@@ -5,9 +5,32 @@ import { cageBoard, clearsCage, forgeWin, settleForge } from './cage';
 import { createPrerunSource, parseChshExport, parseWiesnerExport } from './results';
 import { CAGE_CLEAR_LENGTH, FORGE_LENGTHS, STAKES, isForgeLength } from './rules';
 
-const wiesner = parseWiesnerExport(wiesnerJson);
+/** Only the simulators, so these tests hold before and after a real chip run lands in the file. */
+const bareWiesner = { ...wiesnerJson, runs: wiesnerJson.runs.filter((run) => run.provenance.source !== 'ibm-chip') };
+const wiesner = parseWiesnerExport(bareWiesner);
 const exports = { chsh: parseChshExport(chshJson), wiesner };
 const source = createPrerunSource(exports, 'ibm-noise-model');
+
+const chipRun = {
+  id: 'ibm-chip',
+  provenance: {
+    source: 'ibm-chip',
+    backend: 'ibm_kingston',
+    noiseModel: null,
+    qubits: [61, 42, 5, 48, 15, 21, 93, 62],
+    qubitSelection: 'best-case pick: test qubits',
+    shots: 1024,
+    qiskitVersion: '2.6.2',
+    aerVersion: '0.18.2',
+    runtimeVersion: '0.51.0',
+    date: '2026-11-07',
+    jobId: 'd4forge',
+  },
+  ticketsPerPoint: 32,
+  shotsPerTicket: 32,
+  points: [{ length: 4, seed: 3000040000, shots: 1024, qubits: [61, 42, 5, 48], passes: 256, passRate: 0.25 }],
+};
+const withChip = parseWiesnerExport({ ...bareWiesner, runs: [...bareWiesner.runs, chipRun] });
 
 describe('forge lengths', () => {
   it('covers every length the export carries', () => {
@@ -53,6 +76,41 @@ describe('cageBoard', () => {
     expect(() => cageBoard(wiesner, 'nope')).toThrow(/nope/);
     const short = { ...wiesner, limits: { ...wiesner.limits, byLength: wiesner.limits.byLength.slice(1) } };
     expect(() => cageBoard(short, 'ideal')).toThrow(/length 1/);
+  });
+});
+
+describe('cageBoard with a chip run', () => {
+  const board = cageBoard(withChip, 'ibm-noise-model');
+  const noisy = cageBoard(wiesner, 'ibm-noise-model');
+
+  it('reads the chip rate at the length the chip ran, against the proven limit', () => {
+    const row = board.rows.find((r) => r.length === 4);
+    expect(row?.passRate).toBe(0.25);
+    expect(row?.onChip).toBe(true);
+    expect(row?.limit).toBe(wiesner.limits.byLength.find((l) => l.length === 4)?.value);
+    expect(row?.pays).toBe(wiesner.payouts.table.find((p) => p.length === 4)?.pays);
+  });
+
+  it('keeps every other length on the board run, unblended', () => {
+    board.rows.filter((r) => r.length !== 4).forEach((row, i) => {
+      const plain = noisy.rows.filter((r) => r.length !== 4)[i];
+      expect(row.passRate).toBe(plain?.passRate);
+      expect(row.onChip).toBe(false);
+    });
+  });
+
+  it('keeps the run it was given as the provenance, and names the chip run apart', () => {
+    expect(board.provenance).toEqual(noisy.provenance);
+    expect(board.chip?.provenance.source).toBe('ibm-chip');
+  });
+
+  it('has no chip when the export has none, or only a simulator under the chip id', () => {
+    expect(noisy.chip).toBeNull();
+    expect(noisy.rows.some((row) => row.onChip)).toBe(false);
+    const mislabelled = { ...wiesner, runs: wiesner.runs.map((r) => ({ ...r, id: r.id === 'ideal' ? 'ibm-chip' : r.id })) };
+    const board = cageBoard(mislabelled, 'ibm-noise-model');
+    expect(board.chip).toBeNull();
+    expect(board.rows.some((row) => row.onChip)).toBe(false);
   });
 });
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import chshJson from '../../public/data/chsh.v1.json';
 import wiesnerJson from '../../public/data/wiesner.v1.json';
 import { cageBoard, settleForge } from '../game/cage';
+import { withChipRuns } from '../game/chip';
 import {
   createPrerunSource,
   parseChshExport,
@@ -12,9 +13,38 @@ import {
 import { CAGE_CLEAR_LENGTH, START_BANKROLL } from '../game/rules';
 import { RESTART_ARM_MS, cageView, createRestartGuard, type CageState } from './cage-view';
 
-const wiesner = parseWiesnerExport(wiesnerJson);
+/** Only the simulators, so these tests hold before and after a real chip run lands in the file. */
+const bareWiesner = { ...wiesnerJson, runs: wiesnerJson.runs.filter((run) => run.provenance.source !== 'ibm-chip') };
+const wiesner = parseWiesnerExport(bareWiesner);
 const board = cageBoard(wiesner, 'ibm-noise-model');
-const source = createPrerunSource({ chsh: parseChshExport(chshJson), wiesner }, 'ibm-noise-model');
+const exports = { chsh: parseChshExport(chshJson), wiesner };
+const source = createPrerunSource(exports, 'ibm-noise-model');
+
+const chipRun = {
+  id: 'ibm-chip',
+  provenance: {
+    source: 'ibm-chip',
+    backend: 'ibm_kingston',
+    noiseModel: null,
+    qubits: [61, 42, 5, 48, 15, 21, 93, 62],
+    qubitSelection: 'best-case pick: test qubits',
+    shots: 1024,
+    qiskitVersion: '2.6.2',
+    aerVersion: '0.18.2',
+    runtimeVersion: '0.51.0',
+    date: '2026-11-07',
+    jobId: 'd4forge',
+  },
+  ticketsPerPoint: 32,
+  shotsPerTicket: 32,
+  points: [{ length: 4, seed: 3000040000, shots: 1024, qubits: [61, 42, 5, 48], passes: 256, passRate: 0.25 }],
+};
+const SPLIT = '32 tickets × 32 shots';
+const CHIP_LABEL = 'IBM chip ibm_kingston, job d4forge';
+const wiesnerChip = parseWiesnerExport({ ...bareWiesner, runs: [...bareWiesner.runs, chipRun] });
+const chipExports = { ...exports, wiesner: wiesnerChip };
+const chipBoard = cageBoard(wiesnerChip, 'ibm-noise-model');
+const chipSource = withChipRuns(createPrerunSource(chipExports, 'ibm-noise-model'), chipExports);
 
 const state = (over: Partial<CageState> = {}): CageState => ({
   bankroll: START_BANKROLL,
@@ -180,6 +210,64 @@ describe('cageView sources', () => {
       `Odds source: ${provenanceLabel(board.provenance)}`,
       'Last forge source: Live Qiskit simulator, fake_kingston noise model',
     ]);
+  });
+});
+
+describe('cageView with a chip run', () => {
+  it('marks the chip row, shows its rate and names the split aloud', () => {
+    const row = cageView(state(), chipBoard).rows[3];
+    expect(row?.pass).toBe('25.0%*');
+    expect(row?.label).toContain('25.0% on chip');
+    expect(row?.label).toContain(SPLIT);
+    expect(row?.label).toContain(`proven limit ${row?.limit ?? ''}`);
+  });
+
+  it('leaves every simulator row unmarked and free of chip words', () => {
+    const rows = cageView(state(), chipBoard).rows.filter((row) => row.length !== 4);
+    expect(rows).toHaveLength(7);
+    for (const row of rows) {
+      expect(row.pass).not.toContain('*');
+      expect(row.label).not.toMatch(/chip|tickets/);
+    }
+  });
+
+  it('labels both sources, with the split on the chip one', () => {
+    expect(cageView(state(), chipBoard).sources).toEqual([
+      `Odds source: ${provenanceLabel(board.provenance)}`,
+      `* Odds source: ${CHIP_LABEL}, ${SPLIT}`,
+    ]);
+  });
+
+  it('drops the simulator source once the chip covers every row', () => {
+    const points = wiesnerChip.payouts.table.map(({ length }) => ({
+      length, seed: 3000000000 + length, shots: 1024, qubits: chipRun.provenance.qubits.slice(0, length), passes: 100, passRate: 100 / 1024,
+    }));
+    const full = parseWiesnerExport({ ...bareWiesner, runs: [...bareWiesner.runs, { ...chipRun, points }] });
+    expect(cageView(state(), cageBoard(full, 'ibm-noise-model')).sources).toEqual([`* Odds source: ${CHIP_LABEL}, ${SPLIT}`]);
+  });
+
+  it('says why a chip rate spreads wider, and never calls the shots independent', () => {
+    const shown = cageView(state(), chipBoard);
+    expect(shown.note).toMatch(/fixed set of tickets/);
+    expect(JSON.stringify(shown)).not.toMatch(/independent/i);
+  });
+
+  it('keeps the plain note when no chip run exists', () => {
+    expect(cageView(state(), board).note).toBe('A run is a sample of shots, so it can land a little either side of its limit.');
+  });
+
+  it('shows the split beside a chip forge and its own label', async () => {
+    const forge = settleForge(await chipSource.wiesner(4), 100, board.payoutStake, () => 0);
+    const shown = cageView(state({ forge }), chipBoard);
+    expect(shown.result?.detail).toContain(`256 passes in 1,024 shots (${SPLIT})`);
+    expect(shown.sources).toContain(`Last forge source: ${CHIP_LABEL}`);
+  });
+
+  it('never shows a split or a chip label on a simulated forge at a chip board', async () => {
+    const forge = settleForge(await chipSource.wiesner(3), 100, board.payoutStake, () => 0);
+    const shown = cageView(state({ forge }), chipBoard);
+    expect(shown.result?.detail).not.toContain('tickets');
+    expect(shown.sources[2]).toBe(`Last forge source: ${provenanceLabel(board.provenance)}`);
   });
 });
 

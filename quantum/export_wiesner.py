@@ -1,20 +1,25 @@
 """Export the Wiesner chip forgery for the Cashier's Cage.
 
 Run from the repo root: .venv/bin/python -m quantum.export_wiesner
+Add --chip-only to rewrite just the chip runs and leave the simulators as written.
 
 The noisy run uses Aer with a noise model built from IBM's stored fake_kingston
 calibration, pinned to that snapshot's eight quietest qubits. It is a simulation,
-and the provenance says so.
+and the provenance says so. Chip runs come from the records in CHIP_JOBS, and
+cover only the lengths those jobs ran.
 
 Every shot is its own circuit binding, and the full noise model costs about
 50 ms per binding. The noisy simulator keeps only the errors on the chosen
 qubits, which gives the same counts at about 3 ms per binding.
 """
 
+import argparse
+import json
 import math
 import random
 from collections.abc import Sequence
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 from qiskit import qasm2
@@ -24,7 +29,14 @@ from qiskit_aer.noise import NoiseModel
 from qiskit_aer.noise.device import basic_device_gate_errors, basic_device_readout_errors
 from qiskit_ibm_runtime.fake_provider import FakeKingston
 
-from quantum.export import DATA_DIR, SCHEMA_VERSION, simulator_provenance, write_export
+from quantum.export import (
+    CHIP_SOURCE,
+    DATA_DIR,
+    SCHEMA_VERSION,
+    collected_runs,
+    simulator_provenance,
+    write_export,
+)
 from quantum.wiesner import (
     LENGTHS,
     MAX_LENGTH,
@@ -36,7 +48,8 @@ from quantum.wiesner import (
 
 EXPORT_PATH = DATA_DIR / f"wiesner.v{SCHEMA_VERSION}.json"
 SHOTS = 8192
-TICKETS_PER_SHOT = 1
+SIMULATOR_TICKETS_PER_SHOT = 1
+CHIP_JOBS: tuple[str, ...] = ()
 ATTACK = "measure each qubit in a guessed basis, then resend it as a re-made chip"
 PASS_RULE = (
     "one re-made chip goes to the cashier and every qubit must agree; "
@@ -53,7 +66,7 @@ NOISE_SCOPE = (
 
 LOGICAL_CIRCUITS_NOTE = (
     "each circuit is one example ticket, the first of the ideal run's stream; "
-    "every shot used a fresh ticket"
+    "every simulator shot used a fresh ticket"
 )
 BY_LENGTH_METHOD = (
     "perQubit to the power of length, because the qubits are independent "
@@ -182,6 +195,10 @@ def noisy_run(lengths: Sequence[int], shots: int, today: date) -> dict[str, Any]
     }
 
 
+def chip_runs() -> list[dict[str, Any]]:
+    return collected_runs("wiesner", CHIP_JOBS)
+
+
 def limits(lengths: Sequence[int]) -> dict[str, Any]:
     per_qubit = exact_pass_per_qubit()
     return {
@@ -245,15 +262,34 @@ def build_export(
         "experiment": "wiesner",
         "attack": ATTACK,
         "passRule": PASS_RULE,
-        "ticketsPerShot": TICKETS_PER_SHOT,
+        "simulatorTicketsPerShot": SIMULATOR_TICKETS_PER_SHOT,
         "limits": pass_limits,
         "payouts": payouts(pass_limits["byLength"]),
         "logicalCircuits": logical_circuits(lengths),
         "logicalCircuitsNote": LOGICAL_CIRCUITS_NOTE,
-        "runs": [ideal_run(lengths, shots, today), noisy_run(lengths, shots, today)],
+        "runs": [
+            ideal_run(lengths, shots, today),
+            noisy_run(lengths, shots, today),
+            *chip_runs(),
+        ],
     }
 
 
-if __name__ == "__main__":
-    write_export(EXPORT_PATH, build_export())
+def refresh_chip_runs(path: Path) -> None:
+    export = json.loads(path.read_text())
+    simulators = [r for r in export["runs"] if r["provenance"]["source"] != CHIP_SOURCE]
+    write_export(path, {**export, "runs": [*simulators, *chip_runs()]})
+
+
+def main(argv: Sequence[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--chip-only", action="store_true")
+    if parser.parse_args(argv).chip_only:
+        refresh_chip_runs(EXPORT_PATH)
+    else:
+        write_export(EXPORT_PATH, build_export())
     print(f"wrote {EXPORT_PATH}")
+
+
+if __name__ == "__main__":
+    main()

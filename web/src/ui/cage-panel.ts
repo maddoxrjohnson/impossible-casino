@@ -21,7 +21,7 @@ export function createCagePanel({ board, stakes, onForge, onRestart, onStake }: 
     <div class="dc-cage-rows" role="radiogroup" aria-label="Chip length">${board.rows.map(({ length }) => `<label class="dc-cage-row"><input type="radio" name="dc-cage-length" value="${length}"><span>${length}</span><span></span><span></span><span></span></label>`).join('')}</div>
     <div class="dc-stakes" role="radiogroup" aria-label="Stake on this forge"><span>Stake</span>${stakes.map((value) => `<label class="dc-stake"><input type="radio" name="dc-cage-stake" value="${value}"><span>${value.toLocaleString('en-US')}</span></label>`).join('')}</div>
     <div class="dc-cage-act"><button type="button" class="dc-btn"></button><div class="dc-cage-result" role="status"><b></b><span></span></div></div>
-    <p class="dc-cage-note">A run is a sample of shots, so it can land a little either side of its limit.</p>
+    <p class="dc-cage-note"></p>
     <p class="dc-source dc-cage-source"></p>`;
 
   const rows = [...box.querySelectorAll<HTMLLabelElement>('.dc-cage-row')].map((label) => {
@@ -36,6 +36,7 @@ export function createCagePanel({ board, stakes, onForge, onRestart, onStake }: 
   const result = box.querySelector('.dc-cage-result') as HTMLElement;
   const head = result.querySelector('b') as HTMLElement;
   const detail = result.querySelector('span') as HTMLElement;
+  const note = box.querySelector('.dc-cage-note') as HTMLElement;
   const sourceTag = box.querySelector('.dc-cage-source') as HTMLElement;
 
   let length = board.rows[0]?.length ?? 1;
@@ -55,6 +56,7 @@ export function createCagePanel({ board, stakes, onForge, onRestart, onStake }: 
     });
     stakeInputs.forEach((input, i) => { input.checked = +input.value === s.stake; input.disabled = !!view.stakes[i]?.disabled; });
     goal.textContent = view.goal;
+    note.textContent = view.note;
     button.textContent = view.button.label;
     guard.see(view.button.act);
     const off = view.button.disabled || guard.holding();

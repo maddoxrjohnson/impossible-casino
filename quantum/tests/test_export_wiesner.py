@@ -1,6 +1,8 @@
 import json
 import math
 import random
+import subprocess
+import sys
 from datetime import date
 from pathlib import Path
 
@@ -14,10 +16,14 @@ from qiskit_aer import AerSimulator
 from qiskit_aer.noise import NoiseModel
 from qiskit_ibm_runtime.fake_provider import FakeKingston
 
+import quantum.export
+import quantum.export_wiesner
 import quantum.wiesner
-from quantum.export import simulator_provenance
+from quantum.chip_wiesner import run_from_passes, ticket_seed
+from quantum.export import simulator_provenance, write_export, write_record
 from quantum.export_wiesner import (
     ATTACK,
+    CHIP_JOBS,
     EXPORT_PATH,
     IDEAL_BASE_SEED,
     LOGICAL_CIRCUITS_NOTE,
@@ -26,16 +32,19 @@ from quantum.export_wiesner import (
     PASS_RULE,
     SHOTS,
     SX_PER_QUBIT,
-    TICKETS_PER_SHOT,
+    SIMULATOR_TICKETS_PER_SHOT,
     build_export,
+    chip_runs,
     length_seed,
     limits,
     logical_circuits,
+    main,
     noise_model_label,
     noise_simulator,
     noisy_run,
     payouts,
     quietest_qubits,
+    refresh_chip_runs,
     sample_point,
 )
 from quantum.wiesner import (
@@ -49,6 +58,9 @@ from quantum.wiesner import (
     random_tickets,
 )
 
+PILOT_JOB = "dbnoi58ou4as73b4tcr0"
+CHIP_QUBITS = [61, 42, 5, 48, 15, 21, 93, 62]
+CHIP_SELECTION = "best-case pick: the qubits with the lowest error in the day's calibration"
 EXPECTED_PAYS = {1: 25, 2: 65, 3: 125, 4: 200, 5: 300, 6: 430, 7: 610, 8: 845}
 SMALL_LENGTHS = (1, 2, 8)
 SMALL_SHOTS = 512
@@ -71,6 +83,60 @@ def limit_at(export, length):
     return next(e["value"] for e in export["limits"]["byLength"] if e["length"] == length)
 
 
+def simulator_runs(export):
+    return [r for r in export["runs"] if r["provenance"]["source"] != "ibm-chip"]
+
+
+def committed_chip_runs(export):
+    return [r for r in export["runs"] if r["provenance"]["source"] == "ibm-chip"]
+
+
+def small_build():
+    """Only the simulators: a chip run's lengths are not this export's."""
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(quantum.export_wiesner, "CHIP_JOBS", ())
+        return build_export(lengths=SMALL_LENGTHS, shots=SMALL_SHOTS, today=date(2026, 11, 7))
+
+
+def assert_honest_chip_run(run):
+    provenance = run["provenance"]
+    tickets = run["ticketsPerPoint"]
+    per_ticket = run["shotsPerTicket"]
+    assert run["id"] == "ibm-chip", "the game reads a chip run only under this id"
+    assert set(run) == {"id", "provenance", "ticketsPerPoint", "shotsPerTicket", "points"}
+    assert provenance["source"] == "ibm-chip"
+    assert provenance["backend"].startswith("ibm_")
+    assert provenance["jobId"].strip()
+    assert provenance["noiseModel"] is None
+    assert "best-case" in provenance["qubitSelection"]
+    assert provenance["shots"] == tickets * per_ticket
+    assert run["points"]
+    for point in run["points"]:
+        assert set(point) == {"length", "seed", "shots", "qubits", "passes", "passRate"}
+        assert point["length"] in LENGTHS
+        assert point["seed"] == ticket_seed(point["length"])
+        assert point["shots"] == tickets * per_ticket
+        assert point["qubits"] == provenance["qubits"][: point["length"]]
+        assert isinstance(point["passes"], int)
+        assert 0 <= point["passes"] <= point["shots"]
+        assert point["passRate"] == point["passes"] / point["shots"]
+
+
+def chip_run(job_id="job123", passes=None):
+    """Counts made up for this file, purely to exercise the file handling."""
+    return run_from_passes(
+        "ibm-chip",
+        "ibm_kingston",
+        CHIP_QUBITS,
+        CHIP_SELECTION,
+        32,
+        32,
+        date(2026, 11, 7),
+        job_id,
+        passes or {4: 300},
+    )
+
+
 def expected_provenance(run_id, shots, today, device):
     if run_id == "ideal":
         return simulator_provenance("aer_simulator", shots, today)
@@ -87,9 +153,31 @@ def shot_noise_tolerance(rate, shots, sigmas=4):
     return sigmas * math.sqrt(rate * (1 - rate) / shots)
 
 
+@pytest.fixture
+def records(monkeypatch, tmp_path):
+    """Chip records in a temp folder, listed in CHIP_JOBS as they are written."""
+    monkeypatch.setattr(quantum.export, "RUNS_DIR", tmp_path)
+    monkeypatch.setattr(quantum.export_wiesner, "CHIP_JOBS", ())
+
+    def add(job_id, **fields):
+        write_record({"experiment": "wiesner", "jobId": job_id, **fields})
+        jobs = (*quantum.export_wiesner.CHIP_JOBS, job_id)
+        monkeypatch.setattr(quantum.export_wiesner, "CHIP_JOBS", jobs)
+
+    return add
+
+
+@pytest.fixture
+def export_copy(tmp_path, committed):
+    """A copy of the committed file holding its simulators and no chip run."""
+    path = tmp_path / "wiesner.json"
+    write_export(path, {**committed, "runs": simulator_runs(committed)})
+    return path
+
+
 @pytest.fixture(scope="module")
 def small_export():
-    return build_export(lengths=SMALL_LENGTHS, shots=SMALL_SHOTS, today=date(2026, 11, 7))
+    return small_build()
 
 
 @pytest.fixture(scope="module")
@@ -116,7 +204,7 @@ def test_export_has_every_top_level_block(export):
         "experiment",
         "attack",
         "passRule",
-        "ticketsPerShot",
+        "simulatorTicketsPerShot",
         "limits",
         "payouts",
         "logicalCircuits",
@@ -125,7 +213,7 @@ def test_export_has_every_top_level_block(export):
     }
     assert export["schemaVersion"] == 1
     assert export["experiment"] == "wiesner"
-    assert export["ticketsPerShot"] == 1
+    assert export["simulatorTicketsPerShot"] == 1
 
 
 def test_labels_say_this_is_one_remade_chip_and_not_two_copies(export):
@@ -136,7 +224,7 @@ def test_labels_say_this_is_one_remade_chip_and_not_two_copies(export):
 
 
 def test_each_run_labels_its_true_source(export):
-    assert [r["id"] for r in export["runs"]] == ["ideal", "ibm-noise-model"]
+    assert [r["id"] for r in simulator_runs(export)] == ["ideal", "ibm-noise-model"]
     ideal = run_named(export, "ideal")["provenance"]
     noisy = run_named(export, "ibm-noise-model")["provenance"]
     for provenance in (ideal, noisy):
@@ -156,7 +244,7 @@ def test_each_run_labels_its_true_source(export):
 
 
 def test_points_are_consistent_in_both_exports(export):
-    for run in export["runs"]:
+    for run in simulator_runs(export):
         assert set(run) == {"id", "provenance", "points"}
         shots = run["provenance"]["shots"]
         for point in run["points"]:
@@ -189,22 +277,22 @@ def test_provenance_records_the_requested_shots_and_date(small_export, device):
 
 
 def test_export_is_reproducible(small_export):
-    again = build_export(lengths=SMALL_LENGTHS, shots=SMALL_SHOTS, today=date(2026, 11, 7))
-    assert again == small_export
+    assert small_build() == small_export
 
 
-def test_committed_export_covers_every_length_for_both_runs(committed):
-    assert {r["id"] for r in committed["runs"]} == {"ideal", "ibm-noise-model"}
+def test_committed_export_covers_every_length_for_both_simulators(committed):
+    simulators = simulator_runs(committed)
+    assert {r["id"] for r in simulators} == {"ideal", "ibm-noise-model"}
     assert [e["length"] for e in committed["limits"]["byLength"]] == list(LENGTHS)
     assert [e["length"] for e in committed["logicalCircuits"]] == list(LENGTHS)
     assert [e["length"] for e in committed["payouts"]["table"]] == list(LENGTHS)
-    for run in committed["runs"]:
+    for run in simulators:
         assert [p["length"] for p in run["points"]] == list(LENGTHS)
         assert run["provenance"]["shots"] == SHOTS
 
 
 def test_ticket_count_is_labelled_per_shot(export):
-    assert export["ticketsPerShot"] == TICKETS_PER_SHOT == 1
+    assert export["simulatorTicketsPerShot"] == SIMULATOR_TICKETS_PER_SHOT == 1
 
 
 def test_committed_shared_blocks_match_the_current_code(committed, device):
@@ -214,10 +302,106 @@ def test_committed_shared_blocks_match_the_current_code(committed, device):
     assert committed["attack"] == ATTACK
     assert committed["passRule"] == PASS_RULE
     assert committed["logicalCircuitsNote"] == LOGICAL_CIRCUITS_NOTE
-    for run in committed["runs"]:
+    for run in simulator_runs(committed):
         provenance = run["provenance"]
         today = date.fromisoformat(provenance["date"])
         assert provenance == expected_provenance(run["id"], SHOTS, today, device)
+
+
+# Chip runs
+
+
+def test_committed_chip_runs_are_labelled_and_consistent(committed):
+    for run in committed_chip_runs(committed):
+        assert_honest_chip_run(run)
+
+
+def test_the_chip_run_check_passes_a_run_collect_would_write():
+    assert_honest_chip_run(chip_run(passes={2: 500, 4: 300}))
+
+
+def test_the_chip_run_keeps_its_ticket_split_and_only_its_own_lengths():
+    run = chip_run(passes={2: 500, 4: 300})
+    assert (run["ticketsPerPoint"], run["shotsPerTicket"]) == (32, 32)
+    assert [p["length"] for p in run["points"]] == [2, 4]
+
+
+def test_the_pilot_is_never_listed_for_export():
+    assert PILOT_JOB not in CHIP_JOBS
+
+
+def test_chip_runs_skips_a_job_with_no_run_yet(records):
+    run = chip_run()
+    records("collected", run=run)
+    records("queued", maxSeconds=20)
+    assert chip_runs() == [run]
+
+
+def test_chip_runs_refuses_repeated_run_ids(records):
+    records("first", run=chip_run("first"))
+    records("second", run=chip_run("second"))
+    with pytest.raises(ValueError, match="repeat"):
+        chip_runs()
+
+
+def test_build_export_appends_chip_runs_after_the_simulators(records, small_export):
+    run = chip_run(passes={2: 500})
+    records("collected", run=run)
+    built = build_export(lengths=SMALL_LENGTHS, shots=SMALL_SHOTS, today=date(2026, 11, 7))
+    assert [r["id"] for r in built["runs"]] == ["ideal", "ibm-noise-model", "ibm-chip"]
+    assert built["runs"][:2] == small_export["runs"]
+    assert built["runs"][2] == run
+
+
+def test_chip_only_leaves_the_file_alone_with_nothing_collected(records, export_copy):
+    records("queued", maxSeconds=20)
+    before = export_copy.read_bytes()
+    refresh_chip_runs(export_copy)
+    assert export_copy.read_bytes() == before
+
+
+def test_chip_only_keeps_every_simulator_byte_and_everything_else(
+    records, export_copy, committed
+):
+    run = chip_run()
+    records("collected", run=run)
+    before = export_copy.read_bytes()
+    simulators = before[: before.rindex(b"\n ]")]
+    refresh_chip_runs(export_copy)
+    assert export_copy.read_bytes().startswith(simulators + b",\n")
+    written = json.loads(export_copy.read_text())
+    assert written["runs"] == [*simulator_runs(committed), run]
+    assert {k: v for k, v in written.items() if k != "runs"} == {
+        k: v for k, v in committed.items() if k != "runs"
+    }
+
+
+def test_chip_only_replaces_chip_runs_rather_than_stacking_them(records, export_copy):
+    records("first", run=chip_run("first"))
+    refresh_chip_runs(export_copy)
+    newer = chip_run("second")
+    write_record({"experiment": "wiesner", "jobId": "first", "run": newer})
+    refresh_chip_runs(export_copy)
+    assert committed_chip_runs(json.loads(export_copy.read_text())) == [newer]
+
+
+def test_chip_only_flag_never_regenerates_the_simulators(records, export_copy, monkeypatch):
+    def no_regeneration(*_args, **_kwargs):
+        raise AssertionError("the simulators were rebuilt")
+
+    monkeypatch.setattr(quantum.export_wiesner, "build_export", no_regeneration)
+    monkeypatch.setattr(quantum.export_wiesner, "EXPORT_PATH", export_copy)
+    run = chip_run()
+    records("collected", run=run)
+    main(["--chip-only"])
+    assert committed_chip_runs(json.loads(export_copy.read_text())) == [run]
+
+
+def test_the_exporter_does_not_load_the_chip_module():
+    """The live service imports this file, and must stay clear of chip submission."""
+    code = "import sys, quantum.export_wiesner; sys.exit('quantum.chip' in sys.modules)"
+    root = Path(__file__).resolve().parents[2]
+    assert subprocess.run([sys.executable, "-c", code], cwd=root, check=False).returncode == 0
 
 
 # Seeds

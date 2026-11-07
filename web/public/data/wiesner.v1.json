@@ -3,7 +3,7 @@
  "experiment": "wiesner",
  "attack": "measure each qubit in a guessed basis, then resend it as a re-made chip",
  "passRule": "one re-made chip goes to the cashier and every qubit must agree; this does not model both of two copies passing",
- "ticketsPerShot": 1,
+ "simulatorTicketsPerShot": 1,
  "limits": {
   "perQubit": {
    "value": 0.75,
@@ -314,7 +314,7 @@
    "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg chip[8];\ncreg attacker[8];\ncreg cashier[8];\nry(-pi/2) chip[0];\nry(-pi/2) chip[1];\nry(0) chip[2];\nry(0) chip[3];\nry(-pi/2) chip[4];\nry(0) chip[5];\nry(pi/2) chip[6];\nry(0) chip[7];\nbarrier chip[0],chip[1],chip[2],chip[3],chip[4],chip[5],chip[6],chip[7];\nry(-pi/2) chip[0];\nry(-pi/2) chip[1];\nry(0) chip[2];\nry(-pi/2) chip[3];\nry(-pi/2) chip[4];\nry(-pi/2) chip[5];\nry(0) chip[6];\nry(-pi/2) chip[7];\nmeasure chip[0] -> attacker[0];\nmeasure chip[1] -> attacker[1];\nmeasure chip[2] -> attacker[2];\nmeasure chip[3] -> attacker[3];\nmeasure chip[4] -> attacker[4];\nmeasure chip[5] -> attacker[5];\nmeasure chip[6] -> attacker[6];\nmeasure chip[7] -> attacker[7];\nry(pi/2) chip[0];\nry(pi/2) chip[1];\nry(0) chip[2];\nry(pi/2) chip[3];\nry(pi/2) chip[4];\nry(pi/2) chip[5];\nry(0) chip[6];\nry(pi/2) chip[7];\nbarrier chip[0],chip[1],chip[2],chip[3],chip[4],chip[5],chip[6],chip[7];\nry(pi/2) chip[0];\nry(pi/2) chip[1];\nry(0) chip[2];\nry(0) chip[3];\nry(pi/2) chip[4];\nry(0) chip[5];\nry(-pi/2) chip[6];\nry(0) chip[7];\nmeasure chip[0] -> cashier[0];\nmeasure chip[1] -> cashier[1];\nmeasure chip[2] -> cashier[2];\nmeasure chip[3] -> cashier[3];\nmeasure chip[4] -> cashier[4];\nmeasure chip[5] -> cashier[5];\nmeasure chip[6] -> cashier[6];\nmeasure chip[7] -> cashier[7];"
   }
  ],
- "logicalCircuitsNote": "each circuit is one example ticket, the first of the ideal run's stream; every shot used a fresh ticket",
+ "logicalCircuitsNote": "each circuit is one example ticket, the first of the ideal run's stream; every simulator shot used a fresh ticket",
  "runs": [
   {
    "id": "ideal",

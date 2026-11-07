@@ -1,6 +1,6 @@
 // What the Cage panel shows at each moment. Rates come from the board and the forge's own result. No DOM.
 import { forgeWin, type CageBoard } from '../game/cage';
-import { provenanceLabel } from '../game/results';
+import { provenanceLabel, ticketSplit } from '../game/results';
 import { CAGE_CLEAR_LENGTH } from '../game/rules';
 import type { GameState } from '../game/store';
 import { money, pct, signedAmount } from './lines';
@@ -36,6 +36,7 @@ export interface CageView {
   readonly button: CageButton;
   readonly result: CageResult | null;
   readonly goal: string;
+  readonly note: string;
   readonly sources: readonly string[];
 }
 
@@ -58,6 +59,9 @@ export function createRestartGuard(now: () => number) {
   };
 }
 
+const RUN_NOTE = 'A run is a sample of shots, so it can land a little either side of its limit.';
+const CHIP_NOTE = '* Chip rates repeat a fixed set of tickets, so they spread wider than their shots suggest.';
+
 const qubits = (length: number): string => `${length} qubit${length === 1 ? '' : 's'}`;
 
 function button({ broke, forging, autoplaying }: CageState): CageButton {
@@ -68,7 +72,8 @@ function button({ broke, forging, autoplaying }: CageState): CageButton {
 function result({ forge, bankroll }: CageState): CageResult | null {
   if (!forge) return null;
   const { passed, delta, length, stake, result: run } = forge;
-  const counts = `${money(run.passes)} passes in ${money(run.shots)} shots`;
+  const split = ticketSplit(run);
+  const counts = `${money(run.passes)} passes in ${money(run.shots)} shots${split ? ` (${split})` : ''}`;
   return {
     head: `${passed ? 'Passed' : 'Caught'} ${signedAmount(delta)}`,
     detail: `${qubits(length)} at ${money(stake)}. One draw at ${pct(run.passRate, 1)}, from ${counts}. Bankroll now ${money(bankroll)}.`,
@@ -77,13 +82,18 @@ function result({ forge, bankroll }: CageState): CageResult | null {
 }
 
 export function cageView(state: CageState, board: CageBoard): CageView {
+  const { chip } = board;
+  const split = chip && ticketSplit(chip);
   const rows = board.rows.map((row) => {
     const pass = pct(row.passRate, 1), limit = pct(row.limit, 1);
     const pays = `+${money(forgeWin(row.pays, state.stake, board.payoutStake))}`;
-    const label = `${qubits(row.length)}, ${pass} this run, proven limit ${limit}, pays ${pays}`;
-    return { length: row.length, pass, limit, pays, label };
+    const measured = row.onChip ? `${pass} on chip, ${split ?? ''}` : `${pass} this run`;
+    const label = `${qubits(row.length)}, ${measured}, proven limit ${limit}, pays ${pays}`;
+    return { length: row.length, pass: row.onChip ? `${pass}*` : pass, limit, pays, label };
   });
-  const sources = [`Odds source: ${provenanceLabel(board.provenance)}`];
+  const sources: string[] = [];
+  if (board.rows.some((row) => !row.onChip)) sources.push(`Odds source: ${provenanceLabel(board.provenance)}`);
+  if (chip) sources.push(`* Odds source: ${provenanceLabel(chip.provenance)}, ${split ?? ''}`);
   if (state.forge) sources.push(`Last forge source: ${provenanceLabel(state.forge.result.provenance)}`);
   return {
     rows,
@@ -91,6 +101,7 @@ export function cageView(state: CageState, board: CageBoard): CageView {
     button: button(state),
     result: result(state),
     goal: state.cleared.includes('cage') ? 'The Cage is cleared.' : `Pass ${qubits(CAGE_CLEAR_LENGTH)} or longer to clear the Cage.`,
+    note: chip ? `${RUN_NOTE} ${CHIP_NOTE}` : RUN_NOTE,
     sources,
   };
 }

@@ -10,9 +10,12 @@ import {
   type SimulatorProvenance,
 } from '../game/results';
 import { cageBoard, settleForge } from '../game/cage';
+import { withChipRuns } from '../game/chip';
 import { chshReceipt, markerFor, wiesnerReceipt } from './receipt';
 
-const exports = { chsh: parseChshExport(chshJson), wiesner: parseWiesnerExport(wiesnerJson) };
+/** Only the simulators, so these tests hold before and after a real chip run lands in the file. */
+const bareWiesner = { ...wiesnerJson, runs: wiesnerJson.runs.filter((run) => run.provenance.source !== 'ibm-chip') };
+const exports = { chsh: parseChshExport(chshJson), wiesner: parseWiesnerExport(bareWiesner) };
 const noisy = createPrerunSource(exports, 'ibm-noise-model');
 const ideal = createPrerunSource(exports, 'ideal');
 const limits = noisy.limits;
@@ -217,6 +220,64 @@ describe('wiesnerReceipt', () => {
     const live: SimulatorProvenance = { ...(forge.result.provenance as SimulatorProvenance), source: 'live-simulator' };
     const receipt = wiesnerReceipt({ ...forge, result: { ...forge.result, provenance: live } }, board);
     expect(value(receipt, 'Source')).toMatch(/^Live Qiskit simulator/);
+  });
+});
+
+describe('wiesnerReceipt on a chip run', () => {
+  const run = {
+    id: 'ibm-chip',
+    provenance: { ...chip, jobId: 'd4forge', qubits: [61, 42, 5, 48, 15, 21, 93, 62], shots: 1024 },
+    ticketsPerPoint: 32,
+    shotsPerTicket: 32,
+    points: [{ length: 4, seed: 3000040000, shots: 1024, qubits: [61, 42, 5, 48], passes: 256, passRate: 0.25 }],
+  };
+  const wiesner = parseWiesnerExport({ ...bareWiesner, runs: [...bareWiesner.runs, run] });
+  const both = { ...exports, wiesner };
+  const source = withChipRuns(createPrerunSource(both, 'ibm-noise-model'), both);
+  const board = cageBoard(wiesner, 'ibm-noise-model');
+  const receiptAt = async (length: number) =>
+    wiesnerReceipt(settleForge(await source.wiesner(length), 100, board.payoutStake, () => 0), board);
+
+  it('prints the shots with their tickets and shots per ticket', async () => {
+    const receipt = await receiptAt(4);
+    expect(value(receipt, 'Shots')).toBe('1,024 (32 tickets × 32 shots)');
+    expect(value(receipt, 'Passes')).toBe('256, or 25.0%');
+    expect(JSON.stringify(receipt)).not.toMatch(/independent/i);
+  });
+
+  it('says the spread is wider than the shot count suggests', async () => {
+    const receipt = await receiptAt(4);
+    const labels = receipt.rows.map(([label]) => label);
+    expect(value(receipt, 'Reading this')).toMatch(/fixed set of random tickets/);
+    expect(value(receipt, 'Reading this')).toContain('1,024 shots');
+    expect(labels.indexOf('Reading this')).toBe(labels.indexOf('Proven limit') + 1);
+  });
+
+  it('does not let the example ticket pass for one that ran', async () => {
+    const receipt = await receiptAt(4);
+    expect(receipt.circuitTitle).toMatch(/example/i);
+    expect(receipt.circuitNote).toMatch(/not taken from this run/);
+    expect(receipt.circuitNote).toContain('3000040000');
+    expect(receipt.circuitNote).not.toMatch(/fresh ticket/);
+    expect(receipt.stamp).toBe('Ran on ibm_kingston. IBM job d4forge. The example ticket is not from this run.');
+  });
+
+  it('never reads as a simulator or prints Aer', async () => {
+    const receipt = await receiptAt(4);
+    const printed = [...receipt.rows.flat(), receipt.stamp, receipt.sub, receipt.circuitNote].join(' ');
+    expect(printed).not.toMatch(/simulat|\baer\b/i);
+    expect(value(receipt, 'Job')).toBe('d4forge');
+    expect(value(receipt, 'Qubits')).toBe('61, 42, 5, 48');
+    expect(value(receipt, 'Software')).toBe('Qiskit 2.6.2, Runtime 0.51.0');
+  });
+
+  it('keeps a simulated length next to it reading as a simulator', async () => {
+    const receipt = await receiptAt(3);
+    expect(value(receipt, 'Source')).toMatch(/^Pre-run Qiskit simulator/);
+    expect(value(receipt, 'Shots')).not.toContain('tickets');
+    expect(value(receipt, 'Reading this')).toBeUndefined();
+    expect(receipt.stamp).toMatch(/never touched a chip/);
+    expect(receipt.circuitNote).toContain(wiesner.logicalCircuitsNote);
   });
 });
 

@@ -100,6 +100,12 @@ export interface WiesnerPayout {
   readonly houseEdge: number;
 }
 
+/** A chip run repeats a fixed set of tickets. A simulator forges a fresh ticket every shot and has neither field. */
+export interface TicketShots {
+  readonly ticketsPerPoint?: number;
+  readonly shotsPerTicket?: number;
+}
+
 export interface WiesnerPoint {
   readonly length: number;
   readonly seed: number;
@@ -109,7 +115,7 @@ export interface WiesnerPoint {
   readonly qubits: readonly number[] | null;
 }
 
-export interface WiesnerRun {
+export interface WiesnerRun extends TicketShots {
   readonly id: string;
   readonly provenance: Provenance;
   readonly points: readonly WiesnerPoint[];
@@ -120,7 +126,8 @@ export interface WiesnerExport {
   readonly experiment: 'wiesner';
   readonly attack: string;
   readonly passRule: string;
-  readonly ticketsPerShot: number;
+  /** Tickets per shot in the simulator runs. A chip run carries its own split. */
+  readonly simulatorTicketsPerShot: number;
   readonly limits: {
     readonly perQubit: Limit;
     readonly byLength: readonly { readonly length: number; readonly value: number }[];
@@ -157,7 +164,7 @@ export interface ChshResult {
   readonly provenance: Provenance;
 }
 
-export interface WiesnerResult {
+export interface WiesnerResult extends TicketShots {
   readonly experiment: 'wiesner';
   readonly runId: string;
   readonly length: number;
@@ -440,6 +447,22 @@ function parseWiesnerPoint(value: unknown, path: string): WiesnerPoint {
   };
 }
 
+function parseTicketShots(
+  raw: Record<string, unknown>,
+  provenance: Provenance,
+  points: readonly WiesnerPoint[],
+  path: string,
+): TicketShots {
+  const onChip = provenance.source === 'ibm-chip';
+  if (!onChip && raw.ticketsPerPoint === undefined && raw.shotsPerTicket === undefined) return {};
+  const ticketsPerPoint = integer(raw.ticketsPerPoint, `${path}.ticketsPerPoint`, 1);
+  const shotsPerTicket = integer(raw.shotsPerTicket, `${path}.shotsPerTicket`, 1);
+  if (points.some((p) => p.shots !== ticketsPerPoint * shotsPerTicket)) {
+    fail(`${path}.points`, 'shots do not match tickets times shots per ticket');
+  }
+  return { ticketsPerPoint, shotsPerTicket };
+}
+
 function parseWiesnerRun(value: unknown, path: string): WiesnerRun {
   const raw = record(value, path);
   const points = filled(raw.points, `${path}.points`).map((p, i) =>
@@ -449,10 +472,12 @@ function parseWiesnerRun(value: unknown, path: string): WiesnerRun {
     points.map((p) => p.length),
     `${path}.points`,
   );
+  const provenance = parseExportedProvenance(raw.provenance, `${path}.provenance`);
   return {
     id: text(raw.id, `${path}.id`),
-    provenance: parseExportedProvenance(raw.provenance, `${path}.provenance`),
+    provenance,
     points,
+    ...parseTicketShots(raw, provenance, points, path),
   };
 }
 
@@ -517,7 +542,7 @@ export function parseWiesnerExport(value: unknown): WiesnerExport {
     experiment: 'wiesner',
     attack: text(raw.attack, 'wiesner.attack'),
     passRule: text(raw.passRule, 'wiesner.passRule'),
-    ticketsPerShot: integer(raw.ticketsPerShot, 'wiesner.ticketsPerShot', 1),
+    simulatorTicketsPerShot: integer(raw.simulatorTicketsPerShot, 'wiesner.simulatorTicketsPerShot', 1),
     limits: {
       perQubit: limit(limits.perQubit, 'wiesner.limits.perQubit'),
       byLength: list(limits.byLength, 'wiesner.limits.byLength').map((row, i) => {
@@ -631,6 +656,12 @@ export function provenanceLabel(p: Provenance): string {
     case 'ibm-chip':
       return `IBM chip ${p.backend}, job ${p.jobId}`;
   }
+}
+
+/** A chip rate's real sample size, as "32 tickets × 32 shots". Null for anything but a chip run. */
+export function ticketSplit({ provenance, ticketsPerPoint: tickets, shotsPerTicket: shots }: TicketShots & { readonly provenance: Provenance }): string | null {
+  if (provenance.source !== 'ibm-chip' || tickets === undefined || shots === undefined) return null;
+  return `${tickets.toLocaleString('en-US')} ticket${tickets === 1 ? '' : 's'} × ${shots.toLocaleString('en-US')} shot${shots === 1 ? '' : 's'}`;
 }
 
 export function createPrerunSource(exports: GameExports, runId: string): ResultSource {

@@ -1,6 +1,6 @@
 // What a casino marker says about a run. Every value is read from the result and its provenance. No DOM.
 import type { CageBoard, ForgeAttempt } from '../game/cage';
-import { provenanceLabel, type ChshResult, type Provenance } from '../game/results';
+import { provenanceLabel, ticketSplit, type ChshResult, type Provenance } from '../game/results';
 import type { GameState, LastHand } from '../game/store';
 import { money, pct, signedAmount, type Limits } from './lines';
 
@@ -71,6 +71,7 @@ export function wiesnerReceipt(forge: ForgeAttempt, board: CageBoard): Receipt {
   const { length, stake, passed, delta, result } = forge;
   const { provenance: p, circuit, circuitNote, qubits, shots, passes, passRate } = result;
   const limit = board.rows.find((row) => row.length === length)?.limit;
+  const split = ticketSplit(result);
   return {
     sub: 'Held at the Cage: the shots your draw came from, and where they ran.',
     circuitTitle: `Example ticket: ${length} qubit${length === 1 ? '' : 's'}`,
@@ -81,18 +82,22 @@ export function wiesnerReceipt(forge: ForgeAttempt, board: CageBoard): Receipt {
       ['Source', provenanceLabel(p)],
       ['Backend', p.backend],
       ...machineRows(p, qubits),
-      ['Shots', money(shots)],
+      ['Shots', split ? `${money(shots)} (${split})` : money(shots)],
       ['Passes', `${money(passes)}, or ${pct(passRate, 1)}`],
       ...(limit === undefined ? [] : [['Proven limit', `${pct(limit, 1)} for this attack`] as const]),
       // Few live shots land either side of the limit often enough to look like a broken proof.
       ...(p.source === 'live-simulator' && limit !== undefined
         ? [['Reading this', `The limit is a long-run value. This figure is a ${money(shots)}-shot sample, so it can land above or below it.`] as const]
         : []),
+      // Repeated tickets add their own spread, so the total shots overstate how tight this is.
+      ...(split && limit !== undefined
+        ? [['Reading this', `The limit is a long-run value. This figure repeats a fixed set of random tickets, so it can land further from it than ${money(shots)} shots suggest.`] as const]
+        : []),
       ['Job', p.jobId ?? 'None. Simulators take no job.'],
       ['Software', software(p)],
       ['Run date', p.date],
     ],
-    stamp: stamp(p),
+    stamp: split ? `${stamp(p)} The example ticket is not from this run.` : stamp(p),
   };
 }
 

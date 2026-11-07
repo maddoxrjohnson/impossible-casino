@@ -97,7 +97,7 @@ describe('parsers', () => {
   it('accept both real exports', () => {
     expect(chsh.runs.filter(simulated).map((r) => r.id)).toEqual(['ideal', 'ibm-noise-model']);
     expect(chsh.runs[0]?.points).toHaveLength(33);
-    expect(wiesner.runs.map((r) => r.id)).toEqual(['ideal', 'ibm-noise-model']);
+    expect(wiesner.runs.filter(simulated).map((r) => r.id)).toEqual(['ideal', 'ibm-noise-model']);
     expect(wiesner.runs[0]?.points).toHaveLength(8);
   });
 
