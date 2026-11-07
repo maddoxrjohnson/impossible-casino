@@ -6,3 +6,12 @@
 !quantum/**
 **/tests/
 **/__pycache__/
+# After the allow-list, so a stray secret beside the code stays out of the upload.
+.env*
+**/.env*
+*.pem
+**/*.pem
+*.key
+**/*.key
+qiskit-ibm.json
+**/qiskit-ibm.json

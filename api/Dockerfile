@@ -3,15 +3,11 @@ FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1 OMP_NUM_THREADS=1
 
-RUN pip install --no-cache-dir \
-    fastapi==0.162.2 \
-    starlette==1.10.0 \
-    uvicorn==0.54.0 \
-    qiskit==2.6.2 \
-    qiskit-aer==0.18.2 \
-    qiskit-ibm-runtime==0.51.0
-
 WORKDIR /srv
+COPY api/requirements.lock api/requirements.lock
+RUN pip install --no-cache-dir --no-deps -r api/requirements.lock \
+    && pip check
+
 COPY quantum/ quantum/
 COPY api/ api/
 RUN rm -rf quantum/tests api/tests \

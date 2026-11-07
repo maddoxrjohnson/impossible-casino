@@ -45,7 +45,31 @@ def test_api_group_uses_exact_pins_that_match_what_was_tested() -> None:
     assert {name: version(name) for name in pins} == pins
 
 
-def test_the_image_installs_exactly_the_api_group() -> None:
+def lock_pins() -> dict[str, str]:
+    lines = (API / "requirements.lock").read_text().splitlines()
+    return dict(line.split("==") for line in lines if line and not line.startswith((" ", "#")))
+
+
+def test_the_lock_holds_the_api_group_and_what_was_tested() -> None:
+    locked = lock_pins()
+    assert api_pins().items() <= locked.items()
+    assert {name: version(name) for name in locked} == locked
+
+
+def test_the_image_installs_only_from_the_lock() -> None:
     dockerfile = (API / "Dockerfile").read_text()
-    pinned = dict(re.findall(r"\b([a-z][a-z-]+)==([0-9][0-9.]*)", dockerfile))
-    assert pinned == api_pins()
+    assert "-r api/requirements.lock" in dockerfile
+    assert "--no-deps" in dockerfile
+    assert "==" not in dockerfile
+
+
+def ignored_secrets_rules() -> list[str]:
+    rules = (API / ".gcloudignore").read_text().splitlines()
+    return [rule for rule in rules if rule and not rule.startswith("#")]
+
+
+def test_secret_rules_come_after_the_allow_list() -> None:
+    rules = ignored_secrets_rules()
+    last_allowed = max(i for i, rule in enumerate(rules) if rule.startswith("!"))
+    for rule in (".env*", "*.pem", "*.key", "qiskit-ibm.json"):
+        assert rules.index(rule) > last_allowed
