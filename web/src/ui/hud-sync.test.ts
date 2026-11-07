@@ -258,3 +258,105 @@ describe('a table with nothing to wait for', () => {
     expect(seen.main.disabled).toBeFalsy();
   });
 });
+
+describe('createHudSync in the cage', () => {
+  const PAYS = 100;
+  const pass = () => 0, catchAll = () => 0.999999;
+
+  function cage({ save, rng = pass, wiesner = (length: number) => source.wiesner(length) }: { save?: object; rng?: Rng; wiesner?: typeof source.wiesner } = {}) {
+    const store = createGameStore({ source: { ...source, wiesner }, rng, storage: memoryStorage(save ?? { version: 1, bankroll: 9000, phase: 'entangled', dial: 0.5, stake: 100, cleared: [] }) });
+    const { hud, seen } = fakeHud();
+    const moment = { locked: false, inRoom: true, inCage: true };
+    store.subscribe(createHudSync(hud, { source, lines: LINES, moment: () => moment }).sync);
+    return { store, seen, moment };
+  }
+
+  it('says pass and caught', async () => {
+    const won = cage();
+    await won.store.forge(1, PAYS);
+    expect(said(won.seen)).toBe(LINES.forged);
+    const lost = cage({ rng: catchAll });
+    await lost.store.forge(1, PAYS);
+    expect(said(lost.seen)).toBe(LINES.caught);
+  });
+
+  it('says the room is cleared the first time only', async () => {
+    const { store, seen } = cage();
+    await store.forge(4, PAYS);
+    expect(said(seen)).toBe(LINES.cageClear);
+    await store.forge(4, PAYS);
+    expect(said(seen)).toBe(LINES.forged);
+  });
+
+  it('says broke when the catch took the last chips', async () => {
+    const { store, seen } = cage({ rng: catchAll, save: { version: 1, bankroll: 100, phase: 'entangled', dial: 0.5, stake: 100, cleared: [] } });
+    await store.forge(1, PAYS);
+    expect(said(seen)).toBe(LINES.broke);
+  });
+
+  it('owns up to a rejected forge', async () => {
+    const { store, seen } = cage({ wiesner: () => Promise.reject(new Error('down')) });
+    await store.forge(1, PAYS);
+    expect(said(seen)).toBe(LINES.forgeFailed);
+  });
+
+  it('stays in the cage on a restart that keeps the phase', async () => {
+    const { store, seen } = cage({ rng: catchAll, save: { version: 1, bankroll: 100, phase: 'intro', dial: 0.5, stake: 100, cleared: [] } });
+    await store.forge(1, PAYS);
+    store.restart();
+    expect(said(seen)).toBe(LINES.cage);
+  });
+
+  it('says nothing about a forge dropped by a restart', async () => {
+    const { store, seen, moment } = cage({ save: { version: 1, bankroll: 9000, phase: 'beyond', dial: 0.5, stake: 100, cleared: ['tables'] } });
+    moment.inRoom = false; moment.inCage = false;
+    void store.forge(1, PAYS);
+    store.restart();
+    await vi.waitFor(() => { expect(said(seen)).toBe(LINES.intro); });
+  });
+
+  it('reports a result that lands after the player left', async () => {
+    const { store, seen, moment } = cage();
+    const forged = store.forge(1, PAYS);
+    moment.inRoom = false; moment.inCage = false;
+    await forged;
+    expect(said(seen)).toBe(LINES.forged);
+  });
+
+  it('shows the last forge on the plaque in the cage, and the last hand elsewhere', async () => {
+    const { store, seen, moment } = cage();
+    await store.forge(1, PAYS);
+    expect(seen.plaque.get('delta')).toBe('last forge +25');
+    moment.inRoom = false; moment.inCage = false;
+    store.setStake(200);
+    expect(seen.plaque.get('delta')).toBe('\u00a0');
+  });
+
+  it('turns the receipt on for a forge in the cage, not for the table run', async () => {
+    const { store, seen, moment } = cage();
+    expect(seen.receipt).toBe(false);
+    await store.forge(1, PAYS);
+    expect(seen.receipt).toBe(true);
+    moment.inRoom = false; moment.inCage = false;
+    store.setStake(200);
+    expect(seen.receipt).toBe(false);
+  });
+
+  it('keeps the table run behind the stub in the cage only when a forge exists', async () => {
+    const { store, seen, moment } = cage();
+    moment.inRoom = false; moment.inCage = false;
+    await store.run(1);
+    await vi.waitFor(() => { expect(store.state.autoplaying).toBe(false); });
+    expect(seen.receipt).toBe(true);
+    moment.inRoom = true; moment.inCage = true;
+    store.setStake(200);
+    expect(seen.receipt).toBe(false);
+  });
+
+  it('leaves the wheel room with the table receipt', async () => {
+    const { store, seen, moment } = cage();
+    moment.inCage = false;
+    await store.forge(1, PAYS);
+    expect(seen.receipt).toBe(false);
+  });
+});

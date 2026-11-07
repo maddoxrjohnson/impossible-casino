@@ -9,7 +9,8 @@ import {
   type ChshResult,
   type SimulatorProvenance,
 } from '../game/results';
-import { chshReceipt } from './receipt';
+import { cageBoard, settleForge } from '../game/cage';
+import { chshReceipt, markerFor, wiesnerReceipt } from './receipt';
 
 const exports = { chsh: parseChshExport(chshJson), wiesner: parseWiesnerExport(wiesnerJson) };
 const noisy = createPrerunSource(exports, 'ibm-noise-model');
@@ -119,5 +120,75 @@ describe('chshReceipt', () => {
     expect(receipt.stamp).not.toMatch(/simulated/i);
     expect(value(receipt, 'Qubits')).toBe('147, 148');
     expect(value(receipt, 'Software')).toBe('Qiskit 2.6.2, Runtime 0.51.0');
+  });
+});
+
+describe('wiesnerReceipt', () => {
+  const board = cageBoard(exports.wiesner, 'ibm-noise-model');
+  const passed = async (length = 4) => settleForge(await noisy.wiesner(length), 500, board.payoutStake, () => 0);
+  const receiptAt = async (length = 4) => {
+    const forge = await passed(length);
+    return { forge, receipt: wiesnerReceipt(forge, board) };
+  };
+
+  it('shows the exported example ticket and says it is only an example', async () => {
+    const { forge, receipt } = await receiptAt();
+    expect(receipt.qasm).toBe(exports.wiesner.logicalCircuits.find((c) => c.length === 4)?.qasm);
+    expect(receipt.circuitTitle).toMatch(/example/i);
+    expect(receipt.circuitTitle).toContain('4 qubits');
+    expect(receipt.circuitNote).toContain(forge.result.circuitNote);
+  });
+
+  it('reads shots and passes from the result, and the limit from the export', async () => {
+    const { forge, receipt } = await receiptAt();
+    expect(value(receipt, 'Shots')).toBe(forge.result.shots.toLocaleString('en-US'));
+    expect(value(receipt, 'Passes')).toContain(forge.result.passes.toLocaleString('en-US'));
+    const limit = exports.wiesner.limits.byLength.find((l) => l.length === 4)?.value ?? 0;
+    expect(value(receipt, 'Proven limit')).toContain(`${(limit * 100).toFixed(1)}%`);
+  });
+
+  it('lists only the qubits this length used', async () => {
+    const { forge, receipt } = await receiptAt(2);
+    expect(value(receipt, 'Qubits')).toContain((forge.result.qubits ?? []).join(', '));
+    expect(forge.result.qubits).toHaveLength(2);
+  });
+
+  it('states the outcome as one draw', async () => {
+    const { receipt } = await receiptAt();
+    expect(value(receipt, 'Your forge')).toContain('Passed');
+    expect(value(receipt, 'Your forge')).toContain('+1,000');
+    expect(value(receipt, 'Your forge')).toMatch(/one draw/i);
+  });
+
+  it('says plainly that a simulated forge never ran on a chip', async () => {
+    const { receipt } = await receiptAt();
+    expect(value(receipt, 'Job')).toMatch(/^None/);
+    expect(receipt.stamp).toMatch(/never/i);
+  });
+
+  it('labels a live forge as live, whatever the board was', async () => {
+    const forge = await passed();
+    const live: SimulatorProvenance = { ...(forge.result.provenance as SimulatorProvenance), source: 'live-simulator' };
+    const receipt = wiesnerReceipt({ ...forge, result: { ...forge.result, provenance: live } }, board);
+    expect(value(receipt, 'Source')).toMatch(/^Live Qiskit simulator/);
+  });
+});
+
+describe('markerFor', () => {
+  const board = cageBoard(exports.wiesner, 'ibm-noise-model');
+
+  it('shows the last forge in the cage and the last run everywhere else', async () => {
+    const result = await noisy.chsh(0.5);
+    const forge = settleForge(await noisy.wiesner(3), 100, board.payoutStake, () => 0);
+    const state = { result, last: hand, forge };
+    expect(markerFor(state, true, limits, board)?.circuitTitle).toContain('3 qubits');
+    expect(markerFor(state, false, limits, board)?.circuitTitle).toContain('last hand');
+  });
+
+  it('has nothing to show when that room has no result', async () => {
+    const result = await noisy.chsh(0.5);
+    const forge = settleForge(await noisy.wiesner(3), 100, board.payoutStake, () => 0);
+    expect(markerFor({ result, last: hand, forge: null }, true, limits, board)).toBeNull();
+    expect(markerFor({ result: null, last: null, forge }, false, limits, board)).toBeNull();
   });
 });

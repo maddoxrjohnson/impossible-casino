@@ -1,11 +1,13 @@
 // What a casino marker says about a run. Every value is read from the result and its provenance. No DOM.
+import type { CageBoard, ForgeAttempt } from '../game/cage';
 import { provenanceLabel, type ChshResult, type Provenance } from '../game/results';
-import type { LastHand } from '../game/store';
-import { pct, type Limits } from './lines';
+import type { GameState, LastHand } from '../game/store';
+import { money, pct, signedAmount, type Limits } from './lines';
 
 export type ReceiptRow = readonly [label: string, value: string];
 
 export interface Receipt {
+  readonly sub: string;
   readonly circuitTitle: string;
   readonly qasm: string;
   readonly circuitNote: string;
@@ -20,12 +22,12 @@ function software(p: Provenance): string {
   return `Qiskit ${p.qiskitVersion}, ${second}`;
 }
 
-function machineRows(p: Provenance): ReceiptRow[] {
+function machineRows(p: Provenance, used: readonly number[] | null = p.qubits): ReceiptRow[] {
   const rows: ReceiptRow[] = [];
   const model = p.noiseModel;
   if (model) rows.push(['Noise model', `${model.name}, calibrated ${model.calibrated.slice(0, 10)}`]);
-  if (p.qubits) {
-    const qubits = p.qubits.join(', ');
+  if (used) {
+    const qubits = used.join(', ');
     rows.push(['Qubits', model ? `${qubits} (${model.qubitSelection})` : qubits]);
   }
   return rows;
@@ -45,6 +47,7 @@ export function chshReceipt(result: ChshResult, last: LastHand | null, limits: L
   const questions = `questions ${circuit.x} and ${circuit.y}, dial ${dial}`;
   const shots = pairs.reduce((sum, pair) => sum + pair.shots, 0);
   return {
+    sub: 'Payable at the Cage: what the table ran, and where.',
     circuitTitle: match && last ? `Your last hand: ${questions}` : `Sample circuit: ${questions}`,
     qasm: circuit.qasm,
     circuitNote: CIRCUIT_NOTE,
@@ -61,4 +64,40 @@ export function chshReceipt(result: ChshResult, last: LastHand | null, limits: L
     ],
     stamp: stamp(p),
   };
+}
+
+export function wiesnerReceipt(forge: ForgeAttempt, board: CageBoard): Receipt {
+  const { length, stake, passed, delta, result } = forge;
+  const { provenance: p, circuit, circuitNote, qubits, shots, passes, passRate } = result;
+  const limit = board.rows.find((row) => row.length === length)?.limit;
+  return {
+    sub: 'Held at the Cage: what your forgery was checked against, and where it ran.',
+    circuitTitle: `Example ticket: ${length} qubit${length === 1 ? '' : 's'}`,
+    qasm: circuit.qasm,
+    circuitNote: `Logical circuit, as written: ${circuitNote}.`,
+    rows: [
+      ['Your forge', `${passed ? 'Passed' : 'Caught'} ${signedAmount(delta)} at ${money(stake)}, one draw from these shots`],
+      ['Source', provenanceLabel(p)],
+      ['Backend', p.backend],
+      ...machineRows(p, qubits),
+      ['Shots', money(shots)],
+      ['Passes', `${money(passes)}, or ${pct(passRate, 1)}`],
+      ...(limit === undefined ? [] : [['Proven limit', `${pct(limit, 1)} for this attack`] as const]),
+      ['Job', p.jobId ?? 'None. Simulators take no job.'],
+      ['Software', software(p)],
+      ['Run date', p.date],
+    ],
+    stamp: stamp(p),
+  };
+}
+
+/** The marker for the room the player is in: the last forge in the Cage, the last run anywhere else. */
+export function markerFor(
+  { result, last, forge }: Pick<GameState, 'result' | 'last' | 'forge'>,
+  inCage: boolean,
+  limits: Limits,
+  board: CageBoard,
+): Receipt | null {
+  if (inCage) return forge ? wiesnerReceipt(forge, board) : null;
+  return result ? chshReceipt(result, last, limits) : null;
 }

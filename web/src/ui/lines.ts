@@ -8,14 +8,14 @@ export interface Limits {
 }
 
 export type Band = 'low' | 'over' | 'even' | 'best';
-export type LineKey = Phase | Band | 'short' | 'cold' | 'past' | 'covered' | 'misdeal' | 'broke' | 'cage' | 'wheel';
+export type LineKey = Phase | Band | 'short' | 'cold' | 'past' | 'covered' | 'misdeal' | 'broke' | 'cage' | 'forged' | 'caught' | 'cageClear' | 'forgeFailed' | 'wheel';
 
 /** Where the best band starts, as a share of the span from break-even to the quantum limit. */
 const BEST_SHARE = 0.75;
 
 export const pct = (rate: number, digits = 0): string => `${(rate * 100).toFixed(digits)}%`;
 export const money = (amount: number): string => Math.round(amount).toLocaleString('en-US');
-export const signedAmount = (delta: number): string => `${delta > 0 ? '+' : '−'}${Math.abs(delta)}`;
+export const signedAmount = (delta: number): string => `${delta > 0 ? '+' : '−'}${money(Math.abs(delta))}`;
 
 /**
  * Whether a rate clears the classical limit at the precision the table prints,
@@ -53,7 +53,11 @@ export function createLines(limits: Limits): Record<LineKey, string> {
     covered: 'You could not cover that stake, so the run stopped there. I have cut it to what you hold.',
     misdeal: 'The wire went quiet and no hands were dealt. Nothing left your stack. Run it again.',
     broke: 'That is the last of your chips. The house collects in the end, even down here. Start over.',
-    cage: "The Cashier's Cage, 4 K. Nobody has ever cashed out warm. It opens when the table has something to pay.",
+    cage: "The Cashier's Cage, 4 K. These chips are made of qubits, and reading one the wrong way spoils it. The teller knows the right way. A forger has to guess, and his check catches bad guesses. Longer chips pay more and pass less.",
+    forged: 'It passed. The teller checked it and paid. Your guesses held up, this time.',
+    caught: 'Caught. You had to guess how to read the real chip, and the teller\'s check found what the guessing left behind. He keeps the stake.',
+    cageClear: 'A chip that long should not get past him, and yours did. The Cage is cleared. He will still take your bets.',
+    forgeFailed: 'The wire went quiet and the teller never saw it. Nothing left your stack. Try again.',
     wheel: 'The Roulette Wheel, 800 mK. It has not stopped since 1926. Another night.',
   };
 }

@@ -1,3 +1,4 @@
+import { clearsCage, settleForge, type ForgeAttempt } from './cage';
 import { safeStorage, readSave, writeSave, type SaveData, type SaveStorage } from './save';
 import { sampleOutcome, type ChshResult, type ResultSource } from './results';
 import {
@@ -15,6 +16,7 @@ import {
   START_DIAL,
   chshWin,
   dealDeck,
+  isForgeLength,
   isStake,
   winPayout,
   type Bit,
@@ -53,6 +55,10 @@ export interface GameState {
   readonly broke: boolean;
   /** The current or last quantum run. Classical hands are not quantum results. */
   readonly result: ChshResult | null;
+  /** A forge is waiting on its source. Nothing moves the bankroll or the stake until it settles. */
+  readonly forging: boolean;
+  /** The last settled forge. Not saved, so a reload starts without one. */
+  readonly forge: ForgeAttempt | null;
 }
 
 export interface GameStoreOptions {
@@ -71,6 +77,8 @@ export interface GameStore {
   setDial(value: number): void;
   setStake(value: number): void;
   run(hands?: number): Promise<void>;
+  /** `payoutStake` is the stake the exported pay table is quoted on. */
+  forge(length: number, payoutStake: number): Promise<void>;
   restart(): void;
   clearRoom(room: RoomId): void;
   dispose(): void;
@@ -110,6 +118,8 @@ export function createGameStore({
     stake: CLASSICAL_STAKE as number,
     broke: false,
     result: null as ChshResult | null,
+    forging: false,
+    forge: null as ForgeAttempt | null,
   });
   const state = { ...freshFields(), history, cleared };
 
@@ -117,6 +127,8 @@ export function createGameStore({
   let finishRun: (() => void) | null = null;
   // Bumped whenever a run ends, so a source call still in flight knows it was abandoned.
   let runToken = 0;
+  // The same for a forge, so one abandoned by a restart or dispose never settles.
+  let forgeToken = 0;
   let disposed = false;
 
   const emit = (): void => {
@@ -226,6 +238,15 @@ export function createGameStore({
     }
   };
 
+  const fetchForge = async (length: number) => {
+    try {
+      const result = await source.wiesner(length);
+      return result.length === length && result.shots > 0 ? result : null;
+    } catch {
+      return null;
+    }
+  };
+
   const restore = (data: SaveData): void => {
     const quantum = data.phase === 'entangled' || data.phase === 'beyond';
     state.phase = data.phase;
@@ -260,7 +281,7 @@ export function createGameStore({
       };
     },
     deal() {
-      if (disposed || state.phase !== 'intro' || state.broke) return;
+      if (disposed || state.phase !== 'intro' || state.broke || state.forging) return;
       state.phase = 'classical';
       state.stake = CLASSICAL_STAKE;
       state.autoplaying = true;
@@ -272,7 +293,7 @@ export function createGameStore({
       emit();
     },
     entangle() {
-      if (disposed || state.phase !== 'wall' || state.broke) return;
+      if (disposed || state.phase !== 'wall' || state.broke || state.forging) return;
       state.phase = 'entangled';
       state.mode = 'quantum';
       resetCounters();
@@ -290,7 +311,7 @@ export function createGameStore({
       emit();
     },
     setStake(value) {
-      if (disposed || state.autoplaying || !isStake(value)) return;
+      if (disposed || state.autoplaying || state.forging || !isStake(value)) return;
       if (value > state.bankroll || value === state.stake) return;
       state.stake = value;
       save();
@@ -298,6 +319,7 @@ export function createGameStore({
     },
     async run(hands = RUN_HANDS) {
       if (disposed || state.mode !== 'quantum' || state.autoplaying || state.broke) return;
+      if (state.forging) return;
       if (!Number.isFinite(hands) || hands < 1) return;
       state.autoplaying = true;
       state.result = null;
@@ -320,8 +342,31 @@ export function createGameStore({
       if (token !== runToken) return;
       await playHands(dealDeck(hands, rng), ({ x, y }) => sampleOutcome(pairs[x][y], rng));
     },
+    async forge(length, payoutStake) {
+      if (disposed || state.forging || state.autoplaying || state.broke) return;
+      if (!isForgeLength(length) || !(payoutStake > 0) || state.stake > state.bankroll) return;
+      const { stake } = state;
+      state.forging = true;
+      forgeToken += 1;
+      const token = forgeToken;
+      emit();
+      const result = await fetchForge(length);
+      if (token !== forgeToken) return;
+      state.forging = false;
+      if (result) {
+        const attempt = settleForge(result, stake, payoutStake, rng);
+        state.forge = attempt;
+        state.bankroll += attempt.delta;
+        // Marked directly: clearRoom is a no-op while broke, and it saves and emits on its own.
+        if (clearsCage(attempt)) markCleared('cage');
+        settleStake();
+        save();
+      }
+      emit();
+    },
     restart() {
       if (disposed) return;
+      forgeToken += 1;
       stopRun();
       Object.assign(state, freshFields());
       history.length = 0;
@@ -337,6 +382,7 @@ export function createGameStore({
     },
     dispose() {
       disposed = true;
+      forgeToken += 1;
       stopRun();
       listeners.clear();
       roundListeners.clear();

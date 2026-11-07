@@ -10,10 +10,12 @@ import {
   type ChshResult,
   type Counts,
   type ResultSource,
+  type WiesnerResult,
 } from './results';
 import {
   BEYOND_MIN_HANDS,
   BREAK_EVEN,
+  CAGE_CLEAR_LENGTH,
   CLASSICAL_HANDS,
   HAND_MS,
   HISTORY_CAP,
@@ -968,6 +970,429 @@ describe('rooms', () => {
     held.refuse(new Error('down'));
     await next;
     expect(store.state.last).toBeNull();
+  });
+});
+
+describe('the cage', () => {
+  const PAYS = exportsData.wiesner.payouts.stake;
+  const passing: Rng = () => 0;
+  const caught: Rng = () => 0.999999;
+  const pays = (length: number): number =>
+    exportsData.wiesner.payouts.table.find((row) => row.length === length)?.pays ?? 0;
+
+  /** A source whose wiesner call waits until the test settles it. */
+  function heldForge(): {
+    source: ResultSource;
+    calls: () => number;
+    release: (result: WiesnerResult) => void;
+    refuse: (error: Error) => void;
+  } {
+    let release: (result: WiesnerResult) => void = () => undefined;
+    let refuse: (error: Error) => void = () => undefined;
+    let calls = 0;
+    return {
+      source: {
+        ...source,
+        wiesner: () => {
+          calls += 1;
+          return new Promise((resolve, reject) => {
+            release = resolve;
+            refuse = reject;
+          });
+        },
+      },
+      calls: () => calls,
+      release: (result) => {
+        release(result);
+      },
+      refuse: (error) => {
+        refuse(error);
+      },
+    };
+  }
+
+  describe('a settled forge', () => {
+    it('starts with nothing forged', () => {
+      const store = make();
+      expect(store.state.forge).toBeNull();
+      expect(store.state.forging).toBe(false);
+    });
+
+    it('pays the exported win, scaled to the stake', async () => {
+      const store = make({ rng: passing, storage: saved({ bankroll: 2000, stake: 200 }) });
+      await store.forge(3, PAYS);
+      expect(store.state.bankroll).toBe(2000 + pays(3) * 2);
+      expect(store.state.forging).toBe(false);
+      expect(store.state.forge).toMatchObject({ length: 3, stake: 200, passed: true, delta: pays(3) * 2 });
+      expect(store.state.forge?.result).toEqual(await source.wiesner(3));
+    });
+
+    it('takes the stake on a catch', async () => {
+      const store = make({ rng: caught, storage: saved({ bankroll: 2000, stake: 500 }) });
+      await store.forge(2, PAYS);
+      expect(store.state.bankroll).toBe(1500);
+      expect(store.state.forge).toMatchObject({ length: 2, stake: 500, passed: false, delta: -500 });
+    });
+
+    it('reads the odds and the label from whatever the source returned', async () => {
+      const real = await source.wiesner(8);
+      const live: WiesnerResult = {
+        ...real,
+        shots: 1000,
+        passes: 1000,
+        provenance: { ...real.provenance, source: 'live-simulator' } as WiesnerResult['provenance'],
+      };
+      const store = make({
+        source: { ...source, wiesner: () => Promise.resolve(live) },
+        rng: () => 0.99,
+        storage: saved(),
+      });
+      await store.forge(8, PAYS);
+      expect(store.state.forge?.passed).toBe(true);
+      expect(store.state.forge?.result.provenance.source).toBe('live-simulator');
+    });
+
+    it('leaves the table exactly as the player left it', async () => {
+      const rng = await steeredRng(TUNED, 2, () => true);
+      const store = make({ rng, storage: saved() });
+      const finished = store.run(2);
+      await hands(2);
+      await finished;
+      const { phase, mode, rounds, wins, winRate, target, last, dial, result } = store.state;
+      const history = [...store.state.history];
+      await store.forge(1, PAYS);
+      expect(store.state.forge).not.toBeNull();
+      expect(store.state).toMatchObject({ phase, mode, rounds, wins, winRate, target, last, dial });
+      expect(store.state.result).toBe(result);
+      expect(store.state.history).toEqual(history);
+    });
+
+    it('fires no round listeners', async () => {
+      const store = make({ storage: saved() });
+      const heard = vi.fn();
+      store.onRound(heard);
+      await store.forge(1, PAYS);
+      expect(heard).not.toHaveBeenCalled();
+    });
+
+    it('works before the first deal and keeps the phase', async () => {
+      const storage = memoryStorage();
+      const store = make({ rng: passing, storage });
+      await store.forge(1, PAYS);
+      expect(store.state.phase).toBe('intro');
+      expect(store.state.bankroll).toBe(START_BANKROLL + pays(1));
+      expect(saveOf(storage)?.phase).toBe('intro');
+    });
+
+    it('trims the stake to what is left after a catch', async () => {
+      const store = make({ rng: caught, storage: saved({ bankroll: 1200, stake: 1000 }) });
+      await store.forge(1, PAYS);
+      expect(store.state.bankroll).toBe(200);
+      expect(store.state.stake).toBe(200);
+      expect(store.state.broke).toBe(false);
+    });
+
+    it('goes broke on a catch that takes the last chips', async () => {
+      const store = make({ rng: caught, storage: saved({ bankroll: 100, stake: 100 }) });
+      await store.forge(1, PAYS);
+      expect(store.state.bankroll).toBe(0);
+      expect(store.state.broke).toBe(true);
+      expect(store.state.stake).toBe(100);
+    });
+
+    it('emits when it starts and when it settles', async () => {
+      const store = make({ storage: saved() });
+      const seen: boolean[] = [];
+      store.subscribe((s) => seen.push(s.forging));
+      await store.forge(1, PAYS);
+      expect(seen).toEqual([false, true, false]);
+    });
+  });
+
+  describe('what it refuses', () => {
+    it('a bad length, without asking the source', async () => {
+      const held = heldForge();
+      const store = make({ source: held.source, storage: saved() });
+      for (const bad of [0, 9, 1.5, -2, Number.NaN]) await store.forge(bad, PAYS);
+      expect(held.calls()).toBe(0);
+      expect(store.state.forging).toBe(false);
+    });
+
+    it('a pay table with no stake behind it', async () => {
+      const held = heldForge();
+      const store = make({ source: held.source, storage: saved() });
+      await store.forge(1, 0);
+      await store.forge(1, Number.NaN);
+      expect(held.calls()).toBe(0);
+    });
+
+    it('a second forge while one is in flight', async () => {
+      const held = heldForge();
+      const store = make({ source: held.source, rng: passing, storage: saved() });
+      const first = store.forge(1, PAYS);
+      await store.forge(2, PAYS);
+      expect(held.calls()).toBe(1);
+      held.release(await source.wiesner(1));
+      await first;
+      expect(store.state.forge?.length).toBe(1);
+      expect(store.state.bankroll).toBe(9700 + pays(1));
+    });
+
+    it('a forge while the table is playing', async () => {
+      const held = heldForge();
+      const store = make({ source: held.source, storage: saved() });
+      const finished = store.run();
+      await store.forge(1, PAYS);
+      expect(held.calls()).toBe(0);
+      await hands(RUN_HANDS);
+      await finished;
+    });
+
+    it('a forge once broke', async () => {
+      const held = heldForge();
+      const store = make({ source: held.source, storage: saved({ bankroll: 50, stake: 100 }) });
+      expect(store.state.broke).toBe(true);
+      await store.forge(1, PAYS);
+      expect(held.calls()).toBe(0);
+    });
+
+    it('a forge after dispose', async () => {
+      const held = heldForge();
+      const store = make({ source: held.source, storage: saved() });
+      store.dispose();
+      await store.forge(1, PAYS);
+      expect(held.calls()).toBe(0);
+    });
+
+    it('anything that would move the bankroll or the stake while one is in flight', async () => {
+      const held = heldForge();
+      const store = make({ source: held.source, rng: caught, storage: saved() });
+      const forged = store.forge(1, PAYS);
+      void store.run();
+      store.setStake(500);
+      expect(store.state.autoplaying).toBe(false);
+      expect(store.state.stake).toBe(100);
+      held.release(await source.wiesner(1));
+      await forged;
+      expect(store.state.bankroll).toBe(9600);
+    });
+
+    it('a deal or an entangle while one is in flight', async () => {
+      const intro = heldForge();
+      const fresh = make({ source: intro.source, storage: memoryStorage() });
+      const a = fresh.forge(1, PAYS);
+      fresh.deal();
+      expect(fresh.state.phase).toBe('intro');
+      intro.release(await source.wiesner(1));
+      await a;
+
+      const wall = heldForge();
+      const waiting = make({ source: wall.source, storage: saved({ phase: 'wall' }) });
+      const b = waiting.forge(1, PAYS);
+      waiting.entangle();
+      expect(waiting.state.phase).toBe('wall');
+      wall.release(await source.wiesner(1));
+      await b;
+    });
+  });
+
+  describe('a failed forge', () => {
+    it('costs nothing and frees the lock when the source rejects', async () => {
+      const held = heldForge();
+      const storage = saved();
+      const store = make({ source: held.source, storage });
+      const forged = store.forge(1, PAYS);
+      expect(store.state.forging).toBe(true);
+      held.refuse(new Error('down'));
+      await forged;
+      expect(store.state.forging).toBe(false);
+      expect(store.state.forge).toBeNull();
+      expect(store.state.bankroll).toBe(9700);
+      expect(storage.writes).toBe(0);
+
+      const retry = store.forge(1, PAYS);
+      expect(held.calls()).toBe(2);
+      held.release(await source.wiesner(1));
+      await retry;
+      expect(store.state.forge).not.toBeNull();
+    });
+
+    it('keeps the last forge on show', async () => {
+      let calls = 0;
+      const store = make({
+        source: {
+          ...source,
+          wiesner: (length) => {
+            calls += 1;
+            return calls === 1 ? source.wiesner(length) : Promise.reject(new Error('down'));
+          },
+        },
+        storage: saved(),
+      });
+      await store.forge(2, PAYS);
+      const first = store.state.forge;
+      await store.forge(3, PAYS);
+      expect(store.state.forge).toBe(first);
+    });
+
+    it('rejects a result for another length or with no shots', async () => {
+      const wrong = await source.wiesner(5);
+      const empty = { ...(await source.wiesner(1)), shots: 0, passes: 0 };
+      for (const bad of [wrong, empty]) {
+        const store = make({
+          source: { ...source, wiesner: () => Promise.resolve(bad) },
+          storage: saved(),
+        });
+        await store.forge(1, PAYS);
+        expect(store.state.forge).toBeNull();
+        expect(store.state.bankroll).toBe(9700);
+        expect(store.state.forging).toBe(false);
+      }
+    });
+  });
+
+  describe('clearing the room', () => {
+    it('clears on a pass at the clearing length', async () => {
+      const storage = saved();
+      const store = make({ rng: passing, storage });
+      await store.forge(CAGE_CLEAR_LENGTH, PAYS);
+      expect(store.state.cleared).toEqual(['cage']);
+      expect(saveOf(storage)?.cleared).toEqual(['cage']);
+    });
+
+    it('does not clear on a shorter pass or a catch', async () => {
+      const short = make({ rng: passing, storage: saved() });
+      await short.forge(CAGE_CLEAR_LENGTH - 1, PAYS);
+      expect(short.state.cleared).toEqual([]);
+      const lost = make({ rng: caught, storage: saved() });
+      await lost.forge(8, PAYS);
+      expect(lost.state.cleared).toEqual([]);
+    });
+
+    it('clears once', async () => {
+      const store = make({ rng: passing, storage: saved() });
+      await store.forge(CAGE_CLEAR_LENGTH, PAYS);
+      await store.forge(8, PAYS);
+      expect(store.state.cleared).toEqual(['cage']);
+    });
+
+    it('cannot lose a clearing win staked with the last chips', async () => {
+      const storage = saved({ bankroll: 100, stake: 100 });
+      const store = make({ rng: passing, storage });
+      await store.forge(CAGE_CLEAR_LENGTH, PAYS);
+      expect(store.state.broke).toBe(false);
+      expect(store.state.cleared).toEqual(['cage']);
+      expect(saveOf(storage)?.cleared).toEqual(['cage']);
+    });
+
+    it('stays cleared across a reload, and restart clears it', async () => {
+      const storage = saved();
+      const store = make({ rng: passing, storage });
+      await store.forge(CAGE_CLEAR_LENGTH, PAYS);
+      const reloaded = make({ storage });
+      expect(reloaded.state.cleared).toEqual(['cage']);
+      reloaded.restart();
+      expect(reloaded.state.cleared).toEqual([]);
+    });
+  });
+
+  describe('saving', () => {
+    it('writes the bankroll once, at the settled point', async () => {
+      const held = heldForge();
+      const storage = saved();
+      const store = make({ source: held.source, rng: passing, storage });
+      const forged = store.forge(1, PAYS);
+      expect(storage.writes).toBe(0);
+      held.release(await source.wiesner(1));
+      await forged;
+      expect(storage.writes).toBe(1);
+      expect(saveOf(storage)?.bankroll).toBe(9700 + pays(1));
+    });
+
+    it('never writes the forge, so a reload starts with no receipt', async () => {
+      const storage = saved();
+      const store = make({ rng: passing, storage });
+      await store.forge(1, PAYS);
+      expect(storage.getItem(SAVE_KEY)).not.toContain('forge');
+      const reloaded = make({ storage });
+      expect(reloaded.state.forge).toBeNull();
+      expect(reloaded.state.bankroll).toBe(9700 + pays(1));
+    });
+
+    it('still loads a save written before the cage existed', () => {
+      const storage = memoryStorage();
+      storage.setItem(
+        SAVE_KEY,
+        JSON.stringify({ version: 1, bankroll: 1234, phase: 'wall', dial: 0.25, stake: 200, cleared: [] }),
+      );
+      const store = make({ storage });
+      expect(store.state.bankroll).toBe(1234);
+      expect(store.state.forge).toBeNull();
+    });
+
+    it('brings a save that went broke at the cage back broke', async () => {
+      const storage = saved({ phase: 'intro', bankroll: 100, stake: 100 });
+      const store = make({ rng: caught, storage });
+      await store.forge(1, PAYS);
+      const reloaded = make({ storage });
+      expect(reloaded.state.broke).toBe(true);
+      expect(reloaded.state.bankroll).toBe(0);
+    });
+  });
+
+  describe('restart and dispose', () => {
+    it('restart clears the forge and works from broke', async () => {
+      const store = make({ rng: caught, storage: saved({ bankroll: 100, stake: 100 }) });
+      await store.forge(1, PAYS);
+      expect(store.state.broke).toBe(true);
+      store.restart();
+      expect(store.state.forge).toBeNull();
+      expect(store.state.broke).toBe(false);
+      expect(store.state.bankroll).toBe(START_BANKROLL);
+    });
+
+    it('restart abandons a forge in flight', async () => {
+      const held = heldForge();
+      const store = make({ source: held.source, rng: passing, storage: saved() });
+      const forged = store.forge(1, PAYS);
+      store.restart();
+      expect(store.state.forging).toBe(false);
+      held.release(await source.wiesner(1));
+      await forged;
+      expect(store.state.forge).toBeNull();
+      expect(store.state.bankroll).toBe(START_BANKROLL);
+    });
+
+    it('a new forge after restart is not ended by the old one', async () => {
+      const pending: ((result: WiesnerResult) => void)[] = [];
+      const store = make({
+        source: { ...source, wiesner: () => new Promise((resolve) => { pending.push(resolve); }) },
+        rng: passing,
+        storage: saved(),
+      });
+      const old = store.forge(1, PAYS);
+      store.restart();
+      const fresh = store.forge(2, PAYS);
+      pending[0]?.(await source.wiesner(1));
+      await old;
+      expect(store.state.forging).toBe(true);
+      pending[1]?.(await source.wiesner(2));
+      await fresh;
+      expect(store.state.forge?.length).toBe(2);
+      expect(store.state.forging).toBe(false);
+    });
+
+    it('dispose abandons a forge in flight', async () => {
+      const held = heldForge();
+      const storage = saved();
+      const store = make({ source: held.source, rng: passing, storage });
+      const forged = store.forge(1, PAYS);
+      store.dispose();
+      held.release(await source.wiesner(1));
+      await forged;
+      expect(store.state.bankroll).toBe(9700);
+      expect(storage.writes).toBe(0);
+    });
   });
 });
 

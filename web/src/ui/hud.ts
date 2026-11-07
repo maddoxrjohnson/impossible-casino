@@ -1,4 +1,7 @@
 // The DOM over the film: brass plaques, a lift dial, intertitles, ticket stubs and a paper marker. A hotel floor indicator over a noir title card.
+import type { CageBoard } from '../game/cage';
+import type { GameState } from '../game/store';
+import { createCagePanel } from './cage-panel';
 import type { Receipt } from './receipt';
 import type { StakeChoice } from './table';
 
@@ -22,8 +25,11 @@ export interface HudOptions {
   onDial: (value: number) => void;
   onStake: (value: number) => void;
   onSound: (on: boolean) => void;
-  /** The marker for the latest run, or null when there is no run to show. */
-  onReceipt: () => Receipt | null;
+  /** The marker for the room in view, or null when there is nothing to show. */
+  onReceipt: (inCage: boolean) => Receipt | null;
+  /** The Cage's board, read from the export. */
+  cage: CageBoard;
+  onForge: (length: number) => void;
 }
 
 export type Hud = ReturnType<typeof createHud>;
@@ -33,7 +39,7 @@ const svg = (tag: string, attrs: Record<string, string | number>, parent?: Eleme
 const LIFT_A = (i: number) => -76 + i * 38;   // stage angle in degrees either side of straight up
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
 
-export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, onAction, onDial, onStake, onSound, onReceipt }: HudOptions) {
+export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, onAction, onDial, onStake, onSound, onReceipt, cage, onForge }: HudOptions) {
   root.classList.add('deco');
 
   const hud = el('div', 'dc-hud');
@@ -43,7 +49,8 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
     <div class="dc-cell is-limit"><div class="dc-k">The limit</div><div class="dc-v" data-v="limit"></div><div class="dc-s" data-v="even"></div></div>`);
   const mid = el('div', 'dc-mid');
   const title = el('div', 'dc-title', `<h1>The Impossible <br>Casino</h1><p>Built inside a dilution refrigerator</p>`);
-  mid.appendChild(title);
+  const cagePanel = createCagePanel({ board: cage, stakes, onForge, onRestart: () => { onAction('restart'); }, onStake });
+  mid.append(title, cagePanel.box);
   const ticket = el('div', 'dc-ticket', `<b data-v="tt">Hand</b>
     <div class="row"><span>Your question</span><span data-v="x"></span></div>
     <div class="row"><span>Theirs</span><span data-v="y"></span></div>
@@ -92,9 +99,9 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   const marker = el('div', 'dc-marker');
   // Focusable so a keyboard can scroll a marker taller than the screen.
   marker.tabIndex = 0;
-  const circuitTitle = el('p', 'cap'), pre = el('pre'), circuitNote = el('p', 'cap'), details = el('dl'), stamp = el('span', 'dc-stamp');
+  const markerSub = el('p', 'sub'), circuitTitle = el('p', 'cap'), pre = el('pre'), circuitNote = el('p', 'cap'), details = el('dl'), stamp = el('span', 'dc-stamp');
   const close = el('button', 'dc-btn', 'Close marker'); close.type = 'button';
-  marker.append(el('h2', '', 'Casino marker'), el('p', 'sub', 'Payable at the Cage: what the table ran, and where.'), circuitTitle, pre, circuitNote, details, stamp, close);
+  marker.append(el('h2', '', 'Casino marker'), markerSub, circuitTitle, pre, circuitNote, details, stamp, close);
   receipt.append(marker);
 
   root.append(hud, receipt);
@@ -107,7 +114,7 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   const stakeInputs = [...stakeRow.querySelectorAll('input')];
   input.min = String(dialRange.min); input.max = String(dialRange.max); input.step = String(dialRange.step);
 
-  let swapTimer = 0;
+  let swapTimer = 0, room: SideName | null = null;
   function say(text: string) {
     if (cache.get('say') === text) return; cache.set('say', text);
     clearTimeout(swapTimer); line.classList.add('is-swap');
@@ -127,9 +134,9 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   const onStakeChange = (e: Event) => { if (e.target instanceof HTMLInputElement) onStake(+e.target.value); };
   const isOpen = () => receipt.classList.contains('is-on');
   const onReceiptOpen = () => {
-    const data = onReceipt();
+    const data = onReceipt(room === 'cage');
     if (!data) return;
-    circuitTitle.textContent = data.circuitTitle; pre.textContent = data.qasm; circuitNote.textContent = data.circuitNote; stamp.textContent = data.stamp;
+    markerSub.textContent = data.sub; circuitTitle.textContent = data.circuitTitle; pre.textContent = data.qasm; circuitNote.textContent = data.circuitNote; stamp.textContent = data.stamp;
     details.replaceChildren(...data.rows.flatMap(([k, value]) => { const a = el('dt'), b = el('dd'); a.textContent = k; b.textContent = value; return [a, b]; }));
     hud.inert = true; receipt.classList.add('is-on'); marker.scrollTop = 0; marker.focus({ preventScroll: true });
   };
@@ -159,8 +166,8 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
       if (cache.get('here') !== here) { cache.set('here', here); stageT.forEach((t, i) => t.classList.toggle('is-here', i === here)); }
     },
     stubs(on: boolean, hasReceipt: boolean) { clockBtn.disabled = !on; winBtn.disabled = !on; receiptBtn.disabled = !(on && hasReceipt); },
-    /** Without a building to walk through, the side-room buttons go. */
-    rooms(on: boolean) { clockBtn.hidden = !on; winBtn.hidden = !on; },
+    /** Which side rooms exist. The Cage is a panel, so it works without a building; the wheel does not. */
+    rooms(cageOn: boolean, wheelOn: boolean) { clockBtn.hidden = !cageOn; winBtn.hidden = !wheelOn; },
     source(text: string | null) { const s = text ?? ''; if (cache.get('source') !== s) { cache.set('source', s); sourceTag.textContent = s; sourceTag.hidden = !s; } },
     title(on: boolean) { title.classList.toggle('is-gone', !on); },
     dial(on: boolean) { dial.classList.toggle('is-on', on); },
@@ -168,16 +175,23 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
     stakes(choices: readonly StakeChoice[], stake: number) { stakeInputs.forEach((box, i) => { box.checked = +box.value === stake; box.disabled = !!choices[i]?.disabled; }); },
     ticket(on: boolean) { ticket.classList.toggle('is-on', on); },
     colour(on: boolean) { root.classList.toggle('is-colour', on); },
-    side(name: SideName | null) { root.classList.toggle('is-side', !!name); clockBtn.textContent = name === 'cage' ? 'Back to the table' : 'The cage'; winBtn.textContent = name === 'wheel' ? 'Back to the table' : 'The wheel'; },
+    side(name: SideName | null) {
+      const focused = cagePanel.box.contains(document.activeElement);
+      room = name; root.classList.toggle('is-side', !!name); root.classList.toggle('is-cage', name === 'cage'); cagePanel.show(name === 'cage');
+      if (focused && name !== 'cage') clockBtn.focus({ preventScroll: true });
+      clockBtn.textContent = name === 'cage' ? 'Back to the table' : 'The cage'; winBtn.textContent = name === 'wheel' ? 'Back to the table' : 'The wheel';
+    },
+    /** Hands the panel the game. Called on every store change, in or out of the room. */
+    cage(s: GameState) { cagePanel.sync(s); },
     hot(on: boolean) { root.querySelector('canvas')?.classList.toggle('is-hot', on); hint.classList.toggle('is-on', on); },
     hint(text: string, x: number, y: number) { hint.textContent = text; hint.style.left = `${x}px`; hint.style.top = `${y}px`; },
     dispose() {
-      clearTimeout(swapTimer);
+      clearTimeout(swapTimer); cagePanel.dispose();
       main.removeEventListener('click', clickMain); alt.removeEventListener('click', clickAlt); input.removeEventListener('input', onInput); stakeRow.removeEventListener('change', onStakeChange);
       receiptBtn.removeEventListener('click', onReceiptOpen); close.removeEventListener('click', onReceiptClose); receipt.removeEventListener('pointerdown', onReceiptDown); receipt.removeEventListener('click', onBackdrop);
       clockBtn.removeEventListener('click', onClock); winBtn.removeEventListener('click', onWin); soundBtn.removeEventListener('click', onSnd);
       document.removeEventListener('keydown', onKey);
-      hud.remove(); receipt.remove(); root.classList.remove('deco', 'is-colour', 'is-side');
+      hud.remove(); receipt.remove(); root.classList.remove('deco', 'is-colour', 'is-side', 'is-cage');
     },
   };
 }

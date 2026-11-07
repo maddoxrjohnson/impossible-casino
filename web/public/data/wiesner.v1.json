@@ -46,7 +46,7 @@
   "byLengthMethod": "perQubit to the power of length, because the qubits are independent with no entangling gates"
  },
  "payouts": {
-  "status": "proposed",
+  "status": "accepted",
   "stake": 100,
   "rule": "fair total return times 0.95, with net profit on a 100 stake rounded down to a multiple of 5",
   "table": [

@@ -1,6 +1,7 @@
 import './styles.css';
 import './ui/hud.css';
 import { createAudio } from './audio/audio';
+import { cageBoard, type ForgeAttempt } from './game/cage';
 import { createPrerunSource, loadExports } from './game/results';
 import { STAKES } from './game/rules';
 import { createGameStore } from './game/store';
@@ -8,7 +9,7 @@ import { showFallback } from './ui/fallback';
 import { createFlatTable } from './ui/flat';
 import { createHud, type HudAction } from './ui/hud';
 import { dialStep } from './ui/lines';
-import { chshReceipt } from './ui/receipt';
+import { markerFor } from './ui/receipt';
 import { stakeChoices } from './ui/table';
 
 /** The exported run the table plays. Noisy on purpose: it is the closest stand-in for a real chip. */
@@ -69,6 +70,7 @@ async function boot(root: HTMLElement): Promise<void> {
     const source = createPrerunSource(exports, RUN_ID);
     const store = createGameStore({ source });
     const audio = createAudio();
+    const cage = cageBoard(exports.wiesner, RUN_ID);
     const actions: Record<HudAction, () => void> = {
       deal: () => {
         store.deal();
@@ -103,14 +105,22 @@ async function boot(root: HTMLElement): Promise<void> {
         store.setStake(value);
         // As with the dial, a refused stake does not emit.
         hud.stakes(stakeChoices(store.state, false), store.state.stake);
+        hud.cage(store.state);
       },
       onSound: (on) => {
         audio.set(on);
       },
-      onReceipt: () => {
-        const { result, last } = store.state;
-        return result ? chshReceipt(result, last, source.limits) : null;
+      onReceipt: (inCage) => markerFor(store.state, inCage, source.limits, cage),
+      cage,
+      onForge: (length) => {
+        void store.forge(length, cage.payoutStake);
       },
+    });
+    let heard: ForgeAttempt | null = null;
+    store.subscribe((state) => {
+      hud.cage(state);
+      if (state.forge && state.forge !== heard) audio.tick(state.forge.passed);
+      heard = state.forge;
     });
 
     let closed = false;

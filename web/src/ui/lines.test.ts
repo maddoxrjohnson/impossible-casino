@@ -25,6 +25,7 @@ describe('money and signed amounts', () => {
   it('signs a change with a true minus', () => {
     expect(signedAmount(25)).toBe('+25');
     expect(signedAmount(-100)).toBe('−100');
+    expect(signedAmount(8450)).toBe('+8,450');
   });
 });
 
@@ -109,6 +110,30 @@ describe('createLines', () => {
   it('gives break-even from the rules', () => {
     expect(lines.wall).toContain('80%');
     expect(lines.over).toContain('80%');
+  });
+});
+
+describe('the cage lines', () => {
+  const lines = createLines(limits);
+  const said = [lines.cage, lines.forged, lines.caught, lines.cageClear, lines.forgeFailed];
+
+  it('no longer says the cage waits on the table', () => {
+    expect(lines.cage).not.toMatch(/opens when/i);
+  });
+
+  it('teaches that a forger has to guess and the check catches it', () => {
+    expect(lines.cage).toMatch(/guess/i);
+    expect(lines.cage).toMatch(/teller/i);
+    expect(lines.caught).toMatch(/guess/i);
+  });
+
+  it('makes no claim about single qubits, noise, or a chip run', () => {
+    for (const line of said) {
+      expect(line).not.toMatch(/noise|first qubit|last qubit|\bqubit \d/i);
+      expect(line).not.toMatch(/ibm|on a chip/i);
+    }
+    expect(lines.forged).not.toMatch(/every qubit/i);
+    expect(lines.caught).not.toMatch(/every qubit/i);
   });
 });
 

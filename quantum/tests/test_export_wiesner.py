@@ -433,7 +433,7 @@ def test_replay_notices_a_dropped_or_changed_layout(committed, committed_noise):
 
 def test_payouts_pay_the_expected_table(export):
     table = export["payouts"]["table"]
-    assert export["payouts"]["status"] == "proposed"
+    assert export["payouts"]["status"] == "accepted"
     assert export["payouts"]["stake"] == 100
     assert export["payouts"]["rule"]
     assert {row["length"]: row["pays"] for row in table} == {

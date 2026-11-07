@@ -1,6 +1,7 @@
 // Puts the game on the HUD. Shared by the 3D view and the flat table, so it stays clear of the renderer.
 import { BREAK_EVEN, winPayout } from '../game/rules';
 import type { ResultSource } from '../game/results';
+import type { ForgeAttempt } from '../game/cage';
 import type { GameState, Phase } from '../game/store';
 import type { Hud } from './hud';
 import { type LineKey, money, pct, signedAmount } from './lines';
@@ -12,12 +13,24 @@ export interface HudSyncOptions {
   source: Pick<ResultSource, 'limits' | 'previewProvenance'>;
   lines: Record<LineKey, string>;
   /** Read on every sync, so the caller can lock the table or leave it for a side room. */
-  moment: () => TableMoment;
+  moment: () => TableMoment & { readonly inCage?: boolean };
 }
 
 export function createHudSync(hud: HudSurface, { source, lines, moment }: HudSyncOptions) {
   const LIMIT = pct(source.limits.classical), EVEN = pct(BREAK_EVEN);
   let lastPhase: Phase | null = null, lastBroke = false, lastBand: LineKey | '' = '', running = false, buttonKey = '', ticketFilled = false;
+  let lastForge: ForgeAttempt | null = null, lastForging = false, cageCleared = false;
+  /** A forge can settle after the player has left the room, so its line is not tied to being there. */
+  const forgeLine = (s: GameState): boolean => {
+    const justCleared = !cageCleared && s.cleared.includes('cage');
+    cageCleared = s.cleared.includes('cage');
+    const settled = s.forge !== null && s.forge !== lastForge;
+    const failed = lastForging && !s.forging && s.forge === lastForge && s.phase === lastPhase;
+    if (settled) hud.say(lines[s.broke ? 'broke' : justCleared ? 'cageClear' : s.forge?.passed ? 'forged' : 'caught']);
+    else if (failed) hud.say(lines.forgeFailed);
+    lastForge = s.forge; lastForging = s.forging;
+    return settled || failed;
+  };
   return {
     sync: (s: GameState): void => {
       hud.put('bank', money(s.bankroll));
@@ -35,8 +48,10 @@ export function createHudSync(hud: HudSurface, { source, lines, moment }: HudSyn
         hud.put('res', l.win ? 'Won' : 'Lost');
         hud.put('amt', signedAmount(l.delta));
         hud.put('delta', `last hand ${signedAmount(l.delta)}`);
-      } else hud.put('delta', '\u00a0');
-      const p = s.phase, b = s.autoplaying, { locked: lock, inRoom } = moment();
+      }
+      const p = s.phase, b = s.autoplaying, { locked: lock, inRoom, inCage = false } = moment();
+      if (inCage && s.forge) hud.put('delta', `last forge ${signedAmount(s.forge.delta)}`);
+      else if (!s.last) hud.put('delta', '\u00a0');
       // A reloaded game has no last hand, and a run clears it, so the stub stays down until it has one to show.
       ticketFilled = p !== 'intro' && (ticketFilled || !!s.last);
       hud.ticket(ticketFilled);
@@ -44,23 +59,24 @@ export function createHudSync(hud: HudSurface, { source, lines, moment }: HudSyn
       if (p !== lastPhase || (lastBroke && !s.broke)) {
         hud.title(p === 'intro');
         if (p === 'intro' || p === 'classical' || p === 'wall') hud.colour(false);
-        hud.say(lines[p]); lastBand = ''; running = false;
+        hud.say(lines[inCage ? 'cage' : p]); lastBand = ''; running = false;
       }
       hud.dial((p === 'entangled' || p === 'beyond') && !lock && !inRoom && !s.broke);
       hud.dialLocked(b);
       hud.stakes(stakeChoices(s, lock), s.stake);
       hud.source(inRoom ? null : sourceLine(s, source.previewProvenance));
-      const key = `${p}|${b}|${lock}|${inRoom}|${s.broke}|${!!s.result}`;
+      const key = `${p}|${b}|${lock}|${inRoom}|${s.broke}|${!!s.result}|${inCage}|${!!s.forge}`;
       if (buttonKey !== key) {
         buttonKey = key;
         const { main, alt } = tableButtons(s, { locked: lock, inRoom });
         hud.buttons(main, alt);
-        hud.stubs(p !== 'classical' && !b && !lock, !!s.result);
+        hud.stubs(p !== 'classical' && !b && !lock, inCage ? !!s.forge : !!s.result);
       }
+      const spoke = forgeLine(s);
       if (!b && !lock && !inRoom) {
         const owed = settledLine(s, running, source.limits, lastBand);
         // A phase line gets its moment first; only being broke overrides it at once.
-        if (owed && owed !== lastBand && (s.broke || lastPhase === p)) { lastBand = owed; hud.say(lines[owed]); }
+        if (owed && owed !== lastBand && (s.broke || lastPhase === p)) { lastBand = owed; if (!spoke) hud.say(lines[owed]); }
         running = false;
       }
       if (b && s.mode === 'quantum') running = true;

@@ -17,6 +17,10 @@ export const RUN_HANDS = 36;
 export const BEYOND_MIN_HANDS = 24;
 export const HAND_MS = 90;
 export const HISTORY_CAP = 120;
+/** The chip lengths the Cage offers. */
+export const FORGE_LENGTHS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+/** Provisional: a forgery that passes at this length or longer clears the Cage. */
+export const CAGE_CLEAR_LENGTH = 4;
 /** Starts mistuned, so the player has something to find. Snapped to the grid at use. */
 export const START_DIAL = 0.14;
 /** The best classical strategy: both players always answer 0. */
@@ -37,6 +41,10 @@ export const BREAK_EVEN = CLASSICAL_STAKE / (CLASSICAL_STAKE + winPayout(CLASSIC
 
 export function isStake(value: unknown): value is number {
   return STAKES.some((stake) => stake === value);
+}
+
+export function isForgeLength(value: unknown): value is number {
+  return FORGE_LENGTHS.some((length) => length === value);
 }
 
 export function chshWin(x: Bit, y: Bit, a: Bit, b: Bit): boolean {

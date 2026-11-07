@@ -32,7 +32,7 @@ export function createFlatTable(root: HTMLElement, { store, source, hud, audio, 
   const { limits } = source;
   const surface = showFallback(root, 'no-webgl', hud.hud);
   root.classList.add('is-flat');
-  hud.rooms(false);
+  hud.rooms(true, false);
 
   const felt = document.createElement('div');
   felt.className = 'dc-felt';
@@ -53,8 +53,20 @@ export function createFlatTable(root: HTMLElement, { store, source, hud, audio, 
   const fill = felt.querySelector('.dc-bar-fill') as HTMLElement;
 
   // Story beats belong to the 3D view. Here the next control is always ready.
-  const moment = { locked: false, inRoom: false };
-  const { sync } = createHudSync(hud, { source, lines: createLines(limits), moment: () => moment });
+  const moment = { locked: false, inRoom: false, inCage: false };
+  const lines = createLines(limits);
+  const { sync, clearBand } = createHudSync(hud, { source, lines, moment: () => moment });
+
+  // The Cage is the one room that needs no building, so it opens over the same HUD.
+  hud.setSide((name) => {
+    const enter = name === 'cage' && !moment.inCage;
+    if (enter === moment.inCage) return;
+    moment.inRoom = moment.inCage = enter;
+    hud.side(enter ? 'cage' : null);
+    hud.say(enter ? lines.cage : lines[store.state.phase]);
+    clearBand();
+    sync(store.state);
+  });
 
   let held: FlatHand | null = null, flooded = false;
   const paint = (s: GameStore['state']): void => {

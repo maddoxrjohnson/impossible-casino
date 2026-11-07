@@ -64,6 +64,7 @@ BY_LENGTH_METHOD = (
 MEASURES_PER_QUBIT = 2
 SX_PER_QUBIT = 8
 
+PAYOUT_STATUS = "accepted"
 STAKE = 100
 HOUSE_RETURN = 0.95
 PAYS_STEP = 5
@@ -182,7 +183,7 @@ def limits(lengths: Sequence[int]) -> dict[str, Any]:
 
 
 def payouts(by_length: Sequence[dict[str, Any]]) -> dict[str, Any]:
-    """A proposed pay table, set from the limits. pays is net profit on the stake."""
+    """The pay table, set from the limits. pays is net profit on the stake."""
     table = []
     for entry in by_length:
         limit = entry["value"]
@@ -197,7 +198,7 @@ def payouts(by_length: Sequence[dict[str, Any]]) -> dict[str, Any]:
                 "houseEdge": 1 - (STAKE + pays) / STAKE * limit,
             }
         )
-    return {"status": "proposed", "stake": STAKE, "rule": PAYOUT_RULE, "table": table}
+    return {"status": PAYOUT_STATUS, "stake": STAKE, "rule": PAYOUT_RULE, "table": table}
 
 
 def logical_circuits(lengths: Sequence[int]) -> list[dict[str, Any]]:
