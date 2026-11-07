@@ -1,0 +1,17 @@
+[project]
+name = "impossible-casino-quantum"
+version = "0.1.0"
+description = "Qiskit circuits and exports behind The Impossible Casino"
+requires-python = ">=3.12"
+dependencies = [
+    "qiskit>=2.6,<2.7",
+    "qiskit-aer>=0.18,<0.19",
+    "qiskit-ibm-runtime>=0.51,<0.52",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=9"]
+
+[tool.pytest.ini_options]
+testpaths = ["quantum/tests"]
+pythonpath = ["."]
