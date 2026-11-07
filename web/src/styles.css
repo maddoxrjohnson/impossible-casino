@@ -1,0 +1,73 @@
+:root {
+  color-scheme: dark;
+  --black: #000;
+  --paper: #e9e0c9;
+  --gold: #d4ae5d;
+  --serif: 'Bodoni Moda', Didot, 'Hoefler Text', Georgia, serif;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: var(--black);
+  color: var(--paper);
+  font-family: var(--serif);
+  overflow: hidden;
+}
+
+#app {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+#app canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+#status,
+.notice {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  text-align: center;
+}
+
+#status {
+  color: var(--gold);
+  font-size: 18px;
+  font-style: italic;
+  letter-spacing: 0.04em;
+}
+
+.notice h1 {
+  margin: 0;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--gold);
+  color: var(--gold);
+  font-size: clamp(30px, 6vw, 52px);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+
+.notice h2 {
+  margin: 24px 0 0;
+  font-size: clamp(20px, 3.5vw, 26px);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.notice p {
+  max-width: 34em;
+  margin: 12px 0 0;
+  font-size: 17px;
+  line-height: 1.55;
+}
