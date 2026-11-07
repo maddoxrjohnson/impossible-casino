@@ -7,7 +7,7 @@ import type { Hud } from './hud';
 import { type LineKey, money, pct, signedAmount } from './lines';
 import { settledLine, sourceLine, stakeChoices, tableButtons, type TableMoment } from './table';
 
-export type HudSurface = Pick<Hud, 'put' | 'say' | 'buttons' | 'input' | 'stubs' | 'source' | 'title' | 'dial' | 'dialLocked' | 'stakes' | 'ticket' | 'colour'>;
+export type HudSurface = Pick<Hud, 'put' | 'say' | 'buttons' | 'input' | 'stubs' | 'source' | 'title' | 'dial' | 'dialLocked' | 'stakes' | 'ticket' | 'colour' | 'progress'>;
 
 export interface HudSyncOptions {
   source: Pick<ResultSource, 'limits' | 'previewProvenance'>;
@@ -33,6 +33,7 @@ export function createHudSync(hud: HudSurface, { source, lines, moment }: HudSyn
   };
   return {
     sync: (s: GameState): void => {
+      hud.progress(s.cleared);
       hud.put('bank', money(s.bankroll));
       hud.put('rate', s.rounds ? pct(s.winRate, 1) : 'No hands');
       hud.put('hands', s.rounds ? `over ${s.rounds} hand${s.rounds === 1 ? '' : 's'}` : 'dealt yet');

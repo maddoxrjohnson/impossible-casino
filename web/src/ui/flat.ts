@@ -1,6 +1,6 @@
 // The table without WebGL: the same game on the same HUD, over a flat surface in place of the felt. Nothing here waits on an animation.
 import type { GameAudio } from '../audio/audio';
-import { BREAK_EVEN } from '../game/rules';
+import { BREAK_EVEN, type RoomId } from '../game/rules';
 import type { ResultSource } from '../game/results';
 import type { GameStore } from '../game/store';
 import { showFallback } from './fallback';
@@ -18,6 +18,8 @@ export interface FlatTableOptions {
 }
 
 const BLANK = '–';
+/** The rooms with a view that needs no building. A new room joins the elevator here once it has one. */
+const FLAT_ROOMS: readonly RoomId[] = ['tables', 'cage'];
 
 function seat(name: string) {
   const box = document.createElement('div');
@@ -32,7 +34,7 @@ export function createFlatTable(root: HTMLElement, { store, source, hud, audio, 
   const { limits } = source;
   const surface = showFallback(root, 'no-webgl', hud.hud);
   root.classList.add('is-flat');
-  hud.rooms(true, false);
+  hud.rooms((room) => FLAT_ROOMS.includes(room));
 
   const felt = document.createElement('div');
   felt.className = 'dc-felt';
@@ -59,7 +61,7 @@ export function createFlatTable(root: HTMLElement, { store, source, hud, audio, 
 
   // The Cage is the one room that needs no building, so it opens over the same HUD.
   hud.setSide((name) => {
-    const enter = name === 'cage' && !moment.inCage;
+    const enter = name === 'cage';
     if (enter === moment.inCage) return;
     moment.inRoom = moment.inCage = enter;
     hud.side(enter ? 'cage' : null);

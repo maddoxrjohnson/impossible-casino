@@ -1,5 +1,7 @@
 // The DOM over the film: brass plaques, a lift dial, intertitles, ticket stubs and a paper marker. A hotel floor indicator over a noir title card.
 import type { CageBoard } from '../game/cage';
+import { ROOM_LIST, colourLevel, colourStep, elevatorStops, nextStop, roomInfo } from '../game/rooms';
+import type { RoomId } from '../game/rules';
 import type { GameState } from '../game/store';
 import { createCagePanel } from './cage-panel';
 import type { Receipt } from './receipt';
@@ -7,7 +9,8 @@ import type { StakeChoice } from './table';
 
 export type HudKey = 'bank' | 'delta' | 'rate' | 'hands' | 'limit' | 'even' | 'odds' | 'pays' | 'tt' | 'x' | 'y' | 'a' | 'b' | 'res' | 'amt';
 export type HudAction = 'deal' | 'entangle' | 'run' | 'restart';
-export type SideName = 'cage' | 'wheel';
+/** A room off the Tables, reached by the elevator. */
+export type SideName = Exclude<RoomId, 'tables'>;
 
 export interface HudButton {
   label: string;
@@ -41,6 +44,7 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: 
 
 export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, onAction, onDial, onStake, onSound, onReceipt, cage, onForge }: HudOptions) {
   root.classList.add('deco');
+  root.dataset.colour = '0';
 
   const hud = el('div', 'dc-hud');
   const plaque = el('div', 'dc-plaque', `
@@ -69,10 +73,9 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   row.append(main, alt);
   const stubs = el('div', 'dc-row');
   const receiptBtn = el('button', 'dc-stub', 'Receipt'); receiptBtn.type = 'button'; receiptBtn.disabled = true;
-  const clockBtn = el('button', 'dc-stub', 'The cage'); clockBtn.type = 'button';
-  const winBtn = el('button', 'dc-stub', 'The wheel'); winBtn.type = 'button';
+  const liftBtn = el('button', 'dc-stub dc-lift-stub', 'Elevator'); liftBtn.type = 'button'; liftBtn.setAttribute('aria-haspopup', 'dialog');
   const soundBtn = el('button', 'dc-stub', 'Sound off'); soundBtn.type = 'button'; soundBtn.setAttribute('aria-pressed', 'false');
-  stubs.append(receiptBtn, clockBtn, winBtn, soundBtn);
+  stubs.append(receiptBtn, liftBtn, soundBtn);
   stubs.classList.add('dc-stubs');
   base.append(card, dial, row);
   const lift = el('div', 'dc-lift'); lift.setAttribute('role', 'img');
@@ -104,7 +107,25 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   marker.append(el('h2', '', 'Casino marker'), markerSub, circuitTitle, pre, circuitNote, details, stamp, close);
   receipt.append(marker);
 
-  root.append(hud, receipt);
+  // The elevator: a floor panel over the film, every stop listed top to bottom of the fridge.
+  const elevator = el('div', 'dc-receipt dc-elevator');
+  elevator.setAttribute('role', 'dialog'); elevator.setAttribute('aria-modal', 'true'); elevator.setAttribute('aria-labelledby', 'dc-elevator-h');
+  const car = el('div', 'dc-car', `<h2 id="dc-elevator-h">Elevator</h2><p class="sub">Any open floor, in any order.</p>`);
+  const floors = el('div', 'dc-floors');
+  const floorBtns = elevatorStops().map((room) => {
+    const b = el('button', 'dc-floor'); b.type = 'button'; b.dataset.room = room.id;
+    b.innerHTML = `<span class="dc-floor-k"></span><span class="dc-floor-n"></span><span class="dc-floor-t"></span>`;
+    const [k, n, t] = b.children as unknown as [HTMLElement, HTMLElement, HTMLElement];
+    k.textContent = room.stage; n.textContent = room.name;
+    floors.appendChild(b);
+    return { id: room.id, b, t };
+  });
+  const liftNote = el('p', 'dc-car-note');
+  const stay = el('button', 'dc-btn', 'Stay on this floor'); stay.type = 'button';
+  car.append(floors, liftNote, stay);
+  elevator.append(car);
+
+  root.append(hud, receipt, elevator);
 
   const v = new Map<string, HTMLElement>(); root.querySelectorAll<HTMLElement>('[data-v]').forEach((n) => { if (n.dataset.v) v.set(n.dataset.v, n); });
   const cache = new Map<string, string | number>();
@@ -115,6 +136,9 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   input.min = String(dialRange.min); input.max = String(dialRange.max); input.step = String(dialRange.step);
 
   let swapTimer = 0, room: SideName | null = null;
+  let cleared: readonly RoomId[] = [], reachable: (id: RoomId) => boolean = () => true, liftOn = true, progressKey = '';
+  const here = (): RoomId => room ?? 'tables';
+  const canStop = (id: RoomId) => roomInfo(id).open && reachable(id);
   function say(text: string) {
     if (cache.get('say') === text) return; cache.set('say', text);
     clearTimeout(swapTimer); line.classList.add('is-swap');
@@ -145,13 +169,52 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   let downOnBackdrop = false;
   const onReceiptDown = (e: PointerEvent) => { downOnBackdrop = e.target === receipt; };
   const onBackdrop = (e: MouseEvent) => { if (downOnBackdrop && e.target === receipt) onReceiptClose(); };
-  const onKey = (e: KeyboardEvent) => { if (e.key !== 'Escape') return; if (isOpen()) onReceiptClose(); else onSide('back'); };
-  const onClock = () => { onSide('cage'); }, onWin = () => { onSide('wheel'); };
+  const isLiftOpen = () => elevator.classList.contains('is-on');
+  /** The stops, the quiet hint on the stub and the panel, all from the cleared rooms. Nothing is forced. */
+  const paintLift = () => {
+    const next = nextStop(cleared, ROOM_LIST, reachable), at = here();
+    for (const { id, b, t } of floorBtns) {
+      const can = canStop(id), parts = [id === at ? 'You are here' : '', !can ? 'Not open yet' : '', can && cleared.includes(id) ? 'Cleared' : '', can && id === next && id !== at ? 'Suggested next' : ''].filter(Boolean);
+      t.textContent = parts.join(' · ');
+      b.setAttribute('aria-disabled', String(!can));
+      if (id === at) b.setAttribute('aria-current', 'location'); else b.removeAttribute('aria-current');
+      b.classList.toggle('is-next', can && id === next && id !== at);
+    }
+    const nextName = next ? roomInfo(next).name : '';
+    liftNote.textContent = !next ? 'Every open floor is cleared. The house still takes bets on all of them.' : next === at ? 'You are on the suggested floor.' : `Suggested next: ${nextName}.`;
+    const hint = !!next && next !== at;
+    liftBtn.classList.toggle('is-next', hint);
+    liftBtn.setAttribute('aria-label', hint ? `Elevator, suggested next: ${nextName}` : 'Elevator');
+  };
+  const onLiftOpen = () => {
+    if (!liftOn || isLiftOpen() || isOpen()) return;
+    paintLift();
+    hud.inert = true; elevator.classList.add('is-on');
+    const next = floorBtns.find((f) => f.b.classList.contains('is-next')) ?? floorBtns.find((f) => f.id === here());
+    next?.b.focus({ preventScroll: true });
+  };
+  const closeLift = (refocus = true) => { if (!isLiftOpen()) return; hud.inert = false; elevator.classList.remove('is-on'); if (refocus) liftBtn.focus({ preventScroll: true }); };
+  /** Glides to the stop. Focus lands on the room's first control, or back on the stub if the world said not now. */
+  const travel = (id: RoomId) => {
+    if (!canStop(id)) return;
+    if (id === here()) { closeLift(); return; }
+    closeLift(false);
+    onSide(id === 'tables' ? 'back' : id);
+    if (here() !== id) liftBtn.focus({ preventScroll: true });
+    else if (id === 'tables') main.focus({ preventScroll: true });
+    else if (!hud.contains(document.activeElement)) liftBtn.focus({ preventScroll: true });
+  };
+  const onFloor = (e: MouseEvent) => { const b = e.target instanceof Element ? e.target.closest<HTMLElement>('.dc-floor') : null; const id = floorBtns.find((f) => f.b === b)?.id; if (id) travel(id); };
+  const onStay = () => { closeLift(); };
+  let downOnLift = false;
+  const onLiftDown = (e: PointerEvent) => { downOnLift = e.target === elevator; };
+  const onLiftBackdrop = (e: MouseEvent) => { if (downOnLift && e.target === elevator) closeLift(); };
+  const onKey = (e: KeyboardEvent) => { if (e.key !== 'Escape') return; if (isOpen()) onReceiptClose(); else if (isLiftOpen()) closeLift(); else onSide('back'); };
   let soundOn = false;
   const onSnd = () => { soundOn = !soundOn; soundBtn.textContent = soundOn ? 'Sound on' : 'Sound off'; soundBtn.setAttribute('aria-pressed', String(soundOn)); onSound(soundOn); };
   main.addEventListener('click', clickMain); alt.addEventListener('click', clickAlt); input.addEventListener('input', onInput); stakeRow.addEventListener('change', onStakeChange);
   receiptBtn.addEventListener('click', onReceiptOpen); close.addEventListener('click', onReceiptClose); receipt.addEventListener('pointerdown', onReceiptDown); receipt.addEventListener('click', onBackdrop);
-  clockBtn.addEventListener('click', onClock); winBtn.addEventListener('click', onWin); soundBtn.addEventListener('click', onSnd);
+  liftBtn.addEventListener('click', onLiftOpen); floors.addEventListener('click', onFloor); stay.addEventListener('click', onStay); elevator.addEventListener('pointerdown', onLiftDown); elevator.addEventListener('click', onLiftBackdrop); soundBtn.addEventListener('click', onSnd);
   // On the document, so Escape still works after a click on the canvas leaves focus on the page.
   document.addEventListener('keydown', onKey);
 
@@ -167,9 +230,20 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
       if (cache.get('rot') !== rot) { cache.set('rot', rot); arrow.style.transform = `rotate(${rot}deg)`; }
       if (cache.get('here') !== here) { cache.set('here', here); stageT.forEach((t, i) => t.classList.toggle('is-here', i === here)); }
     },
-    stubs(on: boolean, hasReceipt: boolean) { clockBtn.disabled = !on; winBtn.disabled = !on; receiptBtn.disabled = !(on && hasReceipt); },
-    /** Which side rooms exist. The Cage is a panel, so it works without a building; the wheel does not. */
-    rooms(cageOn: boolean, wheelOn: boolean) { clockBtn.hidden = !cageOn; winBtn.hidden = !wheelOn; },
+    stubs(on: boolean, hasReceipt: boolean) {
+      if (liftOn !== on) { liftOn = on; liftBtn.setAttribute('aria-disabled', String(!on)); if (!on) closeLift(); }
+      receiptBtn.disabled = !(on && hasReceipt);
+    },
+    /** Which rooms this surface can show. The Cage is a panel, so it works without a building. */
+    rooms(can: (id: RoomId) => boolean) { reachable = can; progressKey = ''; paintLift(); },
+    /** The cleared rooms set the colour of the HUD and the elevator's hint. */
+    progress(done: readonly RoomId[]) {
+      const key = done.join();
+      if (key === progressKey) return;
+      progressKey = key; cleared = [...done];
+      root.dataset.colour = String(colourStep(cleared)); root.style.setProperty('--dc-wash', String(colourLevel(cleared)));
+      paintLift();
+    },
     source(text: string | null) { const s = text ?? ''; if (cache.get('source') !== s) { cache.set('source', s); sourceTag.textContent = s; sourceTag.hidden = !s; } },
     title(on: boolean) { title.classList.toggle('is-gone', !on); },
     dial(on: boolean) { dial.classList.toggle('is-on', on); },
@@ -180,8 +254,8 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
     side(name: SideName | null) {
       const focused = cagePanel.box.contains(document.activeElement);
       room = name; root.classList.toggle('is-side', !!name); root.classList.toggle('is-cage', name === 'cage'); cagePanel.show(name === 'cage');
-      if (focused && name !== 'cage') clockBtn.focus({ preventScroll: true });
-      clockBtn.textContent = name === 'cage' ? 'Back to the table' : 'The cage'; winBtn.textContent = name === 'wheel' ? 'Back to the table' : 'The wheel';
+      if (focused && name !== 'cage') liftBtn.focus({ preventScroll: true });
+      paintLift();
     },
     /** Hands the panel the game. Called on every store change, in or out of the room. */
     cage(s: GameState) { cagePanel.sync(s); },
@@ -191,9 +265,10 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
       clearTimeout(swapTimer); cagePanel.dispose();
       main.removeEventListener('click', clickMain); alt.removeEventListener('click', clickAlt); input.removeEventListener('input', onInput); stakeRow.removeEventListener('change', onStakeChange);
       receiptBtn.removeEventListener('click', onReceiptOpen); close.removeEventListener('click', onReceiptClose); receipt.removeEventListener('pointerdown', onReceiptDown); receipt.removeEventListener('click', onBackdrop);
-      clockBtn.removeEventListener('click', onClock); winBtn.removeEventListener('click', onWin); soundBtn.removeEventListener('click', onSnd);
+      liftBtn.removeEventListener('click', onLiftOpen); floors.removeEventListener('click', onFloor); stay.removeEventListener('click', onStay); elevator.removeEventListener('pointerdown', onLiftDown); elevator.removeEventListener('click', onLiftBackdrop); soundBtn.removeEventListener('click', onSnd);
       document.removeEventListener('keydown', onKey);
-      hud.remove(); receipt.remove(); root.classList.remove('deco', 'is-colour', 'is-side', 'is-cage');
+      hud.remove(); receipt.remove(); elevator.remove(); root.classList.remove('deco', 'is-colour', 'is-side', 'is-cage');
+      delete root.dataset.colour; root.style.removeProperty('--dc-wash');
     },
   };
 }

@@ -25,7 +25,7 @@ export const TIERS = [
 ] as const;
 export const DOORS = [
   { name: 'cage', tier: 1, az: 1.02, sign: "The Cashier's Cage", stage: '4 K' },
-  { name: 'wheel', tier: 2, az: .24, sign: 'The Roulette Wheel', stage: '800 mK' },
+  { name: 'roulette', tier: 2, az: .24, sign: 'The Roulette Wheel', stage: '800 mK' },
 ] as const;
 type ProfilePoint = readonly [r: number, y: number, finish?: number];
 interface Tier { label: string; y: number; R: number; bore: number; name: string }

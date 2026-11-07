@@ -1,5 +1,5 @@
 // The film stock, tuned for a 50 unit shaft. Owns the HDR target, haze, bloom and the flood.
-// Everything is rendered in full colour all along. Before the flood the camera may keep only black, white and gold.
+// Everything is rendered in full colour all along. Before the flood, and before any room is cleared, the camera may keep only black, white and gold.
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 
@@ -101,7 +101,7 @@ varying vec2 vUv;
 uniform sampler2D tScene, tDepth, tHaze, tBloom;
 uniform mat4 uInvVP;
 uniform vec3 uA, uB;
-uniform float uR, uExposure, uTime, uCA, uFlash, uAspect, uFade; uniform vec2 uHazeTexel;
+uniform float uR, uWash, uExposure, uTime, uCA, uFlash, uAspect, uFade; uniform vec2 uHazeTexel;
 ${NOISE}
 vec3 aces(vec3 x){ x*=.6; return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14),0.,1.); }
 float grainAt(vec2 p, float t){ return fract(sin(dot(p+t, vec2(12.9898,78.233)))*43758.5453); }
@@ -132,6 +132,8 @@ void main(){
       band = smoothstep(uR-width*2.6,uR-width*.3,e)*(1.-smoothstep(uR-width*.3,uR+.2,e));
     }
   }
+  // Each room cleared lets the whole house keep more of its dyes, flood or no flood. Zero leaves the print untouched.
+  mask = max(mask, uWash);
 
   float L = dot(col, vec3(.30,.59,.11));
   // Silver print: hard shoulder, deep toe, a breath of selenium.
@@ -146,7 +148,7 @@ void main(){
   gilt = mix(mix(gl*vec3(1.2,.76,.24), vec3(1.,.9,.62), smoothstep(.6,.95,gl)), gilt, .16);
   mono = mix(mono, gilt, gold);
   // Technicolor: the same light, finally allowed its dyes.
-  vec3 rich = mix(vec3(L), col, 1.16 + band*.9);
+  vec3 rich = mix(vec3(L), col, 1.16 + band*.9 + uWash*.24);
   rich = mix(rich, vec3(L), smoothstep(1.6,7.,L)*.75);
   rich = aces(max(rich,0.));
   rich = pow(rich, vec3(1.06));
@@ -187,7 +189,7 @@ export function createPost(renderer: THREE.WebGLRenderer, track: Track) {
   const finalU = {
     tScene: { value: null as THREE.Texture | null }, tDepth: { value: null as THREE.Texture | null }, tHaze: { value: null as THREE.Texture | null }, tBloom: { value: null as THREE.Texture | null },
     uInvVP: { value: new THREE.Matrix4() }, uA: { value: new THREE.Vector3() }, uB: { value: new THREE.Vector3() },
-    uR: { value: 0 }, uExposure: { value: 1 }, uTime: { value: 0 }, uCA: { value: .004 }, uFlash: { value: 0 }, uAspect: { value: 1.6 }, uFade: { value: 0 }, uHazeTexel: { value: new THREE.Vector2() },
+    uR: { value: 0 }, uWash: { value: 0 }, uExposure: { value: 1 }, uTime: { value: 0 }, uCA: { value: .004 }, uFlash: { value: 0 }, uAspect: { value: 1.6 }, uFade: { value: 0 }, uHazeTexel: { value: new THREE.Vector2() },
   };
   const final = mat(FINAL_FRAG, finalU);
 

@@ -1,6 +1,7 @@
 // The Deco Chandelier. A 1920s architect was commissioned to put a casino inside the cryostat.
 // The building opens in black, white and gold. The colour was always in it; you had not been allowed to see it.
 import * as THREE from 'three';
+import { colourLevel, roomInfo } from '../../game/rooms';
 import { BREAK_EVEN, CLASSICAL_STAKE } from '../../game/rules';
 import type { GameStore, LastHand, Phase } from '../../game/store';
 import type { ResultSource } from '../../game/results';
@@ -142,13 +143,15 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
 
   // --- tiny timeline: tweens and scheduled beats, on wall-clock seconds so a slow frame never stalls the story.
   let now = 0, tweens: Tween[] = [], beats: Beat[] = [];
-  const fx = { env: 1, exposure: 1.02, ca: 0, shake: 0, spin: 0, rise: 0, fade: 0, chipBase: .55, lamp: 1, flash: 0, pluck: 0, lit: 0, lift: 0 };
+  // wash: how much colour the cleared rooms have let into the whole house, from rooms.ts.
+  const fx = { env: 1, exposure: 1.02, ca: 0, shake: 0, spin: 0, rise: 0, fade: 0, chipBase: .55, lamp: 1, flash: 0, pluck: 0, lit: 0, lift: 0, wash: colourLevel(store.state.cleared) };
   const tw = <K extends string>(obj: { [P in K]: number }, key: K, to: number, dur: number, ease: Ease = EASE.out, delay = 0) => {
     tweens = tweens.filter((t) => !(t.obj === obj && t.key === key));
     tweens.push({ obj, key, read: () => obj[key], write: (value) => { obj[key] = value; }, from: null, to, t0: now + delay, dur: Math.max(.001, dur), ease });
   };
   const after = (d: number, fn: () => void) => { beats.push({ at: now + d, fn }); };
-  const clearStory = () => { tweens = tweens.filter((x) => x.key === 'fade'); beats = []; };
+  // The fade and the wash outlive any story beat.
+  const clearStory = () => { tweens = tweens.filter((x) => x.key === 'fade' || x.key === 'wash'); beats = []; };
 
   // --- camera
   const pose = { ...POSE.intro };
@@ -167,7 +170,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
   };
   const pointer = { x: 0, y: 0, sx: 0, sy: 0 };
 
-  // --- the two rooms behind the lift doors
+  // --- the rooms behind the lift doors, reached by the elevator or a click on an open door
   type Door = (typeof world.doors)[number];
   const doorByName = Object.fromEntries(world.doors.map((d) => [d.name, d])) as Record<SideName, Door>;
   const setGate = (d: Door, open: boolean) => { d.leaves.forEach((l) => { tw(l.scale, 'x', open ? .22 : 1, 1.1, EASE.inOut, open ? 1.5 : 0); }); };
@@ -175,7 +178,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
   const leaveKeys = (t: { R: number; y: number }): Pose[] => (pose.r < 6 ? [{ r: 10.5, a: pose.a, y: 3.6, ty: 3.2, fov: 52 }] : []).concat([{ r: t.R + 7.5, a: pose.a - .2, y: t.y + 2.5, ty: t.y + 1, fov: 46 }]);
   function openSide(name: SideName) {
     const s = store.state;
-    if (s.phase === 'classical' || s.autoplaying || story.locked) return;
+    if (s.phase === 'classical' || s.autoplaying || story.locked || !roomInfo(name).open) return;
     const d = doorByName[name], t = TIERS[d.tier], prev = side;
     if (prev) setGate(doorByName[prev], false);
     side = name; hud.side(name); hud.say(LINES[name]);
@@ -194,7 +197,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     glide([{ r: t.R + 7.5, a: pose.a + .2, y: inner ? 4 : t.y + 1, ty: 3, fov: 50 }, ...(inner ? [{ r: 10.5, a: home(ph).a, y: 3.6, ty: 3, fov: 52 }] : []), home(ph)], 2.8);
     if (ph === 'beyond') tw(fx, 'spin', 1, 1.6, EASE.inOut);
   }
-  hud.setSide((n) => { if (n === 'back' || n === side) closeSide(); else openSide(n); });
+  hud.setSide((n) => { if (n === 'back') closeSide(); else if (n !== side) openSide(n); });
 
   // --- world state
   let thawed = false, rulesGone = false, cross75 = false, beat = 0, armKick = 0, time = 0, hazeT = 0, hazeSpeed = 1, rainSpeed = 1, chipN = -1, floodOn = false;
@@ -322,8 +325,11 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
   }
 
   // ---- Game wiring ----
-  let worldPhase: Phase | null = null;
+  let worldPhase: Phase | null = null, washGoal = fx.wash;
   const unsub = store.subscribe((s) => {
+    // A newly cleared room seeps colour through the whole house, after its own moment has played.
+    const wash = colourLevel(s.cleared);
+    if (wash !== washGoal) { washGoal = wash; if (reducedMotion) tw(fx, 'wash', wash, .6, EASE.linear); else tw(fx, 'wash', wash, 3.2, EASE.inOut, wash > fx.wash ? 2.4 : 0); }
     if (s.phase !== worldPhase) { const prev = worldPhase; worldPhase = s.phase; if (phaseArmed) arrive(s.phase, prev); }
     hudSync(s);
     const n = Math.floor(s.bankroll / CLASSICAL_STAKE);
@@ -345,7 +351,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
   cleanups.push(unsub, unround);
 
   // ---- Picking ----
-  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), picks = world.doors.map((d) => d.hit);
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), picks = world.doors.filter((d) => roomInfo(d.name).open).map((d) => d.hit);
   function hit(e: PointerEvent) {
     const r = root.getBoundingClientRect();
     ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
@@ -367,7 +373,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
   const onDown = (e: PointerEvent) => { downAt = [e.clientX, e.clientY]; };
   const onUp = (e: PointerEvent) => {
     if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 8) return;
-    if (e.target instanceof Element && e.target.closest('button, input, .dc-receipt, .dc-cage')) return;
+    if (e.target instanceof Element && e.target.closest('button, input, .dc-receipt, .dc-cage, .dc-elevator')) return;
     if (side) { closeSide(); return; }
     const n = clickable() ? hit(e) : null;
     if (n) openSide(n);
@@ -461,10 +467,11 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     lampSpot.intensity = (820 + beat * 420) * clamp(fx.lamp, 0, 1.15) * (1 - lit * .35);
     lampSpot.color.copy(white).lerp(warm, lit);
     world.feltMat.color.setScalar(.62 - .12 * lit);           // the room brightens after the flood; the baize must keep its print
-    world.velvetMat.color.copy(VELVET).multiplyScalar(lerp(.3, 1, lit));   // before the flood the curtains are only dark mass at the edge of frame
+    const dye = Math.max(lit, fx.wash);   // the cleared rooms' colour reaches the curtains and the coloured fills even before a flood
+    world.velvetMat.color.copy(VELVET).multiplyScalar(lerp(.3, 1, dye));   // before the flood the curtains are only dark mass at the edge of frame
     winSpot.color.copy(moonMono).lerp(moonWarm, lit);
     winSpot.intensity = 15 * clamp(fx.lamp, .1, 1);
-    warmFill.intensity = 240 * lit; oxFill.intensity = 110 * lit * (.8 + .2 * Math.sin(now * 1.1) * Math.sin(now * 3.7)); jadeFill.intensity = 7 * lit;
+    warmFill.intensity = 240 * lit; oxFill.intensity = 110 * dye * (.8 + .2 * Math.sin(now * 1.1) * Math.sin(now * 3.7)); jadeFill.intensity = 7 * dye;
 
     // Flying chips.
     if (flying) {
@@ -519,7 +526,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     // Post.
     const f = post.final.uniforms, hz = post.haze.uniforms;
     f.uExposure.value = fx.exposure * (reducedMotion || lit > .01 ? 1 : 1 + Math.sin(now * 31) * Math.sin(now * 19) * .012);
-    f.uR.value = Rv; f.uTime.value = now; f.uFade.value = fx.fade;
+    f.uR.value = Rv; f.uWash.value = fx.wash; f.uTime.value = now; f.uFade.value = fx.fade;
     f.uCA.value = .0028 + fx.ca + (Rv > 0 && Rv < 74 && !reducedMotion ? .004 : 0);
     f.uFlash.value = reducedMotion ? 0 : Math.max(0, fx.exposure - 1.5) * .05;
     hz.uHazeT.value = hazeT; hz.uDensity.value = (.42 + lit * .1) * clamp(fx.lamp, .25, 1) * lerp(1, .3, clamp01((pose.r - 30) / 40));

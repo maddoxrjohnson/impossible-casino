@@ -37,6 +37,7 @@ function fakeHud() {
     receipt: false,
     ticket: false,
     colour: false,
+    cleared: null as readonly string[] | null,
     source: null as string | null,
     stakesDisabled: [] as boolean[],
   };
@@ -53,6 +54,7 @@ function fakeHud() {
     stakes: (choices) => { seen.stakesDisabled = choices.map((c) => c.disabled); },
     ticket: (on) => { seen.ticket = on; },
     colour: (on) => { seen.colour = on; },
+    progress: (cleared) => { seen.cleared = [...cleared]; },
   };
   return { hud, seen };
 }
@@ -312,6 +314,15 @@ describe('createHudSync in the cage', () => {
     expect(said(seen)).toBe(LINES.cageClear);
     await store.forge(4, PAYS);
     expect(said(seen)).toBe(LINES.forged);
+  });
+
+  it('hands the HUD the cleared rooms, so the colour and the elevator follow them', async () => {
+    const { store, seen } = cage();
+    expect(seen.cleared).toEqual([]);
+    await store.forge(4, PAYS);
+    expect(seen.cleared).toEqual(['cage']);
+    store.restart();
+    expect(seen.cleared).toEqual([]);
   });
 
   it('says broke when the catch took the last chips', async () => {

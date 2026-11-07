@@ -8,7 +8,7 @@ export interface Limits {
 }
 
 export type Band = 'low' | 'over' | 'even' | 'best';
-export type LineKey = Phase | Band | 'short' | 'cold' | 'past' | 'covered' | 'misdeal' | 'broke' | 'cage' | 'forged' | 'caught' | 'cageClear' | 'forgeFailed' | 'wheel';
+export type LineKey = Phase | Band | 'short' | 'cold' | 'past' | 'covered' | 'misdeal' | 'broke' | 'cage' | 'forged' | 'caught' | 'cageClear' | 'forgeFailed' | 'roulette';
 
 /** Where the best band starts, as a share of the span from break-even to the quantum limit. */
 const BEST_SHARE = 0.75;
@@ -58,7 +58,7 @@ export function createLines(limits: Limits): Record<LineKey, string> {
     caught: 'Caught. You had to guess how to read the honest one, and the teller\'s check found what the guessing left behind. He keeps the stake.',
     cageClear: 'Few chips that long get past him, and yours did. The Cage is cleared. He will still take your bets.',
     forgeFailed: 'The wire went quiet and the teller never saw it. Nothing left your stack. Try again.',
-    wheel: 'The Roulette Wheel, 800 mK. It has not stopped since 1926. Another night.',
+    roulette: 'The Roulette Wheel, 800 mK. It has not stopped since 1926. Another night.',
   };
 }
 

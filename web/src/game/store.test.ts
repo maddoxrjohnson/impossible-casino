@@ -971,6 +971,58 @@ describe('rooms', () => {
     await next;
     expect(store.state.last).toBeNull();
   });
+
+  describe('one bankroll across them', () => {
+    const PAYS = exportsData.wiesner.payouts.stake;
+    const forgePays = (length: number): number =>
+      exportsData.wiesner.payouts.table.find((row) => row.length === length)?.pays ?? 0;
+
+    it('carries the Tables winnings into the Cage and the Cage winnings back, through a reload', async () => {
+      const storage = memoryStorage();
+      let draw: Rng = seeded(7);
+      const store = make({ storage, rng: () => draw() });
+      await reachWall(store);
+      expect(store.state.bankroll).toBe(9700);
+      draw = () => 0;
+      await store.forge(2, PAYS);
+      expect(store.state.bankroll).toBe(9700 + forgePays(2));
+      store.entangle();
+      expect(store.state.bankroll).toBe(9700 + forgePays(2));
+
+      const reloaded = make({ storage });
+      expect(reloaded.state).toMatchObject({ phase: 'entangled', bankroll: 9700 + forgePays(2) });
+    });
+
+    it('lets a forge at the intro set the stack the Tables deal from', async () => {
+      const storage = memoryStorage();
+      const store = make({ storage, rng: () => 0.999999 });
+      await store.forge(1, PAYS);
+      expect(store.state.bankroll).toBe(START_BANKROLL - 100);
+      expect(make({ storage }).state).toMatchObject({ phase: 'intro', bankroll: START_BANKROLL - 100 });
+    });
+
+    it('keeps both clears and the bankroll together in one save', async () => {
+      const storage = saved({ phase: 'beyond', cleared: ['tables'] });
+      const store = make({ storage, rng: () => 0 });
+      await store.forge(CAGE_CLEAR_LENGTH, PAYS);
+      const after = store.state.bankroll;
+      expect(saveOf(storage)).toMatchObject({ bankroll: after, cleared: ['tables', 'cage'] });
+      expect(make({ storage }).state.cleared).toEqual(['tables', 'cage']);
+    });
+
+    it('leaves restart as the only way on, whichever room went broke', async () => {
+      const table = make({ storage: saved({ bankroll: 100, phase: 'entangled' }), rng: () => 0.999999 });
+      await table.forge(1, PAYS);
+      expect(table.state).toMatchObject({ bankroll: 0, broke: true });
+      table.deal();
+      table.entangle();
+      void table.run();
+      await table.forge(1, PAYS);
+      expect(table.state).toMatchObject({ bankroll: 0, autoplaying: false, forging: false });
+      table.restart();
+      expect(table.state).toMatchObject({ bankroll: START_BANKROLL, broke: false, cleared: [] });
+    });
+  });
 });
 
 describe('the cage', () => {
