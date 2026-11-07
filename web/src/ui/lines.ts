@@ -55,7 +55,7 @@ export function createLines(limits: Limits): Record<LineKey, string> {
     broke: 'That is the last of your chips. The house collects in the end, even down here. Start over.',
     cage: "The Cashier's Cage, 4 K. These chips are made of qubits, and reading one the wrong way spoils it. The teller knows the right way. A forger has to guess, and his check catches bad guesses. Longer chips pay more and pass less.",
     forged: 'It passed. The teller checked it and paid. Your guesses held up, this time.',
-    caught: 'Caught. You had to guess how to read the real chip, and the teller\'s check found what the guessing left behind. He keeps the stake.',
+    caught: 'Caught. You had to guess how to read the honest one, and the teller\'s check found what the guessing left behind. He keeps the stake.',
     cageClear: 'Few chips that long get past him, and yours did. The Cage is cleared. He will still take your bets.',
     forgeFailed: 'The wire went quiet and the teller never saw it. Nothing left your stack. Try again.',
     wheel: 'The Roulette Wheel, 800 mK. It has not stopped since 1926. Another night.',
