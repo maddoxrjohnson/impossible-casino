@@ -1,0 +1,109 @@
+{
+ "jobId": "dbnoi58ou4as73b4tcr0",
+ "experiment": "wiesner",
+ "backend": "ibm_kingston",
+ "qubits": [
+  61,
+  42,
+  5,
+  48,
+  15,
+  21,
+  93,
+  62
+ ],
+ "qubitSelection": "best-case pick: the qubits with the lowest readout plus single-qubit gate error in the day's calibration, ranked best first; length n uses the first n",
+ "errors": [
+  {
+   "qubit": 61,
+   "readout": 0.00244140625,
+   "sx": 0.0001640670459919777
+  },
+  {
+   "qubit": 42,
+   "readout": 0.00244140625,
+   "sx": 0.00026393151082760083
+  },
+  {
+   "qubit": 5,
+   "readout": 0.00244140625,
+   "sx": 0.0002677365064206954
+  },
+  {
+   "qubit": 48,
+   "readout": 0.0029296875,
+   "sx": 0.00022555550691913674
+  },
+  {
+   "qubit": 15,
+   "readout": 0.00390625,
+   "sx": 0.00011447960258137038
+  },
+  {
+   "qubit": 21,
+   "readout": 0.00390625,
+   "sx": 0.0001563326514709437
+  },
+  {
+   "qubit": 93,
+   "readout": 0.00341796875,
+   "sx": 0.0002970498887566893
+  },
+  {
+   "qubit": 62,
+   "readout": 0.00390625,
+   "sx": 0.0001753931693157957
+  }
+ ],
+ "calibrated": "2026-11-07T15:06:04-05:00",
+ "lengths": [
+  4
+ ],
+ "tickets": 32,
+ "shotsPerTicket": 32,
+ "maxSeconds": 20,
+ "submitted": "2026-11-07T20:24:53.182691+00:00",
+ "usageSeconds": 3,
+ "run": {
+  "id": "ibm-chip",
+  "provenance": {
+   "source": "ibm-chip",
+   "backend": "ibm_kingston",
+   "noiseModel": null,
+   "qubits": [
+    61,
+    42,
+    5,
+    48,
+    15,
+    21,
+    93,
+    62
+   ],
+   "qubitSelection": "best-case pick: the qubits with the lowest readout plus single-qubit gate error in the day's calibration, ranked best first; length n uses the first n",
+   "shots": 1024,
+   "qiskitVersion": "2.6.2",
+   "aerVersion": "0.18.2",
+   "runtimeVersion": "0.51.0",
+   "date": "2026-11-07",
+   "jobId": "dbnoi58ou4as73b4tcr0"
+  },
+  "ticketsPerPoint": 32,
+  "shotsPerTicket": 32,
+  "points": [
+   {
+    "length": 4,
+    "seed": 3000040000,
+    "shots": 1024,
+    "qubits": [
+     61,
+     42,
+     5,
+     48
+    ],
+    "passes": 303,
+    "passRate": 0.2958984375
+   }
+  ]
+ }
+}
