@@ -28,6 +28,8 @@ export interface StageOptions {
   adaptiveDpr: boolean;
   /** Shows the frame timing readout. */
   perf: boolean;
+  /** What the game is doing, for the `perf` log. */
+  perfMoment?: () => string;
   /** Called after the stage has shut itself down because a frame threw. */
   onFailure: (error: unknown) => void;
 }
@@ -73,7 +75,7 @@ function createRenderer(): WebGLRenderer | null {
 export function createStage(
   root: HTMLElement,
   createView: (renderer: WebGLRenderer) => StageView,
-  { adaptiveDpr, perf: showPerf, onFailure }: StageOptions,
+  { adaptiveDpr, perf: showPerf, perfMoment = () => '', onFailure }: StageOptions,
 ): Stage | null {
   const renderer = createRenderer();
   if (!renderer) return null;
@@ -89,7 +91,7 @@ export function createStage(
 
   const canvas = renderer.domElement;
   const dpr = createDprController(window.devicePixelRatio);
-  const perf = showPerf ? createPerf(renderer, dpr, adaptiveDpr) : null;
+  const perf = showPerf ? createPerf(renderer, dpr, adaptiveDpr, perfMoment) : null;
 
   let width = 0;
   let height = 0;

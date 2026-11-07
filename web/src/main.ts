@@ -139,6 +139,10 @@ async function boot(root: HTMLElement): Promise<void> {
       {
         adaptiveDpr: !navigator.webdriver,
         perf: new URLSearchParams(location.search).has('perf'),
+        perfMoment: () => {
+          const { phase, autoplaying, rounds } = store.state;
+          return `${phase}${autoplaying ? ' running' : ''} hand ${String(rounds)}`;
+        },
         onFailure: (error) => {
           fail(root, error);
         },
