@@ -46,18 +46,13 @@ Cloud Run sets `K_SERVICE`, which is what turns on reading the client address fr
 
 The image builds from the repo root with Cloud Build, because `api/Dockerfile` needs both `api/` and `quantum/`. It installs exact versions from `api/requirements.lock`. Run these from the repo root.
 
-One-time setup. `compute.googleapis.com` creates the default service account the next step names, and it can take a minute to appear:
+One-time setup. `compute.googleapis.com` creates the default service account that runs builds:
 
 ```sh
 PROJECT=$(gcloud config get-value project)
-NUMBER=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
 
 gcloud services enable compute.googleapis.com run.googleapis.com \
   cloudbuild.googleapis.com artifactregistry.googleapis.com iam.googleapis.com
-
-gcloud projects add-iam-policy-binding "$PROJECT" \
-  --member="serviceAccount:$NUMBER-compute@developer.gserviceaccount.com" \
-  --role=roles/cloudbuild.builds.builder
 
 gcloud iam service-accounts create casino-api-runtime \
   --display-name="Impossible Casino API runtime"
@@ -66,7 +61,7 @@ gcloud artifacts repositories create impossible-casino \
   --repository-format=docker --location=us-east1
 ```
 
-The compute account runs builds. The service runs as `casino-api-runtime`, which has no roles, so a compromised container cannot submit builds or push images.
+Builds run as the default compute account, which holds `roles/editor` on this project, so no extra grant is needed. If a project's default account has no such role, grant it `roles/cloudbuild.builds.builder`. The service runs as `casino-api-runtime`, which has no roles, so a compromised container cannot use that access.
 
 Each deploy:
 
@@ -91,7 +86,7 @@ gcloud run deploy impossible-casino-api \
   --cpu-boost \
   --timeout=30 \
   --allow-unauthenticated \
-  --set-env-vars=LIVE_CHIP_MODE=off
+  --set-env-vars=LIVE_CHIP_MODE=off,RUN_LIMIT_PER_MINUTE=60
 ```
 
 `--allow-unauthenticated` is needed because browsers call it directly. `--concurrency=2` leaves room for a ping or preflight beside the one run an instance takes at a time.
