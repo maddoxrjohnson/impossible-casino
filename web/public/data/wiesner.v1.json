@@ -1,0 +1,540 @@
+{
+ "schemaVersion": 1,
+ "experiment": "wiesner",
+ "attack": "measure each qubit in a guessed basis, then resend it as a re-made chip",
+ "passRule": "one re-made chip goes to the cashier and every qubit must agree; this does not model both of two copies passing",
+ "ticketsPerShot": 1,
+ "limits": {
+  "perQubit": {
+   "value": 0.75,
+   "method": "Qiskit statevector over every bank state and attacker basis"
+  },
+  "byLength": [
+   {
+    "length": 1,
+    "value": 0.75
+   },
+   {
+    "length": 2,
+    "value": 0.5625
+   },
+   {
+    "length": 3,
+    "value": 0.421875
+   },
+   {
+    "length": 4,
+    "value": 0.31640625
+   },
+   {
+    "length": 5,
+    "value": 0.2373046875
+   },
+   {
+    "length": 6,
+    "value": 0.177978515625
+   },
+   {
+    "length": 7,
+    "value": 0.13348388671875
+   },
+   {
+    "length": 8,
+    "value": 0.1001129150390625
+   }
+  ],
+  "byLengthMethod": "perQubit to the power of length, because the qubits are independent with no entangling gates"
+ },
+ "payouts": {
+  "status": "proposed",
+  "stake": 100,
+  "rule": "fair total return times 0.95, with net profit on a 100 stake rounded down to a multiple of 5",
+  "table": [
+   {
+    "length": 1,
+    "pays": 25,
+    "fairPays": 33.33333333333334,
+    "breakEven": 0.8,
+    "houseEdge": 0.0625
+   },
+   {
+    "length": 2,
+    "pays": 65,
+    "fairPays": 77.77777777777777,
+    "breakEven": 0.6060606060606061,
+    "houseEdge": 0.07187500000000002
+   },
+   {
+    "length": 3,
+    "pays": 125,
+    "fairPays": 137.03703703703704,
+    "breakEven": 0.4444444444444444,
+    "houseEdge": 0.05078125
+   },
+   {
+    "length": 4,
+    "pays": 200,
+    "fairPays": 216.04938271604937,
+    "breakEven": 0.3333333333333333,
+    "houseEdge": 0.05078125
+   },
+   {
+    "length": 5,
+    "pays": 300,
+    "fairPays": 321.3991769547325,
+    "breakEven": 0.25,
+    "houseEdge": 0.05078125
+   },
+   {
+    "length": 6,
+    "pays": 430,
+    "fairPays": 461.8655692729767,
+    "breakEven": 0.18867924528301888,
+    "houseEdge": 0.056713867187500044
+   },
+   {
+    "length": 7,
+    "pays": 610,
+    "fairPays": 649.1540923639689,
+    "breakEven": 0.14084507042253522,
+    "houseEdge": 0.05226440429687507
+   },
+   {
+    "length": 8,
+    "pays": 845,
+    "fairPays": 898.8721231519586,
+    "breakEven": 0.10582010582010581,
+    "houseEdge": 0.05393295288085942
+   }
+  ]
+ },
+ "logicalCircuits": [
+  {
+   "length": 1,
+   "ticket": {
+    "bits": [
+     0
+    ],
+    "bases": [
+     "Z"
+    ],
+    "attackerBases": [
+     "Z"
+    ]
+   },
+   "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg chip[1];\ncreg attacker[1];\ncreg cashier[1];\nry(0) chip[0];\nbarrier chip[0];\nry(0) chip[0];\nmeasure chip[0] -> attacker[0];\nry(0) chip[0];\nbarrier chip[0];\nry(0) chip[0];\nmeasure chip[0] -> cashier[0];"
+  },
+  {
+   "length": 2,
+   "ticket": {
+    "bits": [
+     1,
+     0
+    ],
+    "bases": [
+     "X",
+     "X"
+    ],
+    "attackerBases": [
+     "Z",
+     "X"
+    ]
+   },
+   "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg chip[2];\ncreg attacker[2];\ncreg cashier[2];\nry(-pi/2) chip[0];\nry(pi/2) chip[1];\nbarrier chip[0],chip[1];\nry(0) chip[0];\nry(-pi/2) chip[1];\nmeasure chip[0] -> attacker[0];\nmeasure chip[1] -> attacker[1];\nry(0) chip[0];\nry(pi/2) chip[1];\nbarrier chip[0],chip[1];\nry(pi/2) chip[0];\nry(-pi/2) chip[1];\nmeasure chip[0] -> cashier[0];\nmeasure chip[1] -> cashier[1];"
+  },
+  {
+   "length": 3,
+   "ticket": {
+    "bits": [
+     0,
+     1,
+     0
+    ],
+    "bases": [
+     "X",
+     "X",
+     "Z"
+    ],
+    "attackerBases": [
+     "X",
+     "X",
+     "Z"
+    ]
+   },
+   "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg chip[3];\ncreg attacker[3];\ncreg cashier[3];\nry(pi/2) chip[0];\nry(-pi/2) chip[1];\nry(0) chip[2];\nbarrier chip[0],chip[1],chip[2];\nry(-pi/2) chip[0];\nry(-pi/2) chip[1];\nry(0) chip[2];\nmeasure chip[0] -> attacker[0];\nmeasure chip[1] -> attacker[1];\nmeasure chip[2] -> attacker[2];\nry(pi/2) chip[0];\nry(pi/2) chip[1];\nry(0) chip[2];\nbarrier chip[0],chip[1],chip[2];\nry(-pi/2) chip[0];\nry(pi/2) chip[1];\nry(0) chip[2];\nmeasure chip[0] -> cashier[0];\nmeasure chip[1] -> cashier[1];\nmeasure chip[2] -> cashier[2];"
+  },
+  {
+   "length": 4,
+   "ticket": {
+    "bits": [
+     1,
+     0,
+     1,
+     0
+    ],
+    "bases": [
+     "X",
+     "Z",
+     "Z",
+     "Z"
+    ],
+    "attackerBases": [
+     "Z",
+     "Z",
+     "Z",
+     "Z"
+    ]
+   },
+   "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg chip[4];\ncreg attacker[4];\ncreg cashier[4];\nry(-pi/2) chip[0];\nry(0) chip[1];\nry(pi) chip[2];\nry(0) chip[3];\nbarrier chip[0],chip[1],chip[2],chip[3];\nry(0) chip[0];\nry(0) chip[1];\nry(0) chip[2];\nry(0) chip[3];\nmeasure chip[0] -> attacker[0];\nmeasure chip[1] -> attacker[1];\nmeasure chip[2] -> attacker[2];\nmeasure chip[3] -> attacker[3];\nry(0) chip[0];\nry(0) chip[1];\nry(0) chip[2];\nry(0) chip[3];\nbarrier chip[0],chip[1],chip[2],chip[3];\nry(pi/2) chip[0];\nry(0) chip[1];\nry(-pi) chip[2];\nry(0) chip[3];\nmeasure chip[0] -> cashier[0];\nmeasure chip[1] -> cashier[1];\nmeasure chip[2] -> cashier[2];\nmeasure chip[3] -> cashier[3];"
+  },
+  {
+   "length": 5,
+   "ticket": {
+    "bits": [
+     0,
+     1,
+     0,
+     0,
+     1
+    ],
+    "bases": [
+     "Z",
+     "X",
+     "X",
+     "Z",
+     "Z"
+    ],
+    "attackerBases": [
+     "X",
+     "Z",
+     "X",
+     "Z",
+     "X"
+    ]
+   },
+   "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg chip[5];\ncreg attacker[5];\ncreg cashier[5];\nry(0) chip[0];\nry(-pi/2) chip[1];\nry(pi/2) chip[2];\nry(0) chip[3];\nry(pi) chip[4];\nbarrier chip[0],chip[1],chip[2],chip[3],chip[4];\nry(-pi/2) chip[0];\nry(0) chip[1];\nry(-pi/2) chip[2];\nry(0) chip[3];\nry(-pi/2) chip[4];\nmeasure chip[0] -> attacker[0];\nmeasure chip[1] -> attacker[1];\nmeasure chip[2] -> attacker[2];\nmeasure chip[3] -> attacker[3];\nmeasure chip[4] -> attacker[4];\nry(pi/2) chip[0];\nry(0) chip[1];\nry(pi/2) chip[2];\nry(0) chip[3];\nry(pi/2) chip[4];\nbarrier chip[0],chip[1],chip[2],chip[3],chip[4];\nry(0) chip[0];\nry(pi/2) chip[1];\nry(-pi/2) chip[2];\nry(0) chip[3];\nry(-pi) chip[4];\nmeasure chip[0] -> cashier[0];\nmeasure chip[1] -> cashier[1];\nmeasure chip[2] -> cashier[2];\nmeasure chip[3] -> cashier[3];\nmeasure chip[4] -> cashier[4];"
+  },
+  {
+   "length": 6,
+   "ticket": {
+    "bits": [
+     1,
+     0,
+     1,
+     1,
+     1,
+     1
+    ],
+    "bases": [
+     "Z",
+     "Z",
+     "Z",
+     "Z",
+     "X",
+     "Z"
+    ],
+    "attackerBases": [
+     "X",
+     "Z",
+     "X",
+     "X",
+     "Z",
+     "X"
+    ]
+   },
+   "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg chip[6];\ncreg attacker[6];\ncreg cashier[6];\nry(pi) chip[0];\nry(0) chip[1];\nry(pi) chip[2];\nry(pi) chip[3];\nry(-pi/2) chip[4];\nry(pi) chip[5];\nbarrier chip[0],chip[1],chip[2],chip[3],chip[4],chip[5];\nry(-pi/2) chip[0];\nry(0) chip[1];\nry(-pi/2) chip[2];\nry(-pi/2) chip[3];\nry(0) chip[4];\nry(-pi/2) chip[5];\nmeasure chip[0] -> attacker[0];\nmeasure chip[1] -> attacker[1];\nmeasure chip[2] -> attacker[2];\nmeasure chip[3] -> attacker[3];\nmeasure chip[4] -> attacker[4];\nmeasure chip[5] -> attacker[5];\nry(pi/2) chip[0];\nry(0) chip[1];\nry(pi/2) chip[2];\nry(pi/2) chip[3];\nry(0) chip[4];\nry(pi/2) chip[5];\nbarrier chip[0],chip[1],chip[2],chip[3],chip[4],chip[5];\nry(-pi) chip[0];\nry(0) chip[1];\nry(-pi) chip[2];\nry(-pi) chip[3];\nry(pi/2) chip[4];\nry(-pi) chip[5];\nmeasure chip[0] -> cashier[0];\nmeasure chip[1] -> cashier[1];\nmeasure chip[2] -> cashier[2];\nmeasure chip[3] -> cashier[3];\nmeasure chip[4] -> cashier[4];\nmeasure chip[5] -> cashier[5];"
+  },
+  {
+   "length": 7,
+   "ticket": {
+    "bits": [
+     0,
+     0,
+     0,
+     1,
+     0,
+     1,
+     1
+    ],
+    "bases": [
+     "Z",
+     "Z",
+     "Z",
+     "X",
+     "X",
+     "Z",
+     "X"
+    ],
+    "attackerBases": [
+     "X",
+     "Z",
+     "X",
+     "X",
+     "Z",
+     "X",
+     "Z"
+    ]
+   },
+   "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg chip[7];\ncreg attacker[7];\ncreg cashier[7];\nry(0) chip[0];\nry(0) chip[1];\nry(0) chip[2];\nry(-pi/2) chip[3];\nry(pi/2) chip[4];\nry(pi) chip[5];\nry(-pi/2) chip[6];\nbarrier chip[0],chip[1],chip[2],chip[3],chip[4],chip[5],chip[6];\nry(-pi/2) chip[0];\nry(0) chip[1];\nry(-pi/2) chip[2];\nry(-pi/2) chip[3];\nry(0) chip[4];\nry(-pi/2) chip[5];\nry(0) chip[6];\nmeasure chip[0] -> attacker[0];\nmeasure chip[1] -> attacker[1];\nmeasure chip[2] -> attacker[2];\nmeasure chip[3] -> attacker[3];\nmeasure chip[4] -> attacker[4];\nmeasure chip[5] -> attacker[5];\nmeasure chip[6] -> attacker[6];\nry(pi/2) chip[0];\nry(0) chip[1];\nry(pi/2) chip[2];\nry(pi/2) chip[3];\nry(0) chip[4];\nry(pi/2) chip[5];\nry(0) chip[6];\nbarrier chip[0],chip[1],chip[2],chip[3],chip[4],chip[5],chip[6];\nry(0) chip[0];\nry(0) chip[1];\nry(0) chip[2];\nry(pi/2) chip[3];\nry(-pi/2) chip[4];\nry(-pi) chip[5];\nry(pi/2) chip[6];\nmeasure chip[0] -> cashier[0];\nmeasure chip[1] -> cashier[1];\nmeasure chip[2] -> cashier[2];\nmeasure chip[3] -> cashier[3];\nmeasure chip[4] -> cashier[4];\nmeasure chip[5] -> cashier[5];\nmeasure chip[6] -> cashier[6];"
+  },
+  {
+   "length": 8,
+   "ticket": {
+    "bits": [
+     1,
+     1,
+     0,
+     0,
+     1,
+     0,
+     0,
+     0
+    ],
+    "bases": [
+     "X",
+     "X",
+     "Z",
+     "Z",
+     "X",
+     "Z",
+     "X",
+     "Z"
+    ],
+    "attackerBases": [
+     "X",
+     "X",
+     "Z",
+     "X",
+     "X",
+     "X",
+     "Z",
+     "X"
+    ]
+   },
+   "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg chip[8];\ncreg attacker[8];\ncreg cashier[8];\nry(-pi/2) chip[0];\nry(-pi/2) chip[1];\nry(0) chip[2];\nry(0) chip[3];\nry(-pi/2) chip[4];\nry(0) chip[5];\nry(pi/2) chip[6];\nry(0) chip[7];\nbarrier chip[0],chip[1],chip[2],chip[3],chip[4],chip[5],chip[6],chip[7];\nry(-pi/2) chip[0];\nry(-pi/2) chip[1];\nry(0) chip[2];\nry(-pi/2) chip[3];\nry(-pi/2) chip[4];\nry(-pi/2) chip[5];\nry(0) chip[6];\nry(-pi/2) chip[7];\nmeasure chip[0] -> attacker[0];\nmeasure chip[1] -> attacker[1];\nmeasure chip[2] -> attacker[2];\nmeasure chip[3] -> attacker[3];\nmeasure chip[4] -> attacker[4];\nmeasure chip[5] -> attacker[5];\nmeasure chip[6] -> attacker[6];\nmeasure chip[7] -> attacker[7];\nry(pi/2) chip[0];\nry(pi/2) chip[1];\nry(0) chip[2];\nry(pi/2) chip[3];\nry(pi/2) chip[4];\nry(pi/2) chip[5];\nry(0) chip[6];\nry(pi/2) chip[7];\nbarrier chip[0],chip[1],chip[2],chip[3],chip[4],chip[5],chip[6],chip[7];\nry(pi/2) chip[0];\nry(pi/2) chip[1];\nry(0) chip[2];\nry(0) chip[3];\nry(pi/2) chip[4];\nry(0) chip[5];\nry(-pi/2) chip[6];\nry(0) chip[7];\nmeasure chip[0] -> cashier[0];\nmeasure chip[1] -> cashier[1];\nmeasure chip[2] -> cashier[2];\nmeasure chip[3] -> cashier[3];\nmeasure chip[4] -> cashier[4];\nmeasure chip[5] -> cashier[5];\nmeasure chip[6] -> cashier[6];\nmeasure chip[7] -> cashier[7];"
+  }
+ ],
+ "logicalCircuitsNote": "each circuit is one example ticket, the first of the ideal run's stream; every shot used a fresh ticket",
+ "runs": [
+  {
+   "id": "ideal",
+   "provenance": {
+    "source": "pre-run-simulator",
+    "backend": "aer_simulator",
+    "noiseModel": null,
+    "qubits": null,
+    "shots": 8192,
+    "qiskitVersion": "2.6.2",
+    "aerVersion": "0.18.2",
+    "runtimeVersion": "0.51.0",
+    "date": "2026-11-07",
+    "jobId": null
+   },
+   "points": [
+    {
+     "length": 1,
+     "seed": 120000000,
+     "shots": 8192,
+     "qubits": null,
+     "passes": 6167,
+     "passRate": 0.7528076171875
+    },
+    {
+     "length": 2,
+     "seed": 140000000,
+     "shots": 8192,
+     "qubits": null,
+     "passes": 4619,
+     "passRate": 0.5638427734375
+    },
+    {
+     "length": 3,
+     "seed": 160000000,
+     "shots": 8192,
+     "qubits": null,
+     "passes": 3434,
+     "passRate": 0.419189453125
+    },
+    {
+     "length": 4,
+     "seed": 180000000,
+     "shots": 8192,
+     "qubits": null,
+     "passes": 2580,
+     "passRate": 0.31494140625
+    },
+    {
+     "length": 5,
+     "seed": 200000000,
+     "shots": 8192,
+     "qubits": null,
+     "passes": 1920,
+     "passRate": 0.234375
+    },
+    {
+     "length": 6,
+     "seed": 220000000,
+     "shots": 8192,
+     "qubits": null,
+     "passes": 1403,
+     "passRate": 0.1712646484375
+    },
+    {
+     "length": 7,
+     "seed": 240000000,
+     "shots": 8192,
+     "qubits": null,
+     "passes": 1072,
+     "passRate": 0.130859375
+    },
+    {
+     "length": 8,
+     "seed": 260000000,
+     "shots": 8192,
+     "qubits": null,
+     "passes": 791,
+     "passRate": 0.0965576171875
+    }
+   ]
+  },
+  {
+   "id": "ibm-noise-model",
+   "provenance": {
+    "source": "pre-run-simulator",
+    "backend": "aer_simulator_from(fake_kingston)",
+    "noiseModel": {
+     "name": "fake_kingston",
+     "calibrated": "2026-04-15T09:15:15+02:00",
+     "qubitSelection": "best-case pick: the qubits with the lowest readout plus single-qubit gate error in the snapshot, ranked best first; length n uses the first n",
+     "scope": "gate and readout errors on the chosen qubits only; no decay during the mid-circuit measurement"
+    },
+    "qubits": [
+     50,
+     148,
+     21,
+     68,
+     151,
+     8,
+     142,
+     25
+    ],
+    "shots": 8192,
+    "qiskitVersion": "2.6.2",
+    "aerVersion": "0.18.2",
+    "runtimeVersion": "0.51.0",
+    "date": "2026-11-07",
+    "jobId": null
+   },
+   "points": [
+    {
+     "length": 1,
+     "seed": 1020000000,
+     "shots": 8192,
+     "qubits": [
+      50
+     ],
+     "passes": 6069,
+     "passRate": 0.7408447265625
+    },
+    {
+     "length": 2,
+     "seed": 1040000000,
+     "shots": 8192,
+     "qubits": [
+      50,
+      148
+     ],
+     "passes": 4614,
+     "passRate": 0.563232421875
+    },
+    {
+     "length": 3,
+     "seed": 1060000000,
+     "shots": 8192,
+     "qubits": [
+      50,
+      148,
+      21
+     ],
+     "passes": 3450,
+     "passRate": 0.421142578125
+    },
+    {
+     "length": 4,
+     "seed": 1080000000,
+     "shots": 8192,
+     "qubits": [
+      50,
+      148,
+      21,
+      68
+     ],
+     "passes": 2550,
+     "passRate": 0.311279296875
+    },
+    {
+     "length": 5,
+     "seed": 1100000000,
+     "shots": 8192,
+     "qubits": [
+      50,
+      148,
+      21,
+      68,
+      151
+     ],
+     "passes": 1886,
+     "passRate": 0.230224609375
+    },
+    {
+     "length": 6,
+     "seed": 1120000000,
+     "shots": 8192,
+     "qubits": [
+      50,
+      148,
+      21,
+      68,
+      151,
+      8
+     ],
+     "passes": 1442,
+     "passRate": 0.176025390625
+    },
+    {
+     "length": 7,
+     "seed": 1140000000,
+     "shots": 8192,
+     "qubits": [
+      50,
+      148,
+      21,
+      68,
+      151,
+      8,
+      142
+     ],
+     "passes": 1070,
+     "passRate": 0.130615234375
+    },
+    {
+     "length": 8,
+     "seed": 1160000000,
+     "shots": 8192,
+     "qubits": [
+      50,
+      148,
+      21,
+      68,
+      151,
+      8,
+      142,
+      25
+     ],
+     "passes": 792,
+     "passRate": 0.0966796875
+    }
+   ]
+  }
+ ]
+}
