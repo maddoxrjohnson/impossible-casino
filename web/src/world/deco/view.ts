@@ -8,7 +8,7 @@ import type { GameAudio } from '../../audio/audio';
 import type { StageSize, StageView } from '../../render/stage';
 import type { Hud, SideName } from '../../ui/hud';
 import { createLines, type LineKey, money, pastClassical, pct, signedAmount } from '../../ui/lines';
-import { settledLine, stakeChoices, tableButtons } from '../../ui/table';
+import { settledLine, sourceLine, stakeChoices, tableButtons } from '../../ui/table';
 import { buildWorld, FROST, TIERS, TOP_Y, SEAL_S, FLOOR_Y, TABLE_Y, PAIR_A, PAIR_B, WIN_DIR } from './scene';
 import { questionCell } from './textures';
 import { createPost } from './post';
@@ -110,12 +110,13 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     hud.dial((p === 'entangled' || p === 'beyond') && !lock && !side && !s.broke);
     hud.dialLocked(b);
     hud.stakes(stakeChoices(s, lock), s.stake);
-    const key = `${p}|${b}|${lock}|${!!side}|${s.broke}`;
+    hud.source(side ? null : sourceLine(s, source.previewProvenance));
+    const key = `${p}|${b}|${lock}|${!!side}|${s.broke}|${!!s.result}`;
     if (buttonKey !== key) {
       buttonKey = key;
       const { main, alt } = tableButtons(s, { locked: lock, inRoom: !!side });
       hud.buttons(main, alt);
-      hud.stubs(p !== 'classical' && !b && !lock);
+      hud.stubs(p !== 'classical' && !b && !lock, !!s.result);
     }
     if (!b && !lock && !side) {
       const owed = settledLine(s, running, source.limits, lastBand);

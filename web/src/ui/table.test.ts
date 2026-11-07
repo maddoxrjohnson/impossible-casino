@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { RUN_HANDS, STAKES } from '../game/rules';
-import { settledLine, stakeChoices, tableButtons } from './table';
+import { createPrerunSource, parseChshExport, parseWiesnerExport, provenanceLabel, type ChipProvenance, type ChshResult } from '../game/results';
+import chshJson from '../../public/data/chsh.v1.json';
+import wiesnerJson from '../../public/data/wiesner.v1.json';
+import { settledLine, sourceLine, stakeChoices, tableButtons } from './table';
 
 const limits = { classical: 0.75, quantum: 0.8535533905932737 };
 const idle = { locked: false, inRoom: false };
@@ -118,5 +121,33 @@ describe('settledLine', () => {
   it('otherwise keeps the line showing', () => {
     expect(settledLine({ ...entangled, phase: 'beyond' }, false, limits)).toBeNull();
     expect(settledLine({ ...entangled, phase: 'wall' }, false, limits)).toBeNull();
+  });
+});
+
+describe('sourceLine', () => {
+  const source = createPrerunSource({ chsh: parseChshExport(chshJson), wiesner: parseWiesnerExport(wiesnerJson) }, 'ibm-noise-model');
+  const preview = source.previewProvenance;
+
+  it('stays off while the table plays classical hands', () => {
+    for (const phase of ['intro', 'classical', 'wall'] as const) {
+      expect(sourceLine({ phase, dial: 0.5, target: 0.8, result: null }, preview)).toBeNull();
+    }
+  });
+
+  it('labels the dial preview before a run, because those rates are quantum results', () => {
+    for (const phase of ['entangled', 'beyond'] as const) {
+      expect(sourceLine({ phase, dial: 0.5, target: 0.8, result: null }, preview)).toBe(`Source: ${provenanceLabel(preview)}`);
+    }
+  });
+
+  it("follows the run's own source over the preview", async () => {
+    const chip: ChipProvenance = { ...preview, source: 'ibm-chip', noiseModel: null, backend: 'ibm_kingston', jobId: 'd4example' };
+    const result: ChshResult = { ...(await source.chsh(0.5)), provenance: chip };
+    const ran = { phase: 'entangled', dial: 0.5, target: result.winRate, result } as const;
+    expect(sourceLine(ran, preview)).toBe('Source: IBM chip ibm_kingston, job d4example');
+    const previewLabel = `Source: ${provenanceLabel(preview)}`;
+    expect(sourceLine({ ...ran, dial: 0.25, target: source.previewWinRate(0.25) }, preview)).toBe(previewLabel);
+    // Turned away and back: same dial, but the rate on screen is the preview again.
+    expect(sourceLine({ ...ran, target: 0.7 }, preview)).toBe(previewLabel);
   });
 });

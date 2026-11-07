@@ -171,6 +171,8 @@ export interface WiesnerResult {
 export interface ResultSource {
   readonly dials: readonly number[];
   readonly limits: { readonly classical: number; readonly quantum: number };
+  /** Where `previewWinRate` reads from. A run reports its own provenance on its result. */
+  readonly previewProvenance: Provenance;
   snapDial(value: number): number;
   /** Synchronous lookup for live dial feedback. Snaps its input. */
   previewWinRate(dial: number): number;
@@ -600,6 +602,7 @@ export function createPrerunSource(exports: GameExports, runId: string): ResultS
   return {
     dials,
     limits: { classical: chsh.limits.classical.value, quantum: chsh.limits.quantum.value },
+    previewProvenance: chshRun.provenance,
     snapDial,
     previewWinRate: (dial) => pointAt(dial).winRate,
     chsh(dial) {

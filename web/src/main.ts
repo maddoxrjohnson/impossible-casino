@@ -7,6 +7,7 @@ import { createGameStore } from './game/store';
 import { showFallback } from './ui/fallback';
 import { createHud, type HudAction } from './ui/hud';
 import { dialStep } from './ui/lines';
+import { chshReceipt } from './ui/receipt';
 import { stakeChoices } from './ui/table';
 
 /** The exported run the table plays. Noisy on purpose: it is the closest stand-in for a real chip. */
@@ -84,6 +85,10 @@ async function boot(root: HTMLElement): Promise<void> {
       },
       onSound: (on) => {
         audio.set(on);
+      },
+      onReceipt: () => {
+        const { result, last } = store.state;
+        return result ? chshReceipt(result, last, source.limits) : null;
       },
     });
 

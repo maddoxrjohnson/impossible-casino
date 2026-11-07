@@ -1,4 +1,5 @@
-// The DOM over the film: brass plaques, a lift dial, intertitles and ticket stubs. A hotel floor indicator over a noir title card.
+// The DOM over the film: brass plaques, a lift dial, intertitles, ticket stubs and a paper marker. A hotel floor indicator over a noir title card.
+import type { Receipt } from './receipt';
 import type { StakeChoice } from './table';
 
 export type HudKey = 'bank' | 'delta' | 'rate' | 'hands' | 'limit' | 'even' | 'odds' | 'pays' | 'tt' | 'x' | 'y' | 'a' | 'b' | 'res' | 'amt';
@@ -21,6 +22,8 @@ export interface HudOptions {
   onDial: (value: number) => void;
   onStake: (value: number) => void;
   onSound: (on: boolean) => void;
+  /** The marker for the latest run, or null when there is no run to show. */
+  onReceipt: () => Receipt | null;
 }
 
 export type Hud = ReturnType<typeof createHud>;
@@ -30,7 +33,7 @@ const svg = (tag: string, attrs: Record<string, string | number>, parent?: Eleme
 const LIFT_A = (i: number) => -76 + i * 38;   // stage angle in degrees either side of straight up
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
 
-export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, onAction, onDial, onStake, onSound }: HudOptions) {
+export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, onAction, onDial, onStake, onSound, onReceipt }: HudOptions) {
   root.classList.add('deco');
 
   const hud = el('div', 'dc-hud');
@@ -49,6 +52,7 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
     <div class="res"><span data-v="res"></span><span data-v="amt"></span></div>`);
   const base = el('div', 'dc-base');
   const card = el('div', 'dc-card'); const line = el('p'); line.setAttribute('aria-live', 'polite'); card.appendChild(line);
+  const sourceTag = el('div', 'dc-source'); sourceTag.hidden = true; card.appendChild(sourceTag);
   const dial = el('div', 'dc-dial', `<label for="dc-dial-input"><span>Your dial</span><output data-v="odds"></output></label>
     <input id="dc-dial-input" type="range" aria-label="Measurement angle dial">
     <div class="dc-stakes" role="radiogroup" aria-label="Stake per hand"><span>Stake</span>${stakes.map((value) => `<label class="dc-stake"><input type="radio" name="dc-stake" value="${value}"><span>${value.toLocaleString('en-US')}</span></label>`).join('')}<output data-v="pays"></output></div>`);
@@ -57,11 +61,11 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   const alt = el('button', 'dc-btn'); alt.type = 'button'; alt.hidden = true;
   row.append(main, alt);
   const stubs = el('div', 'dc-row');
+  const receiptBtn = el('button', 'dc-stub', 'Receipt'); receiptBtn.type = 'button'; receiptBtn.disabled = true;
   const clockBtn = el('button', 'dc-stub', 'The cage'); clockBtn.type = 'button';
   const winBtn = el('button', 'dc-stub', 'The wheel'); winBtn.type = 'button';
   const soundBtn = el('button', 'dc-stub', 'Sound off'); soundBtn.type = 'button'; soundBtn.setAttribute('aria-pressed', 'false');
-  // The receipt stub and its paper marker go at the front of this row.
-  stubs.append(clockBtn, winBtn, soundBtn);
+  stubs.append(receiptBtn, clockBtn, winBtn, soundBtn);
   stubs.classList.add('dc-stubs');
   base.append(card, dial, row);
   const lift = el('div', 'dc-lift'); lift.setAttribute('role', 'img');
@@ -83,7 +87,17 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   const hint = el('div', 'dc-hint');
   hud.appendChild(hint);
 
-  root.append(hud);
+  const receipt = el('div', 'dc-receipt');
+  receipt.setAttribute('role', 'dialog'); receipt.setAttribute('aria-modal', 'true'); receipt.setAttribute('aria-label', 'Casino marker with the Qiskit receipt');
+  const marker = el('div', 'dc-marker');
+  // Focusable so a keyboard can scroll a marker taller than the screen.
+  marker.tabIndex = 0;
+  const circuitTitle = el('p', 'cap'), pre = el('pre'), circuitNote = el('p', 'cap'), details = el('dl'), stamp = el('span', 'dc-stamp');
+  const close = el('button', 'dc-btn', 'Close marker'); close.type = 'button';
+  marker.append(el('h2', '', 'Casino marker'), el('p', 'sub', 'Payable at the Cage: what the table ran, and where.'), circuitTitle, pre, circuitNote, details, stamp, close);
+  receipt.append(marker);
+
+  root.append(hud, receipt);
 
   const v = new Map<string, HTMLElement>(); root.querySelectorAll<HTMLElement>('[data-v]').forEach((n) => { if (n.dataset.v) v.set(n.dataset.v, n); });
   const cache = new Map<string, string | number>();
@@ -111,11 +125,25 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   const clickAlt = () => { if (altAct) onAction(altAct); };
   const onInput = () => { onDial(+input.value); };
   const onStakeChange = (e: Event) => { if (e.target instanceof HTMLInputElement) onStake(+e.target.value); };
-  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onSide('back'); };
+  const isOpen = () => receipt.classList.contains('is-on');
+  const onReceiptOpen = () => {
+    const data = onReceipt();
+    if (!data) return;
+    circuitTitle.textContent = data.circuitTitle; pre.textContent = data.qasm; circuitNote.textContent = data.circuitNote; stamp.textContent = data.stamp;
+    details.replaceChildren(...data.rows.flatMap(([k, value]) => { const a = el('dt'), b = el('dd'); a.textContent = k; b.textContent = value; return [a, b]; }));
+    hud.inert = true; receipt.classList.add('is-on'); marker.scrollTop = 0; marker.focus({ preventScroll: true });
+  };
+  const onReceiptClose = () => { hud.inert = false; receipt.classList.remove('is-on'); receiptBtn.focus(); };
+  // Only a press that starts on the backdrop closes it, so dragging a text selection off the paper does not.
+  let downOnBackdrop = false;
+  const onReceiptDown = (e: PointerEvent) => { downOnBackdrop = e.target === receipt; };
+  const onBackdrop = (e: MouseEvent) => { if (downOnBackdrop && e.target === receipt) onReceiptClose(); };
+  const onKey = (e: KeyboardEvent) => { if (e.key !== 'Escape') return; if (isOpen()) onReceiptClose(); else onSide('back'); };
   const onClock = () => { onSide('cage'); }, onWin = () => { onSide('wheel'); };
   let soundOn = false;
   const onSnd = () => { soundOn = !soundOn; soundBtn.textContent = soundOn ? 'Sound on' : 'Sound off'; soundBtn.setAttribute('aria-pressed', String(soundOn)); onSound(soundOn); };
   main.addEventListener('click', clickMain); alt.addEventListener('click', clickAlt); input.addEventListener('input', onInput); stakeRow.addEventListener('change', onStakeChange);
+  receiptBtn.addEventListener('click', onReceiptOpen); close.addEventListener('click', onReceiptClose); receipt.addEventListener('pointerdown', onReceiptDown); receipt.addEventListener('click', onBackdrop);
   clockBtn.addEventListener('click', onClock); winBtn.addEventListener('click', onWin); soundBtn.addEventListener('click', onSnd);
   // On the document, so Escape still works after a click on the canvas leaves focus on the page.
   document.addEventListener('keydown', onKey);
@@ -130,7 +158,8 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
       if (cache.get('rot') !== rot) { cache.set('rot', rot); arrow.style.transform = `rotate(${rot}deg)`; }
       if (cache.get('here') !== here) { cache.set('here', here); stageT.forEach((t, i) => t.classList.toggle('is-here', i === here)); }
     },
-    stubs(on: boolean) { clockBtn.disabled = !on; winBtn.disabled = !on; },
+    stubs(on: boolean, hasReceipt: boolean) { clockBtn.disabled = !on; winBtn.disabled = !on; receiptBtn.disabled = !(on && hasReceipt); },
+    source(text: string | null) { const s = text ?? ''; if (cache.get('source') !== s) { cache.set('source', s); sourceTag.textContent = s; sourceTag.hidden = !s; } },
     title(on: boolean) { title.classList.toggle('is-gone', !on); },
     dial(on: boolean) { dial.classList.toggle('is-on', on); },
     dialLocked(on: boolean) { input.disabled = on; },
@@ -143,9 +172,10 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
     dispose() {
       clearTimeout(swapTimer);
       main.removeEventListener('click', clickMain); alt.removeEventListener('click', clickAlt); input.removeEventListener('input', onInput); stakeRow.removeEventListener('change', onStakeChange);
+      receiptBtn.removeEventListener('click', onReceiptOpen); close.removeEventListener('click', onReceiptClose); receipt.removeEventListener('pointerdown', onReceiptDown); receipt.removeEventListener('click', onBackdrop);
       clockBtn.removeEventListener('click', onClock); winBtn.removeEventListener('click', onWin); soundBtn.removeEventListener('click', onSnd);
       document.removeEventListener('keydown', onKey);
-      hud.remove(); root.classList.remove('deco', 'is-colour', 'is-side');
+      hud.remove(); receipt.remove(); root.classList.remove('deco', 'is-colour', 'is-side');
     },
   };
 }

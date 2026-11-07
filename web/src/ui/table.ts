@@ -1,5 +1,6 @@
 // What the table offers at each moment: buttons, stakes, and which line the dealer owes. No DOM, no drawing.
 import { BREAK_EVEN, RUN_HANDS, STAKES } from '../game/rules';
+import { provenanceLabel, type Provenance } from '../game/results';
 import type { GameState } from '../game/store';
 import type { HudButton } from './hud';
 import { bandFor, type Limits, type LineKey } from './lines';
@@ -47,6 +48,20 @@ export function stakeChoices(
   locked: boolean,
 ): StakeChoice[] {
   return STAKES.map((value) => ({ value, disabled: autoplaying || locked || value > bankroll }));
+}
+
+/**
+ * The source of the quantum numbers on the table, or null while none are showing.
+ * Classical hands come from a plan, not a circuit, so they carry no source.
+ */
+export function sourceLine(
+  { phase, dial, target, result }: Pick<GameState, 'phase' | 'dial' | 'target' | 'result'>,
+  preview: Provenance,
+): string | null {
+  if (phase !== 'entangled' && phase !== 'beyond') return null;
+  // Any turn of the dial puts the preview rate back on screen, even if it returns to the run's dial.
+  const showingRun = result?.dial === dial && result.winRate === target;
+  return `Source: ${provenanceLabel(showingRun ? result.provenance : preview)}`;
 }
 
 /**

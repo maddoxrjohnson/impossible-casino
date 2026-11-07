@@ -371,6 +371,10 @@ describe('snapDial', () => {
 });
 
 describe('previewWinRate', () => {
+  it('says where the preview rates come from', () => {
+    expect(ideal.previewProvenance).toBe(chsh.runs[0]?.provenance);
+  });
+
   it('is a lookup of the exported win rate and snaps its input', () => {
     expect(ideal.previewWinRate(0.5)).toBe(chsh.runs[0]?.points[16]?.winRate);
     expect(ideal.previewWinRate(0.51)).toBe(ideal.previewWinRate(0.5));
