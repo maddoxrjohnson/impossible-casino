@@ -76,6 +76,8 @@ export interface GameStore {
   entangle(): void;
   setDial(value: number): void;
   setStake(value: number): void;
+  /** Reads the dial's preview again, after the source has changed what it answers there. */
+  refreshPreview(): void;
   run(hands?: number): Promise<void>;
   /** `payoutStake` is the stake the exported pay table is quoted on. */
   forge(length: number, payoutStake: number): Promise<void>;
@@ -308,6 +310,12 @@ export function createGameStore({
       state.dial = dial;
       state.target = source.previewWinRate(dial);
       save();
+      emit();
+    },
+    refreshPreview() {
+      if (disposed || state.autoplaying || state.mode !== 'quantum') return;
+      // Emits even at the same rate, since the label under it may have changed.
+      state.target = source.previewWinRate(state.dial);
       emit();
     },
     setStake(value) {

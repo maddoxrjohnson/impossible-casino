@@ -104,6 +104,12 @@
 .dc-hint.is-on { opacity: 1; }
 
 .dc-source { margin-top: 5px; font: 400 13px/1.25 "Federo", Georgia, serif; letter-spacing: .02em; color: var(--silver); overflow-wrap: anywhere; }
+.dc-press { margin-top: 7px; pointer-events: auto; }
+.dc-press-form { display: flex; justify-content: center; gap: 6px; }
+.dc-press-form input { min-width: 0; width: 150px; min-height: 32px; box-sizing: border-box; padding: 0 9px; border: 0; background: #0b0b0b; color: #f1eee6; font: 400 14px/1 "Federo", Georgia, serif; box-shadow: inset 0 0 0 1px rgba(207,204,196,.5); }
+.dc-press-form .dc-stub { min-height: 32px; padding: 7px 11px; font-size: 14px; }
+.dc-press-form .dc-stub[aria-disabled="true"] { opacity: .5; cursor: default; }
+.dc-press-line:empty, .dc-press-form[hidden] { display: none; }
 .dc-receipt { position: absolute; inset: 0; display: grid; grid-template-rows: minmax(0, 1fr); place-items: center; padding: 14px; box-sizing: border-box; background: rgba(0,0,0,.6); opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility .2s; z-index: 5; }
 .dc-receipt.is-on { opacity: 1; visibility: visible; transition-property: opacity; } /* visible at once, or the focus call on open finds it hidden */
 .dc-marker { width: min(560px, 100%); max-height: 100%; overflow: auto; box-sizing: border-box; color: var(--ink); padding: 22px 24px 18px; transform: translateY(14px) rotate(-.7deg) scale(.98); transition: transform .26s var(--out);

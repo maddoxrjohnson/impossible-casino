@@ -47,6 +47,22 @@ def test_sample_hands_the_cap_and_shots_to_the_sampler(monkeypatch):
     assert built[0].options.default_shots == 8
 
 
+def test_sample_tags_the_job_when_asked(monkeypatch):
+    built = []
+
+    class Sampler:
+        def __init__(self, mode):
+            self.options = SimpleNamespace(environment=SimpleNamespace(job_tags=None))
+            built.append(self)
+
+        def run(self, pubs):
+            return pubs
+
+    monkeypatch.setattr(quantum.chip, "SamplerV2", Sampler)
+    sample(["pub"], None, shots=8, max_seconds=30, tags=("a", "b"))
+    assert built[0].options.environment.job_tags == ["a", "b"]
+
+
 def test_pending_seconds_counts_caps_on_jobs_with_no_results(tmp_path):
     (tmp_path / "chsh-a.json").write_text(json.dumps({"maxSeconds": 100}))
     (tmp_path / "wiesner-b.json").write_text(json.dumps({"maxSeconds": 30}))

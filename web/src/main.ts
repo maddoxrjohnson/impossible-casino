@@ -4,6 +4,7 @@ import { createAudio } from './audio/audio';
 import { cageBoard, type ForgeAttempt } from './game/cage';
 import { withChipRuns } from './game/chip';
 import { createLiveSource } from './game/live';
+import { createChipPress, pressStorage, withPressedRun } from './game/press';
 import { createPrerunSource, loadExports } from './game/results';
 import { STAKES } from './game/rules';
 import { createGameStore } from './game/store';
@@ -11,6 +12,7 @@ import { showFallback } from './ui/fallback';
 import { createFlatTable } from './ui/flat';
 import { createHud, type HudAction } from './ui/hud';
 import { dialStep } from './ui/lines';
+import { createPressPanel } from './ui/press-panel';
 import { markerFor } from './ui/receipt';
 import { stakeChoices } from './ui/table';
 
@@ -69,9 +71,12 @@ async function boot(root: HTMLElement): Promise<void> {
       loadExports(),
       waitForFonts(),
     ]);
-    const live = createLiveSource(createPrerunSource(exports, RUN_ID), { url: import.meta.env.VITE_API_URL as string | undefined });
+    const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
+    const live = createLiveSource(createPrerunSource(exports, RUN_ID), { url: apiUrl });
     void live.warm();
-    const source = withChipRuns(live, exports);
+    const press = createChipPress({ url: apiUrl, storage: pressStorage() });
+    // A pressed chip result sits over the exported chip runs, at its one dial.
+    const source = withPressedRun(withChipRuns(live, exports), exports, () => press.result());
     const store = createGameStore({ source });
     const audio = createAudio();
     const cage = cageBoard(exports.wiesner, RUN_ID);
@@ -120,6 +125,17 @@ async function boot(root: HTMLElement): Promise<void> {
         void store.forge(length, cage.payoutStake);
       },
     });
+    // Only the owner's ?owner visit shows the button. A job left from one still shows its status.
+    const pressPanel = createPressPanel(press, new URLSearchParams(location.search).has('owner'));
+    hud.card.append(pressPanel.box);
+    // The pressed result changes what the dial previews at its dial, and under which label.
+    let pressed = press.result();
+    press.subscribe(() => {
+      if (press.result() === pressed) return;
+      pressed = press.result();
+      store.refreshPreview();
+    });
+    press.resume();
     let heard: ForgeAttempt | null = null;
     store.subscribe((state) => {
       hud.cage(state);
@@ -133,6 +149,8 @@ async function boot(root: HTMLElement): Promise<void> {
       if (closed) return;
       closed = true;
       closeFlat();
+      pressPanel.dispose();
+      press.dispose();
       hud.dispose();
       audio.dispose();
       store.dispose();

@@ -583,7 +583,19 @@ function parseLiveProvenance(value: unknown, shots: number, path: string): Prove
   return provenance;
 }
 
-export function parseLiveChsh(value: unknown, dial: number): LiveChsh {
+/** A pressed chip run must name a real chip and its job, and carry no noise model. */
+function parseChipProvenance(value: unknown, shots: number, path: string): ChipProvenance {
+  const provenance = parseProvenance(value, path);
+  if (provenance.source !== 'ibm-chip') fail(`${path}.source`, 'expected ibm-chip');
+  if (provenance.shots !== shots) fail(`${path}.shots`, `expected ${shots}`);
+  return provenance;
+}
+
+function parseLiveChshBody<P extends Provenance>(
+  value: unknown,
+  dial: number,
+  parseRunProvenance: (raw: unknown, shots: number, path: string) => P,
+): LiveChsh & { readonly provenance: P } {
   const raw = record(value, 'live');
   if (raw.experiment !== 'chsh') fail('live.experiment', 'expected chsh');
   if (raw.dial !== dial) fail('live.dial', `expected ${dial}`);
@@ -596,8 +608,17 @@ export function parseLiveChsh(value: unknown, dial: number): LiveChsh {
     runId: text(raw.runId, 'live.runId'),
     winRate: rate(raw.winRate, 'live.winRate'),
     pairs,
-    provenance: parseLiveProvenance(raw.provenance, shots, 'live.provenance'),
+    provenance: parseRunProvenance(raw.provenance, shots, 'live.provenance'),
   };
+}
+
+export function parseLiveChsh(value: unknown, dial: number): LiveChsh {
+  return parseLiveChshBody(value, dial, parseLiveProvenance);
+}
+
+/** A press's result from the service. Only a real chip label passes. */
+export function parseLiveChipChsh(value: unknown, dial: number): LiveChsh & { readonly provenance: ChipProvenance } {
+  return parseLiveChshBody(value, dial, parseChipProvenance);
 }
 
 export function parseLiveWiesner(value: unknown, length: number): LiveWiesner {

@@ -1,0 +1,78 @@
+{
+ "status": "done",
+ "jobId": "d0fakejob0000000000a",
+ "result": {
+  "experiment": "chsh",
+  "runId": "ibm-chip",
+  "outcomeOrder": "ba",
+  "dial": 0.5,
+  "seed": 20261107,
+  "winRate": 0.6748046875,
+  "pairs": [
+   {
+    "x": 0,
+    "y": 0,
+    "shots": 1024,
+    "winRate": 0.849609375,
+    "counts": {
+     "00": 430,
+     "01": 70,
+     "10": 84,
+     "11": 440
+    }
+   },
+   {
+    "x": 0,
+    "y": 1,
+    "shots": 1024,
+    "winRate": 0.849609375,
+    "counts": {
+     "00": 430,
+     "01": 70,
+     "10": 84,
+     "11": 440
+    }
+   },
+   {
+    "x": 1,
+    "y": 0,
+    "shots": 1024,
+    "winRate": 0.849609375,
+    "counts": {
+     "00": 430,
+     "01": 70,
+     "10": 84,
+     "11": 440
+    }
+   },
+   {
+    "x": 1,
+    "y": 1,
+    "shots": 1024,
+    "winRate": 0.150390625,
+    "counts": {
+     "00": 430,
+     "01": 70,
+     "10": 84,
+     "11": 440
+    }
+   }
+  ],
+  "provenance": {
+   "source": "ibm-chip",
+   "backend": "ibm_kingston",
+   "noiseModel": null,
+   "qubits": [
+    61,
+    62
+   ],
+   "qubitSelection": "best-case pick: the coupler with the lowest CZ plus readout error in that day's calibration",
+   "shots": 1024,
+   "qiskitVersion": "2.6.2",
+   "aerVersion": "0.18.2",
+   "runtimeVersion": "0.51.0",
+   "date": "2026-11-07",
+   "jobId": "d0fakejob0000000000a"
+  }
+ }
+}

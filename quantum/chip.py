@@ -39,12 +39,20 @@ def pending_seconds(runs_dir: Path = RUNS_DIR) -> int:
     return sum(record["maxSeconds"] for record in records if "run" not in record)
 
 
-def sample(pubs: Sequence[Any], backend: BackendV2, shots: int, max_seconds: int) -> Any:
+def sample(
+    pubs: Sequence[Any],
+    backend: BackendV2,
+    shots: int,
+    max_seconds: int,
+    tags: Sequence[str] = (),
+) -> Any:
     """Submit raw sampling, which IBM cancels past max_seconds of chip time."""
     check_cap(max_seconds)
     sampler = SamplerV2(mode=backend)
     sampler.options.default_shots = shots
     sampler.options.max_execution_time = max_seconds
+    if tags:
+        sampler.options.environment.job_tags = list(tags)
     return sampler.run(list(pubs))
 
 

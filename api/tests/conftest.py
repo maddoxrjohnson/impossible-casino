@@ -12,8 +12,12 @@ from api.main import create_app
 from api.settings import Settings
 
 
+class RuntimeServiceTouched(BaseException):
+    """Not an Exception, so the service's own catch-alls cannot turn it into a 502."""
+
+
 def _no_runtime_service(*_args: Any, **_kwargs: Any) -> None:
-    raise AssertionError("the API must never construct QiskitRuntimeService")
+    raise RuntimeServiceTouched("tests must never construct QiskitRuntimeService")
 
 
 @pytest.fixture(scope="session", autouse=True)

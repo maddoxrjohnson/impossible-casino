@@ -1603,3 +1603,49 @@ describe('subscribe and onRound', () => {
     expect(store.state).toBe(state);
   });
 });
+
+describe('refreshPreview', () => {
+  function switchable() {
+    let rate: number | null = null;
+    const swapped: ResultSource = {
+      ...source,
+      previewWinRate: (dial) => (rate !== null && source.snapDial(dial) === TUNED ? rate : source.previewWinRate(dial)),
+    };
+    return { source: swapped, set: (value: number | null) => { rate = value; } };
+  }
+
+  it('reads the preview again when the source underneath changes', () => {
+    const { source: swapped, set } = switchable();
+    const store = make({ source: swapped, storage: saved() });
+    const fn = vi.fn();
+    store.subscribe(fn);
+    set(0.7);
+    store.refreshPreview();
+    expect(store.state.target).toBe(0.7);
+    expect(fn).toHaveBeenCalledTimes(2);
+    set(null);
+    store.refreshPreview();
+    expect(store.state.target).toBe(source.previewWinRate(TUNED));
+  });
+
+  it('leaves a run in progress alone', async () => {
+    const { source: swapped, set } = switchable();
+    const store = make({ source: swapped, storage: saved() });
+    const finished = store.run(2);
+    await hands(0);
+    const target = store.state.target;
+    set(0.7);
+    store.refreshPreview();
+    expect(store.state.target).toBe(target);
+    await hands(2);
+    await finished;
+  });
+
+  it('leaves the classical table alone', () => {
+    const { source: swapped, set } = switchable();
+    const store = make({ source: swapped });
+    set(0.7);
+    store.refreshPreview();
+    expect(store.state.target).toBe(source.limits.classical);
+  });
+});

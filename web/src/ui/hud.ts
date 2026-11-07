@@ -157,6 +157,8 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
 
   return {
     put, say, buttons, input, hud,
+    /** The caption card under the table, which also holds the source line. */
+    card,
     /** The world answers the side-room buttons once it exists. */
     setSide(fn: (name: SideName | 'back') => void) { onSide = fn; },
     gauge(label: string, frac: number, here: number) {
