@@ -14,6 +14,7 @@ from quantum.chsh import (
     classical_strategies,
     classical_win_rate,
     is_win,
+    measurement_angles,
     pair_win_rate,
     run_chsh,
     split_outcome,
@@ -134,14 +135,16 @@ def test_win_rate_follows_the_game_curve_across_the_dial(step):
     assert win_rate(exact_probabilities(dial)) == pytest.approx(curve, abs=1e-12)
 
 
-def test_player_owns_qubit_and_bit_zero_and_partner_owns_one():
-    circuit = chsh_circuit(0.3, 1, 0)
+@pytest.mark.parametrize("pair", QUESTION_PAIRS)
+def test_player_owns_qubit_and_bit_zero_and_partner_owns_one(pair):
+    circuit = chsh_circuits(0.3)[pair]
+    player, partner = measurement_angles(0.3, *pair)
     rotations = {
         circuit.find_bit(item.qubits[0]).index: item.operation.params[0]
         for item in circuit.data
         if item.operation.name == "ry"
     }
-    assert rotations == pytest.approx({0: -0.3 * math.pi, 1: -math.pi / 4})
+    assert rotations == pytest.approx({0: -player, 1: -partner})
     measured = {
         circuit.find_bit(item.qubits[0]).index: circuit.find_bit(item.clbits[0]).index
         for item in circuit.data
