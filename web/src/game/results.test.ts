@@ -1,15 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import chshJson from '../../public/data/chsh.v1.json';
 import wiesnerJson from '../../public/data/wiesner.v1.json';
+import rouletteJson from '../../public/data/roulette.v1.json';
 import {
   COUNT_KEYS,
   createPrerunSource,
   drawPass,
   loadExports,
+  loadRoulette,
   parseChshExport,
   parseLiveChsh,
   parseLiveWiesner,
   parseProvenance,
+  parseRouletteExport,
   parseWiesnerExport,
   provenanceLabel,
   sampleOutcome,
@@ -631,5 +634,114 @@ describe('loadExports', () => {
   it('throws on a body that fails validation', async () => {
     const fetchFn = () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
     await expect(loadExports(fetchFn, '/')).rejects.toThrow(/schemaVersion/);
+  });
+});
+
+interface LooseRoulette extends Record<string, unknown> {
+  deck: Record<string, unknown>[];
+  wheels: number[][];
+  nodes: (Record<string, unknown> & { draft: number[]; houseCards?: number[]; limitPockets?: number[] })[];
+  logicalCircuits: { draft: number[]; qasm: string }[];
+  runs: (Omit<LooseRun, 'points'> & { points: { draft: number[]; shots: number; counts: number[] }[] })[];
+  payouts: { table: Record<string, unknown>[] } & Record<string, unknown>;
+  edge: Record<string, unknown>[];
+  clear: Record<string, unknown>;
+}
+
+function looseRoulette(): LooseRoulette {
+  return structuredClone(rouletteJson);
+}
+
+function nodeAt(d: LooseRoulette, draft: readonly number[]): LooseRoulette['nodes'][number] {
+  const node = d.nodes.find((n) => n.draft.join(',') === draft.join(','));
+  if (!node) throw new Error(`no node at ${draft.join(',')}`);
+  return node;
+}
+
+describe('parseRouletteExport', () => {
+  const roulette = parseRouletteExport(rouletteJson);
+
+  it('accepts the real export', () => {
+    expect(roulette.experiment).toBe('roulette');
+    expect(roulette.playRun).toBe('ibm-noise-model');
+    expect(roulette.deck).toHaveLength(6);
+    expect(roulette.wheels.every((w) => w.length === 32)).toBe(true);
+    expect(roulette.nodes).toHaveLength(169);
+    expect(roulette.logicalCircuits).toHaveLength(108);
+    expect(roulette.runs.map((r) => r.id)).toEqual(['ideal', 'ibm-noise-model']);
+    expect(roulette.runs[1]?.points).toHaveLength(108);
+    expect(roulette.runs[1]?.provenance.noiseModel?.name).toBe('fake_kingston');
+    expect(roulette.payouts.table[0]).toMatchObject({ bet: 'straight', pays: 280 });
+    expect(roulette.limits.houseLimit.value).toBe(0.25);
+    expect(roulette.edge.map((e) => e.run)).toEqual(['ideal', 'ibm-noise-model']);
+  });
+
+  it('keeps each node to its turn', () => {
+    const root = roulette.nodes.find((n) => n.draft.length === 0);
+    expect(root).toMatchObject({ turn: 'house', houseCards: [2, 3, 4, 5] });
+    const spins = roulette.nodes.filter((n) => n.turn === 'spin');
+    expect(spins).toHaveLength(108);
+    expect(spins.every((n) => n.turn === 'spin' && n.draft.length === 4)).toBe(true);
+  });
+
+  it.each<[string, (d: LooseRoulette) => void, RegExp]>([
+    ['bad version', (d) => (d.schemaVersion = 2), /schemaVersion/],
+    ['wrong experiment', (d) => (d.experiment = 'chsh'), /experiment/],
+    ['a short wheel', (d) => d.wheels[0]!.pop(), /wheels\[0\]/],
+    ['a wheel chance over 1', (d) => (d.wheels[0]![0] = 1.5), /wheels\[0\]/],
+    ['a node on a missing wheel', (d) => (d.nodes[0]!.wheel = 6), /wheel/],
+    ['a repeated node', (d) => d.nodes.push(structuredClone(d.nodes[0]!)), /duplicates/],
+    ['a card off the deck', (d) => (nodeAt(d, [2]).draft = [6]), /draft/],
+    ['a card drafted twice', (d) => (nodeAt(d, [2, 0]).draft = [2, 2]), /draft/],
+    ['a turn out of order', (d) => (nodeAt(d, [2]).turn = 'house'), /turn/],
+    ['a house node with no cards', (d) => (nodeAt(d, []).houseCards = []), /houseCards/],
+    ['a house card already drafted', (d) => (nodeAt(d, [2, 0]).houseCards = [2]), /houseCards/],
+    ['a house card with no node after it', (d) => d.nodes.splice(d.nodes.indexOf(nodeAt(d, [2])), 1), /no node/],
+    ['a spin node with no limit pockets', (d) => Reflect.deleteProperty(nodeAt(d, [2, 3, 4, 0]), 'limitPockets'), /limitPockets/],
+    ['a limit pocket off the wheel', (d) => (nodeAt(d, [2, 3, 4, 0]).limitPockets = [32]), /limitPockets/],
+    ['a play run that does not exist', (d) => (d.playRun = 'chip'), /playRun/],
+    ['counts not summing', (d) => (d.runs[1]!.points[0]!.counts[0]! += 1), /shots/],
+    ['a negative count', (d) => (d.runs[1]!.points[0]!.counts[0] = -1), /counts/],
+    ['a fractional count', (d) => (d.runs[1]!.points[0]!.counts[0] = 0.5), /counts/],
+    ['31 counts', (d) => d.runs[1]!.points[0]!.counts.pop(), /counts/],
+    ['a finished draft the play run lacks', (d) => d.runs[1]!.points.pop(), /no point/],
+    ['a finished draft with no circuit', (d) => d.logicalCircuits.pop(), /circuit/],
+    ['a live source in an export', (d) => (d.runs[1]!.provenance.source = 'live-simulator'), /source/],
+    ['simulator with a job id', (d) => (d.runs[0]!.provenance.jobId = 'abc'), /jobId/],
+    ['a duplicate run id', (d) => (d.runs[1]!.id = 'ideal'), /duplicates/],
+    ['no straight bet', (d) => (d.payouts.table[0]!.bet = 'split'), /straight/],
+    ['no edge for the play run', (d) => d.edge.pop(), /edge/],
+    ['a clear chance over 1', (d) => (d.clear.chance = 2), /clear/],
+  ])('rejects roulette with %s', (_name, spoil, message) => {
+    const bad = looseRoulette();
+    spoil(bad);
+    expect(() => parseRouletteExport(bad)).toThrow(message);
+  });
+
+  it.each([null, 3, 'x', []])('rejects %j as a roulette export', (raw) => {
+    expect(() => parseRouletteExport(raw)).toThrow(Error);
+  });
+});
+
+describe('loadRoulette', () => {
+  it('fetches and parses the file under the base path', async () => {
+    const urls: string[] = [];
+    const fetchFn = (url: string) => {
+      urls.push(url);
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(rouletteJson) });
+    };
+    const loaded = await loadRoulette(fetchFn, '/casino/');
+    expect(urls).toEqual(['/casino/data/roulette.v1.json']);
+    expect(loaded.experiment).toBe('roulette');
+  });
+
+  it('throws on a response that is not OK', async () => {
+    const fetchFn = () => Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+    await expect(loadRoulette(fetchFn, '/')).rejects.toThrow(/404/);
+  });
+
+  it('throws on a body that fails validation', async () => {
+    const fetchFn = () => Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve({}) });
+    await expect(loadRoulette(fetchFn, '/')).rejects.toThrow(/schemaVersion/);
   });
 });

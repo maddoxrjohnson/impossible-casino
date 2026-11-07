@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import chshJson from '../../public/data/chsh.v1.json';
 import wiesnerJson from '../../public/data/wiesner.v1.json';
+import rouletteJson from '../../public/data/roulette.v1.json';
 import {
   COUNT_KEYS,
   createPrerunSource,
   parseChshExport,
+  parseRouletteExport,
   parseWiesnerExport,
   type ChshPair,
   type ChshResult,
@@ -20,11 +22,13 @@ import {
   HAND_MS,
   HISTORY_CAP,
   RUN_HANDS,
+  STAKES,
   START_BANKROLL,
   chshWin,
   dealDeck,
   type Rng,
 } from './rules';
+import { rouletteBoard } from './roulette';
 import { SAVE_KEY, readSave, writeSave, type SaveData } from './save';
 import { createGameStore, type GameStore, type LastHand } from './store';
 
@@ -1702,5 +1706,357 @@ describe('refreshPreview', () => {
     set(0.7);
     store.refreshPreview();
     expect(store.state.target).toBe(source.limits.classical);
+  });
+});
+
+describe('the roulette wheel', () => {
+  const board = rouletteBoard(parseRouletteExport(rouletteJson));
+  /** Tie, untie, the house ties the other pair, Sweep: the line to the house limit. */
+  const LINE = [2, 3, 4, 0];
+  const PAID = (stake: number): number => Math.floor((board.pays * stake) / board.payoutStake);
+
+  /** An rng the test points: 0 makes the house play the first card it lists. */
+  function pointed(): { rng: Rng; set: (value: number) => void } {
+    let value = 0;
+    return {
+      rng: () => value,
+      set: (next) => {
+        value = next;
+      },
+    };
+  }
+
+  /** The draw that lands on the first shot of `pocket` for this draft. */
+  function drawOn(draft: readonly number[], pocket: number): number {
+    const point = board.point(draft);
+    if (!point) throw new Error('no point');
+    return point.counts.slice(0, pocket).reduce((sum, c) => sum + c, 0) / point.shots;
+  }
+
+  /** Opens and drafts LINE: the house plays 2 then 4 when the rng reads 0. */
+  function draftLine(store: GameStore): void {
+    store.rouletteOpen(board);
+    store.roulettePlay(board, 3);
+    store.roulettePlay(board, 0);
+    expect(store.state.roulette).toMatchObject({ draft: LINE, turn: 'spin', spin: null });
+  }
+
+  /** A pocket the line's counts never land on. */
+  const missed = (): number => {
+    const point = board.point(LINE);
+    const index = point?.counts.findIndex((c) => c === 0) ?? -1;
+    return index >= 0 ? index : 31;
+  };
+
+  describe('a round', () => {
+    it('starts with none open', () => {
+      expect(make().state.roulette).toBeNull();
+    });
+
+    it('opens at the current stake, with the house first', () => {
+      const store = make({ rng: () => 0, storage: saved({ stake: 500 }) });
+      store.rouletteOpen(board);
+      expect(store.state.roulette).toMatchObject({ stake: 500, draft: [2], turn: 'player', spin: null });
+    });
+
+    it('emits on each move and leaves the bankroll alone until the spin', () => {
+      const store = make({ rng: () => 0, storage: saved() });
+      const seen = vi.fn();
+      store.subscribe(seen);
+      seen.mockClear();
+      store.rouletteOpen(board);
+      store.roulettePlay(board, 3);
+      expect(seen).toHaveBeenCalledTimes(2);
+      expect(store.state.roulette?.draft).toEqual([2, 3, 4]);
+      expect(store.state.bankroll).toBe(9700);
+    });
+
+    it('ignores an illegal card', () => {
+      const store = make({ rng: () => 0, storage: saved() });
+      store.rouletteOpen(board);
+      const round = store.state.roulette;
+      const seen = vi.fn();
+      store.subscribe(seen);
+      seen.mockClear();
+      for (const bad of [2, 6, -1, 1.5, Number.NaN]) store.roulettePlay(board, bad);
+      expect(store.state.roulette).toBe(round);
+      expect(seen).not.toHaveBeenCalled();
+    });
+
+    it('ignores a card or a spin with no round open', () => {
+      const store = make({ rng: () => 0, storage: saved() });
+      store.roulettePlay(board, 0);
+      store.rouletteSpin(board, 0);
+      expect(store.state.roulette).toBeNull();
+      expect(store.state.bankroll).toBe(9700);
+    });
+
+    it('ignores a spin before the draft is done', () => {
+      const store = make({ rng: () => 0, storage: saved() });
+      store.rouletteOpen(board);
+      store.rouletteSpin(board, 0);
+      expect(store.state.roulette?.spin).toBeNull();
+      expect(store.state.bankroll).toBe(9700);
+    });
+
+    it('ignores a card once the draft is done, and a bad pocket', () => {
+      const store = make({ rng: () => 0, storage: saved() });
+      draftLine(store);
+      const round = store.state.roulette;
+      store.roulettePlay(board, 1);
+      for (const bad of [32, -1, 2.5, Number.NaN]) store.rouletteSpin(board, bad);
+      expect(store.state.roulette).toBe(round);
+    });
+  });
+
+  describe('the spin', () => {
+    it.each(STAKES.map((stake) => [stake]))('pays a straight-up win at stake %i', (stake) => {
+      const { rng, set } = pointed();
+      const store = make({ rng, storage: saved({ stake }) });
+      draftLine(store);
+      set(drawOn(LINE, 8));
+      store.rouletteSpin(board, 8);
+      expect(store.state.roulette?.spin).toMatchObject({ pocket: 8, landed: 8, won: true, delta: PAID(stake) });
+      expect(store.state.bankroll).toBe(9700 + PAID(stake));
+    });
+
+    it('takes the stake on a loss', () => {
+      const store = make({ rng: () => 0, storage: saved({ stake: 200 }) });
+      draftLine(store);
+      store.rouletteSpin(board, missed());
+      expect(store.state.roulette?.spin).toMatchObject({ won: false, delta: -200 });
+      expect(store.state.bankroll).toBe(9500);
+    });
+
+    it('refuses a second spin on the same round', () => {
+      const store = make({ rng: () => 0, storage: saved() });
+      draftLine(store);
+      store.rouletteSpin(board, missed());
+      const settled = store.state.roulette;
+      store.rouletteSpin(board, 0);
+      expect(store.state.roulette).toBe(settled);
+      expect(store.state.bankroll).toBe(9600);
+    });
+
+    it('clears the room on a win on a limit pocket, and saves it', () => {
+      const { rng, set } = pointed();
+      const storage = saved({ bankroll: 100, stake: 100 });
+      const store = make({ rng, storage });
+      draftLine(store);
+      set(drawOn(LINE, 16));
+      store.rouletteSpin(board, 16);
+      expect(store.state.roulette?.spin?.clears).toBe(true);
+      expect(store.state.cleared).toContain('roulette');
+      expect(saveOf(storage)?.cleared).toContain('roulette');
+    });
+
+    it('does not clear on a loss', () => {
+      const store = make({ rng: () => 0, storage: saved() });
+      draftLine(store);
+      store.rouletteSpin(board, missed());
+      expect(store.state.cleared).not.toContain('roulette');
+    });
+
+    it('does not clear on a win off the best line', () => {
+      const { rng, set } = pointed();
+      const store = make({ rng, storage: saved() });
+      store.rouletteOpen(board);
+      store.roulettePlay(board, 1);
+      store.roulettePlay(board, 0);
+      const draft = store.state.roulette?.draft ?? [];
+      expect(board.node(draft)).toMatchObject({ turn: 'spin', limitPockets: [] });
+      const pocket = board.point(draft)?.counts.findIndex((c) => c > 0) ?? 0;
+      set(drawOn(draft, pocket));
+      store.rouletteSpin(board, pocket);
+      expect(store.state.roulette?.spin?.won).toBe(true);
+      expect(store.state.cleared).not.toContain('roulette');
+    });
+
+    it('goes broke on a last losing spin and lowers the stake to fit', () => {
+      const broke = make({ rng: () => 0, storage: saved({ bankroll: 100, stake: 100 }) });
+      draftLine(broke);
+      broke.rouletteSpin(board, missed());
+      expect(broke.state).toMatchObject({ bankroll: 0, broke: true });
+
+      const lower = make({ rng: () => 0, storage: saved({ bankroll: 1200, stake: 1000 }) });
+      draftLine(lower);
+      lower.rouletteSpin(board, missed());
+      expect(lower.state).toMatchObject({ bankroll: 200, stake: 200, broke: false });
+    });
+  });
+
+  describe('what it refuses to open', () => {
+    it('a second round while one is open', () => {
+      const store = make({ rng: () => 0, storage: saved() });
+      store.rouletteOpen(board);
+      store.roulettePlay(board, 3);
+      const round = store.state.roulette;
+      store.rouletteOpen(board);
+      expect(store.state.roulette).toBe(round);
+    });
+
+    it('a round once broke', () => {
+      const store = make({ storage: saved({ bankroll: 50, stake: 100 }) });
+      store.rouletteOpen(board);
+      expect(store.state.roulette).toBeNull();
+    });
+
+    it('a round while the table is playing', async () => {
+      const store = make({ storage: saved() });
+      const finished = store.run();
+      store.rouletteOpen(board);
+      expect(store.state.roulette).toBeNull();
+      await hands(RUN_HANDS);
+      await finished;
+    });
+
+    it('a round while a forge is in flight', async () => {
+      let release: (result: WiesnerResult) => void = () => undefined;
+      const held: ResultSource = {
+        ...source,
+        wiesner: () =>
+          new Promise((resolve) => {
+            release = resolve;
+          }),
+      };
+      const store = make({ source: held, storage: saved() });
+      const forged = store.forge(1, exportsData.wiesner.payouts.stake);
+      store.rouletteOpen(board);
+      expect(store.state.roulette).toBeNull();
+      release(await source.wiesner(1));
+      await forged;
+    });
+
+    it('a round after dispose', () => {
+      const store = make({ storage: saved() });
+      store.dispose();
+      store.rouletteOpen(board);
+      expect(store.state.roulette).toBeNull();
+    });
+
+    it('nothing once settled: a new round replaces the last', () => {
+      const store = make({ rng: () => 0, storage: saved() });
+      draftLine(store);
+      store.rouletteSpin(board, missed());
+      store.rouletteOpen(board);
+      expect(store.state.roulette).toMatchObject({ draft: [2], spin: null, stake: 100 });
+    });
+  });
+
+  describe('the stake rule', () => {
+    it('holds the stake and the other games while a round is open', async () => {
+      const held = { calls: 0 };
+      const counted: ResultSource = {
+        ...source,
+        chsh: (dial) => {
+          held.calls += 1;
+          return source.chsh(dial);
+        },
+        wiesner: (length) => {
+          held.calls += 1;
+          return source.wiesner(length);
+        },
+      };
+      const store = make({ source: counted, rng: () => 0, storage: saved() });
+      store.rouletteOpen(board);
+      store.setStake(500);
+      await store.run();
+      await store.forge(1, exportsData.wiesner.payouts.stake);
+      expect(store.state).toMatchObject({ stake: 100, autoplaying: false, forging: false, forge: null });
+      expect(held.calls).toBe(0);
+      store.roulettePlay(board, 3);
+      store.roulettePlay(board, 0);
+      store.rouletteSpin(board, missed());
+      store.setStake(500);
+      expect(store.state.stake).toBe(500);
+    });
+
+    it('holds a deal and an entangle while a round is open', () => {
+      const intro = make({ rng: () => 0, storage: memoryStorage() });
+      intro.rouletteOpen(board);
+      intro.deal();
+      expect(intro.state).toMatchObject({ phase: 'intro', autoplaying: false });
+
+      const wall = make({ rng: () => 0, storage: saved({ phase: 'wall' }) });
+      wall.rouletteOpen(board);
+      wall.entangle();
+      expect(wall.state.phase).toBe('wall');
+    });
+  });
+
+  describe('leaving, restart and dispose', () => {
+    it('leaving drops an open round at no cost', () => {
+      const store = make({ rng: () => 0, storage: saved() });
+      store.rouletteOpen(board);
+      store.rouletteLeave();
+      expect(store.state.roulette).toBeNull();
+      expect(store.state.bankroll).toBe(9700);
+      store.setStake(500);
+      expect(store.state.stake).toBe(500);
+    });
+
+    it('leaving drops a settled round too', () => {
+      const store = make({ rng: () => 0, storage: saved() });
+      draftLine(store);
+      store.rouletteSpin(board, missed());
+      store.rouletteLeave();
+      expect(store.state.roulette).toBeNull();
+      expect(store.state.bankroll).toBe(9600);
+    });
+
+    it('leaving with no round says nothing', () => {
+      const store = make({ storage: saved() });
+      const seen = vi.fn();
+      store.subscribe(seen);
+      seen.mockClear();
+      store.rouletteLeave();
+      expect(seen).not.toHaveBeenCalled();
+    });
+
+    it('restart drops the round', () => {
+      const store = make({ rng: () => 0, storage: saved() });
+      store.rouletteOpen(board);
+      store.restart();
+      expect(store.state.roulette).toBeNull();
+      store.roulettePlay(board, 3);
+      expect(store.state.roulette).toBeNull();
+    });
+
+    it('dispose drops the round and ignores later moves', () => {
+      const store = make({ rng: () => 0, storage: saved() });
+      store.rouletteOpen(board);
+      store.dispose();
+      expect(store.state.roulette).toBeNull();
+      store.roulettePlay(board, 3);
+      store.rouletteSpin(board, 0);
+      store.rouletteLeave();
+      expect(store.state.roulette).toBeNull();
+    });
+  });
+
+  describe('saving', () => {
+    it('writes once, at the spin', () => {
+      const storage = saved();
+      const store = make({ rng: () => 0, storage });
+      store.rouletteOpen(board);
+      store.roulettePlay(board, 3);
+      store.roulettePlay(board, 0);
+      expect(storage.writes).toBe(0);
+      store.rouletteSpin(board, missed());
+      expect(storage.writes).toBe(1);
+      expect(saveOf(storage)?.bankroll).toBe(9600);
+    });
+
+    it('never writes the round, so a reload drops an open draft', () => {
+      const storage = saved();
+      const store = make({ rng: () => 0, storage });
+      store.rouletteOpen(board);
+      store.setDial(MISTUNED);
+      expect(storage.writes).toBe(1);
+      expect(JSON.parse(storage.getItem(SAVE_KEY) ?? '{}')).not.toHaveProperty('roulette');
+      const reloaded = make({ storage });
+      expect(reloaded.state.roulette).toBeNull();
+      expect(reloaded.state.bankroll).toBe(9700);
+    });
   });
 });

@@ -153,6 +153,105 @@ export interface GameExports {
   readonly wiesner: WiesnerExport;
 }
 
+/** Pockets on the roulette wheel: pocket n is the integer whose bit k is qubit k. */
+export const ROULETTE_POCKETS = 32;
+
+export type RouletteTurn = 'house' | 'player' | 'spin';
+
+export interface RouletteCard {
+  readonly id: string;
+  readonly name: string;
+  readonly ops: readonly { readonly gate: string; readonly qubits: readonly number[] }[];
+}
+
+interface RouletteNodeBase {
+  /** Indexes into the deck, in the order they were drafted. */
+  readonly draft: readonly number[];
+  /** Index into `RouletteExport.wheels`. */
+  readonly wheel: number;
+  /** The best chance on one pocket the player can still force against the house. */
+  readonly value: number;
+}
+
+export type RouletteNode =
+  | (RouletteNodeBase & { readonly turn: 'house'; readonly houseCards: readonly number[] })
+  | (RouletteNodeBase & { readonly turn: 'player' })
+  | (RouletteNodeBase & { readonly turn: 'spin'; readonly limitPockets: readonly number[] });
+
+export interface RoulettePoint {
+  readonly draft: readonly number[];
+  readonly seed: number;
+  readonly shots: number;
+  /** Shots per pocket, `ROULETTE_POCKETS` long. */
+  readonly counts: readonly number[];
+}
+
+export interface RouletteRun {
+  readonly id: string;
+  readonly provenance: Provenance;
+  readonly points: readonly RoulettePoint[];
+}
+
+export interface RoulettePayout {
+  readonly bet: string;
+  readonly pockets: number;
+  readonly pays: number;
+  readonly fairPays: number;
+  readonly breakEven: number;
+  readonly houseEdge: number;
+}
+
+export interface RouletteEdge {
+  readonly run: string;
+  readonly method: string;
+  readonly bestReturn: number;
+  readonly worstSpin: { readonly draft: readonly number[]; readonly return: number };
+  readonly clearChance: number;
+}
+
+export interface RouletteExport {
+  readonly schemaVersion: 1;
+  readonly experiment: 'roulette';
+  readonly pocketOrder: string;
+  readonly opening: string;
+  readonly houseRule: string;
+  readonly bet: string;
+  readonly stakeRule: string;
+  readonly spin: string;
+  readonly wheelsMethod: string;
+  readonly turns: readonly Exclude<RouletteTurn, 'spin'>[];
+  /** The run the game spins on. */
+  readonly playRun: string;
+  readonly deck: readonly RouletteCard[];
+  readonly limits: {
+    readonly fairWheel: Limit;
+    readonly classicalWheel: Limit;
+    readonly houseLimit: Limit;
+    readonly playStyles: readonly { readonly style: string; readonly value: number; readonly rule: string }[];
+    readonly legalDrafts: number;
+    readonly reachableDrafts: number;
+  };
+  readonly payouts: {
+    readonly status: string;
+    readonly stake: number;
+    readonly rule: string;
+    readonly basis: string;
+    readonly table: readonly RoulettePayout[];
+  };
+  readonly clear: { readonly rule: string; readonly basis: string; readonly chance: number };
+  /** Each a probability per pocket, shared by every node that shows it. */
+  readonly wheels: readonly (readonly number[])[];
+  readonly nodes: readonly RouletteNode[];
+  readonly logicalCircuits: readonly { readonly draft: readonly number[]; readonly qasm: string }[];
+  readonly runs: readonly RouletteRun[];
+  readonly edge: readonly RouletteEdge[];
+}
+
+/** A draft as a lookup key. */
+export function draftKey(draft: readonly number[]): string {
+  return draft.join(',');
+}
+
 export interface ChshResult {
   readonly experiment: 'chsh';
   readonly runId: string;
@@ -567,6 +666,251 @@ export function parseWiesnerExport(value: unknown): WiesnerExport {
   };
 }
 
+function pocket(value: unknown, path: string): number {
+  const n = integer(value, path, 0);
+  if (n >= ROULETTE_POCKETS) fail(path, `expected a pocket below ${ROULETTE_POCKETS}`);
+  return n;
+}
+
+function pocketList(value: unknown, path: string): readonly number[] {
+  const pockets = list(value, path).map((p, i) => pocket(p, `${path}[${i}]`));
+  checkUnique(pockets, path);
+  return pockets;
+}
+
+function parseDraft(value: unknown, deckSize: number, path: string): readonly number[] {
+  const draft = list(value, path).map((c, i) => {
+    const card = integer(c, `${path}[${i}]`, 0);
+    if (card >= deckSize) fail(`${path}[${i}]`, 'not a card in the deck');
+    return card;
+  });
+  checkUnique(draft, path);
+  return draft;
+}
+
+function parseRouletteCounts(value: unknown, shots: number, path: string): readonly number[] {
+  const counts = list(value, path);
+  if (counts.length !== ROULETTE_POCKETS) fail(path, `expected ${ROULETTE_POCKETS} counts`);
+  const parsed = counts.map((c, i) => integer(c, `${path}[${i}]`, 0));
+  if (parsed.reduce((sum, c) => sum + c, 0) !== shots) fail(path, `counts do not sum to shots (${shots})`);
+  return parsed;
+}
+
+function parseRouletteNode(
+  value: unknown,
+  turns: readonly Exclude<RouletteTurn, 'spin'>[],
+  deckSize: number,
+  wheelCount: number,
+  path: string,
+): RouletteNode {
+  const raw = record(value, path);
+  const draft = parseDraft(raw.draft, deckSize, `${path}.draft`);
+  if (draft.length > turns.length) fail(`${path}.draft`, `longer than ${turns.length} cards`);
+  const turn: RouletteTurn = turns[draft.length] ?? 'spin';
+  if (raw.turn !== turn) fail(`${path}.turn`, `expected ${turn}`);
+  const wheel = integer(raw.wheel, `${path}.wheel`, 0);
+  if (wheel >= wheelCount) fail(`${path}.wheel`, 'no such wheel');
+  const base = { draft, wheel, value: rate(raw.value, `${path}.value`) };
+  if (turn === 'spin') {
+    return { ...base, turn, limitPockets: pocketList(raw.limitPockets, `${path}.limitPockets`) };
+  }
+  if (turn === 'player') return { ...base, turn };
+  const houseCards = parseDraft(filled(raw.houseCards, `${path}.houseCards`), deckSize, `${path}.houseCards`);
+  if (houseCards.some((card) => draft.includes(card))) {
+    fail(`${path}.houseCards`, 'a card already drafted');
+  }
+  return { ...base, turn, houseCards };
+}
+
+function parseRouletteRun(value: unknown, deckSize: number, path: string): RouletteRun {
+  const raw = record(value, path);
+  const points = filled(raw.points, `${path}.points`).map((entry, i) => {
+    const at = `${path}.points[${i}]`;
+    const point = record(entry, at);
+    const shots = integer(point.shots, `${at}.shots`, 1);
+    return {
+      draft: parseDraft(point.draft, deckSize, `${at}.draft`),
+      seed: finite(point.seed, `${at}.seed`),
+      shots,
+      counts: parseRouletteCounts(point.counts, shots, `${at}.counts`),
+    };
+  });
+  checkUnique(
+    points.map((p) => draftKey(p.draft)),
+    `${path}.points`,
+  );
+  return {
+    id: text(raw.id, `${path}.id`),
+    provenance: parseExportedProvenance(raw.provenance, `${path}.provenance`),
+    points,
+  };
+}
+
+function parseRouletteCard(value: unknown, path: string): RouletteCard {
+  const raw = record(value, path);
+  return {
+    id: text(raw.id, `${path}.id`),
+    name: text(raw.name, `${path}.name`),
+    ops: filled(raw.ops, `${path}.ops`).map((entry, i) => {
+      const op = record(entry, `${path}.ops[${i}]`);
+      return {
+        gate: text(op.gate, `${path}.ops[${i}].gate`),
+        qubits: filled(op.qubits, `${path}.ops[${i}].qubits`).map((q, j) =>
+          integer(q, `${path}.ops[${i}].qubits[${j}]`, 0),
+        ),
+      };
+    }),
+  };
+}
+
+function parseRoulettePayout(value: unknown, path: string): RoulettePayout {
+  const raw = record(value, path);
+  return {
+    bet: text(raw.bet, `${path}.bet`),
+    pockets: integer(raw.pockets, `${path}.pockets`, 1),
+    pays: finite(raw.pays, `${path}.pays`),
+    fairPays: finite(raw.fairPays, `${path}.fairPays`),
+    breakEven: rate(raw.breakEven, `${path}.breakEven`),
+    houseEdge: finite(raw.houseEdge, `${path}.houseEdge`),
+  };
+}
+
+function parseRouletteEdge(value: unknown, deckSize: number, path: string): RouletteEdge {
+  const raw = record(value, path);
+  const worst = record(raw.worstSpin, `${path}.worstSpin`);
+  return {
+    run: text(raw.run, `${path}.run`),
+    method: text(raw.method, `${path}.method`),
+    bestReturn: finite(raw.bestReturn, `${path}.bestReturn`),
+    worstSpin: {
+      draft: parseDraft(worst.draft, deckSize, `${path}.worstSpin.draft`),
+      return: finite(worst.return, `${path}.worstSpin.return`),
+    },
+    clearChance: rate(raw.clearChance, `${path}.clearChance`),
+  };
+}
+
+export function parseRouletteExport(value: unknown): RouletteExport {
+  const raw = record(value, 'roulette');
+  checkHeader(raw, 'roulette');
+  const turns = filled(raw.turns, 'roulette.turns').map((t, i) => {
+    if (t !== 'house' && t !== 'player') fail(`roulette.turns[${i}]`, 'expected house or player');
+    return t;
+  });
+  const deck = filled(raw.deck, 'roulette.deck').map((c, i) => parseRouletteCard(c, `roulette.deck[${i}]`));
+  checkUnique(
+    deck.map((c) => c.id),
+    'roulette.deck',
+  );
+  const wheels = filled(raw.wheels, 'roulette.wheels').map((w, i) => {
+    const path = `roulette.wheels[${i}]`;
+    const wheel = list(w, path);
+    if (wheel.length !== ROULETTE_POCKETS) fail(path, `expected ${ROULETTE_POCKETS} chances`);
+    return wheel.map((p, j) => rate(p, `${path}[${j}]`));
+  });
+  const nodes = filled(raw.nodes, 'roulette.nodes').map((n, i) =>
+    parseRouletteNode(n, turns, deck.length, wheels.length, `roulette.nodes[${i}]`),
+  );
+  const nodeKeys = nodes.map((n) => draftKey(n.draft));
+  checkUnique(nodeKeys, 'roulette.nodes');
+  // Every move the game can make has to land on a node.
+  const known = new Set(nodeKeys);
+  if (!known.has('')) fail('roulette.nodes', 'no node for the empty draft');
+  for (const node of nodes) {
+    const next =
+      node.turn === 'house'
+        ? node.houseCards
+        : node.turn === 'player'
+          ? deck.map((_c, card) => card).filter((card) => !node.draft.includes(card))
+          : [];
+    for (const card of next) {
+      const key = draftKey([...node.draft, card]);
+      if (!known.has(key)) fail('roulette.nodes', `no node for draft ${key}`);
+    }
+  }
+  const logicalCircuits = filled(raw.logicalCircuits, 'roulette.logicalCircuits').map((entry, i) => {
+    const path = `roulette.logicalCircuits[${i}]`;
+    const circuit = record(entry, path);
+    return { draft: parseDraft(circuit.draft, deck.length, `${path}.draft`), qasm: text(circuit.qasm, `${path}.qasm`) };
+  });
+  const runs = filled(raw.runs, 'roulette.runs').map((r, i) =>
+    parseRouletteRun(r, deck.length, `roulette.runs[${i}]`),
+  );
+  checkUnique(
+    runs.map((r) => r.id),
+    'roulette.runs',
+  );
+  const playRun = text(raw.playRun, 'roulette.playRun');
+  const play = runs.find((r) => r.id === playRun);
+  if (!play) fail('roulette.playRun', `no run ${playRun}`);
+  const circuitKeys = new Set(logicalCircuits.map((c) => draftKey(c.draft)));
+  const pointKeys = new Set(play.points.map((p) => draftKey(p.draft)));
+  for (const node of nodes) {
+    if (node.turn !== 'spin') continue;
+    const key = draftKey(node.draft);
+    if (!pointKeys.has(key)) fail(`roulette.runs.${playRun}`, `no point for draft ${key}`);
+    if (!circuitKeys.has(key)) fail('roulette.logicalCircuits', `no logical circuit for draft ${key}`);
+  }
+  const limits = record(raw.limits, 'roulette.limits');
+  const payouts = record(raw.payouts, 'roulette.payouts');
+  const table = filled(payouts.table, 'roulette.payouts.table').map((row, i) =>
+    parseRoulettePayout(row, `roulette.payouts.table[${i}]`),
+  );
+  if (!table.some((row) => row.bet === 'straight')) fail('roulette.payouts.table', 'no straight bet');
+  const clear = record(raw.clear, 'roulette.clear');
+  const edge = filled(raw.edge, 'roulette.edge').map((e, i) =>
+    parseRouletteEdge(e, deck.length, `roulette.edge[${i}]`),
+  );
+  if (!edge.some((e) => e.run === playRun)) fail('roulette.edge', `no entry for ${playRun}`);
+  return {
+    schemaVersion: 1,
+    experiment: 'roulette',
+    pocketOrder: text(raw.pocketOrder, 'roulette.pocketOrder'),
+    opening: text(raw.opening, 'roulette.opening'),
+    houseRule: text(raw.houseRule, 'roulette.houseRule'),
+    bet: text(raw.bet, 'roulette.bet'),
+    stakeRule: text(raw.stakeRule, 'roulette.stakeRule'),
+    spin: text(raw.spin, 'roulette.spin'),
+    wheelsMethod: text(raw.wheelsMethod, 'roulette.wheelsMethod'),
+    turns,
+    playRun,
+    deck,
+    limits: {
+      fairWheel: limit(limits.fairWheel, 'roulette.limits.fairWheel'),
+      classicalWheel: limit(limits.classicalWheel, 'roulette.limits.classicalWheel'),
+      houseLimit: limit(limits.houseLimit, 'roulette.limits.houseLimit'),
+      playStyles: list(limits.playStyles, 'roulette.limits.playStyles').map((entry, i) => {
+        const path = `roulette.limits.playStyles[${i}]`;
+        const style = record(entry, path);
+        return {
+          style: text(style.style, `${path}.style`),
+          value: rate(style.value, `${path}.value`),
+          rule: text(style.rule, `${path}.rule`),
+        };
+      }),
+      legalDrafts: integer(limits.legalDrafts, 'roulette.limits.legalDrafts', 1),
+      reachableDrafts: integer(limits.reachableDrafts, 'roulette.limits.reachableDrafts', 1),
+    },
+    payouts: {
+      status: text(payouts.status, 'roulette.payouts.status'),
+      stake: integer(payouts.stake, 'roulette.payouts.stake', 1),
+      rule: text(payouts.rule, 'roulette.payouts.rule'),
+      basis: text(payouts.basis, 'roulette.payouts.basis'),
+      table,
+    },
+    clear: {
+      rule: text(clear.rule, 'roulette.clear.rule'),
+      basis: text(clear.basis, 'roulette.clear.basis'),
+      chance: rate(clear.chance, 'roulette.clear.chance'),
+    },
+    wheels,
+    nodes,
+    logicalCircuits,
+    runs,
+    edge,
+  };
+}
+
 /** A live run's own numbers. The circuits and payouts stay the exported ones. */
 export type LiveChsh = Pick<ChshResult, 'runId' | 'winRate' | 'pairs' | 'provenance'>;
 export type LiveWiesner = Pick<
@@ -662,6 +1006,14 @@ export async function loadExports(
     fetchJson(fetchFn, `${base}data/wiesner.v1.json`),
   ]);
   return { chsh: parseChshExport(chsh), wiesner: parseWiesnerExport(wiesner) };
+}
+
+/** Loaded on its own, so the Tables and the Cage never wait on it. */
+export async function loadRoulette(
+  fetchFn: (url: string) => Promise<FetchResponse> = fetch,
+  base: string = import.meta.env.BASE_URL,
+): Promise<RouletteExport> {
+  return parseRouletteExport(await fetchJson(fetchFn, `${base}data/roulette.v1.json`));
 }
 
 export function provenanceLabel(p: Provenance): string {

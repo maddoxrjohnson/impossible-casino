@@ -1,4 +1,5 @@
 import { clearsCage, settleForge, type ForgeAttempt } from './cage';
+import { openRound, playCard, spinRound, type RouletteBoard, type RouletteRound } from './roulette';
 import { safeStorage, readSave, writeSave, type SaveData, type SaveStorage } from './save';
 import { sampleOutcome, type ChshResult, type ResultSource } from './results';
 import {
@@ -59,6 +60,12 @@ export interface GameState {
   readonly forging: boolean;
   /** The last settled forge. Not saved, so a reload starts without one. */
   readonly forge: ForgeAttempt | null;
+  /**
+   * The roulette round, open or just settled. Not saved: a reload drops an open draft.
+   * That costs the house nothing, since the edge's worst spin returns under 1 per chip
+   * even to a player who abandons every bad draft.
+   */
+  readonly roulette: RouletteRound | null;
 }
 
 export interface GameStoreOptions {
@@ -81,6 +88,17 @@ export interface GameStore {
   run(hands?: number): Promise<void>;
   /** `payoutStake` is the stake the exported pay table is quoted on. */
   forge(length: number, payoutStake: number): Promise<void>;
+  /**
+   * Opens a roulette round at the current stake, and the house plays its first card.
+   * Until the spin, the stake is fixed and the other games wait.
+   */
+  rouletteOpen(board: RouletteBoard): void;
+  /** The player's card. The house replies at once when it is its turn. */
+  roulettePlay(board: RouletteBoard, card: number): void;
+  /** A straight-up bet on `pocket`. The spin settles the round at once. */
+  rouletteSpin(board: RouletteBoard, pocket: number): void;
+  /** Drops the round, open or settled. An open one costs nothing. */
+  rouletteLeave(): void;
   restart(): void;
   clearRoom(room: RoomId): void;
   dispose(): void;
@@ -122,6 +140,7 @@ export function createGameStore({
     result: null as ChshResult | null,
     forging: false,
     forge: null as ForgeAttempt | null,
+    roulette: null as RouletteRound | null,
   });
   const state = { ...freshFields(), history, cleared };
 
@@ -170,6 +189,9 @@ export function createGameStore({
     state.winRate = 0;
     history.length = 0;
   };
+
+  /** A drafted round waiting on its spin holds the stake and the other games. */
+  const drafting = (): boolean => state.roulette !== null && state.roulette.spin === null;
 
   const markCleared = (room: RoomId): void => {
     if (!cleared.includes(room)) cleared.push(room);
@@ -283,7 +305,7 @@ export function createGameStore({
       };
     },
     deal() {
-      if (disposed || state.phase !== 'intro' || state.broke || state.forging) return;
+      if (disposed || state.phase !== 'intro' || state.broke || state.forging || drafting()) return;
       state.phase = 'classical';
       state.stake = CLASSICAL_STAKE;
       state.autoplaying = true;
@@ -295,7 +317,7 @@ export function createGameStore({
       emit();
     },
     entangle() {
-      if (disposed || state.phase !== 'wall' || state.broke || state.forging) return;
+      if (disposed || state.phase !== 'wall' || state.broke || state.forging || drafting()) return;
       state.phase = 'entangled';
       state.mode = 'quantum';
       resetCounters();
@@ -319,7 +341,7 @@ export function createGameStore({
       emit();
     },
     setStake(value) {
-      if (disposed || state.autoplaying || state.forging || !isStake(value)) return;
+      if (disposed || state.autoplaying || state.forging || drafting() || !isStake(value)) return;
       if (value > state.bankroll || value === state.stake) return;
       state.stake = value;
       save();
@@ -327,7 +349,7 @@ export function createGameStore({
     },
     async run(hands = RUN_HANDS) {
       if (disposed || state.mode !== 'quantum' || state.autoplaying || state.broke) return;
-      if (state.forging) return;
+      if (state.forging || drafting()) return;
       if (!Number.isFinite(hands) || hands < 1) return;
       state.autoplaying = true;
       state.result = null;
@@ -351,7 +373,7 @@ export function createGameStore({
       await playHands(dealDeck(hands, rng), ({ x, y }) => sampleOutcome(pairs[x][y], rng));
     },
     async forge(length, payoutStake) {
-      if (disposed || state.forging || state.autoplaying || state.broke) return;
+      if (disposed || state.forging || state.autoplaying || state.broke || drafting()) return;
       if (!isForgeLength(length) || !(payoutStake > 0) || state.stake > state.bankroll) return;
       const { stake } = state;
       state.forging = true;
@@ -370,6 +392,36 @@ export function createGameStore({
         settleStake();
         save();
       }
+      emit();
+    },
+    rouletteOpen(board) {
+      if (disposed || state.broke || state.autoplaying || state.forging || drafting()) return;
+      if (state.stake > state.bankroll) return;
+      state.roulette = openRound(board, state.stake, rng);
+      emit();
+    },
+    roulettePlay(board, card) {
+      if (disposed || !state.roulette) return;
+      const next = playCard(board, state.roulette, card, rng);
+      if (!next) return;
+      state.roulette = next;
+      emit();
+    },
+    rouletteSpin(board, pocket) {
+      if (disposed || !state.roulette) return;
+      const next = spinRound(board, state.roulette, pocket, rng);
+      if (!next?.spin) return;
+      state.roulette = next;
+      state.bankroll += next.spin.delta;
+      // Marked directly, as a forge is.
+      if (next.spin.clears) markCleared('roulette');
+      settleStake();
+      save();
+      emit();
+    },
+    rouletteLeave() {
+      if (disposed || !state.roulette) return;
+      state.roulette = null;
       emit();
     },
     restart() {
@@ -391,6 +443,7 @@ export function createGameStore({
     dispose() {
       disposed = true;
       forgeToken += 1;
+      state.roulette = null;
       stopRun();
       listeners.clear();
       roundListeners.clear();
