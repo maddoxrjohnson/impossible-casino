@@ -1,0 +1,6 @@
+# The Dockerfile sits in api/ but builds from the repo root, which gcloud run deploy --source cannot do.
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: [build, -f, api/Dockerfile, -t, $_IMAGE, .]
+images:
+  - $_IMAGE

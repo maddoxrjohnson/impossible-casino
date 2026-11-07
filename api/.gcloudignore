@@ -1,0 +1,8 @@
+# Upload only what the image copies.
+*
+!api/
+!api/**
+!quantum/
+!quantum/**
+**/tests/
+**/__pycache__/

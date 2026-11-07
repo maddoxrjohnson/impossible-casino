@@ -12,6 +12,7 @@ import qiskit_ibm_runtime
 SCHEMA_VERSION = 1
 DATA_DIR = Path(__file__).resolve().parent.parent / "web" / "public" / "data"
 PRE_RUN_SIMULATOR = "pre-run-simulator"
+LIVE_SIMULATOR = "live-simulator"
 
 
 def simulator_provenance(
@@ -20,10 +21,11 @@ def simulator_provenance(
     today: date,
     noise_model: dict[str, str] | None = None,
     qubits: list[int] | None = None,
+    source: str = PRE_RUN_SIMULATOR,
 ) -> dict[str, Any]:
     """Label a simulator run. jobId is only ever set by a run on a real chip."""
     return {
-        "source": PRE_RUN_SIMULATOR,
+        "source": source,
         "backend": backend,
         "noiseModel": noise_model,
         "qubits": qubits,

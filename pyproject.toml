@@ -10,8 +10,16 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=9"]
+dev = ["pytest>=9", "httpx==0.28.1"]
+api = [
+    "fastapi==0.162.2",
+    "starlette==1.10.0",
+    "uvicorn==0.54.0",
+    "qiskit==2.6.2",
+    "qiskit-aer==0.18.2",
+    "qiskit-ibm-runtime==0.51.0",
+]
 
 [tool.pytest.ini_options]
-testpaths = ["quantum/tests"]
+testpaths = ["quantum/tests", "api/tests"]
 pythonpath = ["."]

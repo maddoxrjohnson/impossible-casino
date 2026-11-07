@@ -2,6 +2,7 @@ import './styles.css';
 import './ui/hud.css';
 import { createAudio } from './audio/audio';
 import { cageBoard, type ForgeAttempt } from './game/cage';
+import { createLiveSource } from './game/live';
 import { createPrerunSource, loadExports } from './game/results';
 import { STAKES } from './game/rules';
 import { createGameStore } from './game/store';
@@ -67,7 +68,8 @@ async function boot(root: HTMLElement): Promise<void> {
       loadExports(),
       waitForFonts(),
     ]);
-    const source = createPrerunSource(exports, RUN_ID);
+    const source = createLiveSource(createPrerunSource(exports, RUN_ID), { url: import.meta.env.VITE_API_URL as string | undefined });
+    void source.warm();
     const store = createGameStore({ source });
     const audio = createAudio();
     const cage = cageBoard(exports.wiesner, RUN_ID);

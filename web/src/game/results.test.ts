@@ -7,6 +7,8 @@ import {
   drawPass,
   loadExports,
   parseChshExport,
+  parseLiveChsh,
+  parseLiveWiesner,
   parseProvenance,
   parseWiesnerExport,
   provenanceLabel,
@@ -397,6 +399,11 @@ describe('provenanceLabel', () => {
     );
   });
 
+  it('names the noise model on a live run', () => {
+    const live: Provenance = { ...chsh.runs[1]!.provenance, source: 'live-simulator' } as Provenance;
+    expect(provenanceLabel(live)).toBe('Live Qiskit simulator, fake_kingston noise model');
+  });
+
   it('never says chip on a simulator', () => {
     for (const run of [...chsh.runs, ...wiesner.runs]) {
       expect(provenanceLabel(run.provenance).toLowerCase()).not.toContain('chip');
@@ -414,6 +421,99 @@ describe('provenanceLabel', () => {
       jobId: 'd1abc',
     };
     expect(provenanceLabel(chip)).toBe('IBM chip ibm_kingston, job d1abc');
+  });
+});
+
+describe('live responses', () => {
+  const liveProvenance = (shots: number): unknown => ({
+    ...chsh.runs[1]!.provenance,
+    source: 'live-simulator',
+    shots,
+  });
+  const point = chsh.runs[1]!.points[16]!;
+  const chshBody = {
+    experiment: 'chsh',
+    runId: 'live-7',
+    dial: point.dial,
+    seed: 7,
+    outcomeOrder: 'ba',
+    winRate: point.winRate,
+    pairs: point.pairs,
+    provenance: liveProvenance(point.pairs[0]!.shots),
+  };
+  const wiesnerBody = {
+    experiment: 'wiesner',
+    runId: 'live-8',
+    length: 2,
+    seed: 8,
+    shots: 512,
+    passes: 300,
+    passRate: 300 / 512,
+    qubits: [50, 148],
+    provenance: liveProvenance(512),
+  };
+
+  it('reads a chsh response', () => {
+    expect(parseLiveChsh(chshBody, point.dial)).toMatchObject({
+      runId: 'live-7',
+      winRate: point.winRate,
+      pairs: point.pairs,
+      provenance: { source: 'live-simulator' },
+    });
+  });
+
+  it('reads a wiesner response', () => {
+    expect(parseLiveWiesner(wiesnerBody, 2)).toMatchObject({
+      runId: 'live-8',
+      shots: 512,
+      passes: 300,
+      qubits: [50, 148],
+    });
+  });
+
+  it.each([
+    ['another dial', { dial: 0.25 }],
+    ['another experiment', { experiment: 'wiesner' }],
+    ['another outcome order', { outcomeOrder: 'ab' }],
+    ['a rate out of range', { winRate: 1.2 }],
+    ['three pairs', { pairs: point.pairs.slice(1) }],
+    ['a repeated pair', { pairs: [point.pairs[0], point.pairs[0], point.pairs[1], point.pairs[2]] }],
+    ['counts off the shots', { pairs: [{ ...point.pairs[0], shots: 1 }, ...point.pairs.slice(1)] }],
+    ['provenance shots off the pairs', { provenance: liveProvenance(1) }],
+    ['an empty run id', { runId: '' }],
+  ])('refuses a chsh response with %s', (_, change) => {
+    expect(() => parseLiveChsh({ ...chshBody, ...change }, point.dial)).toThrow();
+  });
+
+  it.each([
+    ['another length', { length: 3 }],
+    ['another experiment', { experiment: 'chsh' }],
+    ['more passes than shots', { passes: 513 }],
+    ['a rate off the passes', { passRate: 0.5 }],
+    ['the wrong number of qubits', { qubits: [50] }],
+    ['provenance shots off the run', { provenance: liveProvenance(1) }],
+  ])('refuses a wiesner response with %s', (_, change) => {
+    expect(() => parseLiveWiesner({ ...wiesnerBody, ...change }, 2)).toThrow();
+  });
+
+  it.each([
+    ['pre-run', { source: 'pre-run-simulator' }],
+    ['chip', { source: 'ibm-chip', noiseModel: null, backend: 'ibm_kingston', jobId: 'd1abc' }],
+    ['job id', { jobId: 'abc' }],
+    ['no noise model', { noiseModel: null }],
+    ['a chip backend', { backend: 'ibm_kingston' }],
+  ])('refuses provenance with %s', (_, change) => {
+    const provenance = { ...(chshBody.provenance as object), ...change };
+    expect(() => parseLiveChsh({ ...chshBody, provenance }, point.dial)).toThrow();
+    const wiesnerProvenance = { ...provenance, shots: 512 };
+    expect(() =>
+      parseLiveWiesner({ ...wiesnerBody, provenance: wiesnerProvenance }, 2),
+    ).toThrow();
+  });
+
+  it.each([null, 3, 'x', []])('refuses %j as a response', (raw) => {
+    expect(() => parseLiveChsh(raw, 0.5)).toThrow();
+    expect(() => parseLiveWiesner(raw, 1)).toThrow();
   });
 });
 

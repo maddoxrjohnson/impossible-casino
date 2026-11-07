@@ -535,6 +535,56 @@ export function parseWiesnerExport(value: unknown): WiesnerExport {
   };
 }
 
+/** A live run's own numbers. The circuits and payouts stay the exported ones. */
+export type LiveChsh = Pick<ChshResult, 'runId' | 'winRate' | 'pairs' | 'provenance'>;
+export type LiveWiesner = Pick<
+  WiesnerResult,
+  'runId' | 'shots' | 'passes' | 'passRate' | 'qubits' | 'provenance'
+>;
+
+/** Stricter than an export: a live result must say so, and name its noise model. */
+function parseLiveProvenance(value: unknown, shots: number, path: string): Provenance {
+  const provenance = parseProvenance(value, path);
+  if (provenance.source !== 'live-simulator') fail(`${path}.source`, 'expected live-simulator');
+  if (!provenance.noiseModel) fail(`${path}.noiseModel`, 'a live run names its noise model');
+  if (provenance.shots !== shots) fail(`${path}.shots`, `expected ${shots}`);
+  return provenance;
+}
+
+export function parseLiveChsh(value: unknown, dial: number): LiveChsh {
+  const raw = record(value, 'live');
+  if (raw.experiment !== 'chsh') fail('live.experiment', 'expected chsh');
+  if (raw.dial !== dial) fail('live.dial', `expected ${dial}`);
+  if (raw.outcomeOrder !== 'ba') fail('live.outcomeOrder', 'expected ba');
+  const pairs = list(raw.pairs, 'live.pairs').map((p, i) => parseChshPair(p, `live.pairs[${i}]`));
+  checkFourPairs(pairs, 'live.pairs');
+  const shots = pairs[0]?.shots ?? 0;
+  if (pairs.some((pair) => pair.shots !== shots)) fail('live.pairs', 'shots differ between pairs');
+  return {
+    runId: text(raw.runId, 'live.runId'),
+    winRate: rate(raw.winRate, 'live.winRate'),
+    pairs,
+    provenance: parseLiveProvenance(raw.provenance, shots, 'live.provenance'),
+  };
+}
+
+export function parseLiveWiesner(value: unknown, length: number): LiveWiesner {
+  const raw = record(value, 'live');
+  if (raw.experiment !== 'wiesner') fail('live.experiment', 'expected wiesner');
+  if (raw.length !== length) fail('live.length', `expected ${length}`);
+  const point = parseWiesnerPoint(raw, 'live');
+  if (point.passRate !== point.passes / point.shots) fail('live.passRate', 'does not match passes');
+  if (point.qubits?.length !== length) fail('live.qubits', `expected ${length} qubits`);
+  return {
+    runId: text(raw.runId, 'live.runId'),
+    shots: point.shots,
+    passes: point.passes,
+    passRate: point.passRate,
+    qubits: point.qubits,
+    provenance: parseLiveProvenance(raw.provenance, point.shots, 'live.provenance'),
+  };
+}
+
 interface FetchResponse {
   readonly ok: boolean;
   readonly status: number;
@@ -568,7 +618,9 @@ export function provenanceLabel(p: Provenance): string {
         ? `Pre-run Qiskit simulator, ${p.noiseModel.name} noise model`
         : 'Pre-run Qiskit simulator';
     case 'live-simulator':
-      return 'Live Qiskit simulator';
+      return p.noiseModel
+        ? `Live Qiskit simulator, ${p.noiseModel.name} noise model`
+        : 'Live Qiskit simulator';
     case 'ibm-chip':
       return `IBM chip ${p.backend}, job ${p.jobId}`;
   }
