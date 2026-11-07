@@ -5,8 +5,10 @@ import pytest
 from qiskit.quantum_info import Statevector
 from qiskit_aer import AerSimulator
 from qiskit_aer.noise import NoiseModel, depolarizing_error
+from qiskit_ibm_runtime.fake_provider import FakeKingston
 
 from quantum.chsh import (
+    compile_chsh,
     QUESTION_PAIRS,
     best_classical_win_rate,
     chsh_circuit,
@@ -246,3 +248,27 @@ def test_questions_must_be_bits(x, y):
 def test_shots_must_be_a_positive_integer(shots):
     with pytest.raises(ValueError, match="shots"):
         run_chsh(0.5, shots=shots)
+
+
+def test_pinned_layout_puts_every_circuit_on_the_named_qubits():
+    backend = FakeKingston()
+    compiled = compile_chsh(0.5, backend, layout=(147, 148), seed=3)
+    assert len(compiled) == len(QUESTION_PAIRS)
+    for circuit in compiled:
+        used = {
+            circuit.find_bit(qubit).index
+            for instruction in circuit.data
+            for qubit in instruction.qubits
+        }
+        assert used == {147, 148}
+
+
+def test_pinned_layout_keeps_the_player_on_the_first_named_qubit():
+    compiled = compile_chsh(0.5, FakeKingston(), layout=(148, 147), seed=3)
+    for circuit in compiled:
+        measured = {
+            circuit.find_bit(instruction.clbits[0]).index: circuit.find_bit(instruction.qubits[0]).index
+            for instruction in circuit.data
+            if instruction.operation.name == "measure"
+        }
+        assert measured == {0: 148, 1: 147}

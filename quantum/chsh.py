@@ -15,7 +15,7 @@ outcome string reads "ba".
 """
 
 import math
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from fractions import Fraction
 from itertools import product
 
@@ -108,17 +108,28 @@ def win_rate(outcomes_by_pair: Mapping[tuple[int, int], Outcomes]) -> float:
     return sum(rates) / len(rates)
 
 
+def compile_chsh(
+    dial: float,
+    backend: BackendV2,
+    layout: Sequence[int] | None = None,
+    seed: int | None = None,
+) -> list[QuantumCircuit]:
+    """Transpile the four pairs in QUESTION_PAIRS order; layout is (player, partner)."""
+    circuits = list(chsh_circuits(dial).values())
+    return transpile(circuits, backend, initial_layout=layout, seed_transpiler=seed)
+
+
 def run_chsh(
     dial: float,
     shots: int,
     backend: BackendV2 | None = None,
     seed: int | None = None,
+    layout: Sequence[int] | None = None,
 ) -> dict[tuple[int, int], dict[str, int]]:
     """Sample all four question pairs on a simulator backend. Returns counts per pair."""
     if not isinstance(shots, int) or shots < 1:
         raise ValueError(f"shots must be a positive integer, got {shots!r}")
     backend = backend or AerSimulator()
-    circuits = chsh_circuits(dial)
-    compiled = transpile(list(circuits.values()), backend, seed_transpiler=seed)
+    compiled = compile_chsh(dial, backend, layout=layout, seed=seed)
     result = backend.run(compiled, shots=shots, seed_simulator=seed).result()
-    return {pair: result.get_counts(i) for i, pair in enumerate(circuits)}
+    return {pair: result.get_counts(i) for i, pair in enumerate(QUESTION_PAIRS)}

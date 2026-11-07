@@ -1,0 +1,4515 @@
+{
+ "schemaVersion": 1,
+ "experiment": "chsh",
+ "outcomeOrder": "ba",
+ "limits": {
+  "classical": {
+   "value": 0.75,
+   "method": "brute force over every deterministic strategy"
+  },
+  "quantum": {
+   "value": 0.8535533905932737,
+   "method": "Qiskit statevector at dial 0.5"
+  }
+ },
+ "logicalCircuits": [
+  {
+   "dial": 0.0,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(pi/2) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(pi/2) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(0) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(0) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.03125,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(15*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(15*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.0625,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(7*pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(7*pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.09375,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(13*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(13*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-3*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-3*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.125,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(3*pi/8) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(3*pi/8) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/8) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/8) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.15625,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(11*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(11*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-5*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-5*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.1875,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(5*pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(5*pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-3*pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-3*pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.21875,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(9*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(9*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-7*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-7*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.25,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(pi/4) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(pi/4) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/4) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/4) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.28125,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(7*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(7*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-9*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-9*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.3125,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(3*pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(3*pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-5*pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-5*pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.34375,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(5*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(5*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-11*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-11*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.375,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(pi/8) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(pi/8) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-3*pi/8) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-3*pi/8) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.40625,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(3*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(3*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-13*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-13*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.4375,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-7*pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-7*pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.46875,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-15*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-15*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.5,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(0) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(0) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/2) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/2) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.53125,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-17*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-17*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.5625,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-9*pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-9*pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.59375,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-3*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-3*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-19*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-19*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.625,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/8) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/8) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-5*pi/8) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-5*pi/8) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.65625,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-5*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-5*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-21*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-21*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.6875,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-3*pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-3*pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-11*pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-11*pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.71875,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-7*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-7*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-23*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-23*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.75,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/4) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/4) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-3*pi/4) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-3*pi/4) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.78125,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-9*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-9*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-25*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-25*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.8125,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-5*pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-5*pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-13*pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-13*pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.84375,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-11*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-11*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-27*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-27*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.875,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-3*pi/8) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-3*pi/8) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-7*pi/8) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-7*pi/8) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.90625,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-13*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-13*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-29*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-29*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.9375,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-7*pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-7*pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-15*pi/16) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-15*pi/16) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 0.96875,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-15*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-15*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-31*pi/32) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-31*pi/32) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  },
+  {
+   "dial": 1.0,
+   "pairs": [
+    {
+     "x": 0,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/2) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 0,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi/2) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 0,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi) q[0];\nry(-pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    },
+    {
+     "x": 1,
+     "y": 1,
+     "qasm": "OPENQASM 2.0;\ninclude \"qelib1.inc\";\nqreg q[2];\ncreg c[2];\nh q[0];\ncx q[0],q[1];\nry(-pi) q[0];\nry(pi/4) q[1];\nmeasure q[0] -> c[0];\nmeasure q[1] -> c[1];"
+    }
+   ]
+  }
+ ],
+ "runs": [
+  {
+   "id": "ideal",
+   "provenance": {
+    "source": "pre-run-simulator",
+    "backend": "aer_simulator",
+    "noiseModel": null,
+    "qubits": null,
+    "shots": 8192,
+    "qiskitVersion": "2.6.2",
+    "aerVersion": "0.18.2",
+    "runtimeVersion": "0.51.0",
+    "date": "2026-11-07",
+    "jobId": null
+   },
+   "points": [
+    {
+     "dial": 0.0,
+     "seed": 1000000,
+     "winRate": 0.49639892578125,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.1417236328125,
+       "counts": {
+        "00": 581,
+        "01": 3516,
+        "10": 3515,
+        "11": 580
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.849853515625,
+       "counts": {
+        "00": 3459,
+        "01": 611,
+        "10": 619,
+        "11": 3503
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.8443603515625,
+       "counts": {
+        "00": 3433,
+        "01": 657,
+        "10": 618,
+        "11": 3484
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.149658203125,
+       "counts": {
+        "00": 3468,
+        "01": 611,
+        "10": 615,
+        "11": 3498
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.03125,
+     "seed": 1010000,
+     "winRate": 0.535125732421875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.1787109375,
+       "counts": {
+        "00": 691,
+        "01": 3408,
+        "10": 3320,
+        "11": 773
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.889404296875,
+       "counts": {
+        "00": 3721,
+        "01": 478,
+        "10": 428,
+        "11": 3565
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.8837890625,
+       "counts": {
+        "00": 3582,
+        "01": 465,
+        "10": 487,
+        "11": 3658
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.1885986328125,
+       "counts": {
+        "00": 3309,
+        "01": 775,
+        "10": 770,
+        "11": 3338
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.0625,
+     "seed": 1020000,
+     "winRate": 0.5697021484375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.2188720703125,
+       "counts": {
+        "00": 881,
+        "01": 3281,
+        "10": 3118,
+        "11": 912
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9156494140625,
+       "counts": {
+        "00": 3809,
+        "01": 348,
+        "10": 343,
+        "11": 3692
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.918701171875,
+       "counts": {
+        "00": 3749,
+        "01": 343,
+        "10": 323,
+        "11": 3777
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.2255859375,
+       "counts": {
+        "00": 3148,
+        "01": 926,
+        "10": 922,
+        "11": 3196
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.09375,
+     "seed": 1030000,
+     "winRate": 0.603515625,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.2659912109375,
+       "counts": {
+        "00": 1053,
+        "01": 3031,
+        "10": 2982,
+        "11": 1126
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.94482421875,
+       "counts": {
+        "00": 3933,
+        "01": 195,
+        "10": 257,
+        "11": 3807
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.93994140625,
+       "counts": {
+        "00": 3867,
+        "01": 260,
+        "10": 232,
+        "11": 3833
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.2633056640625,
+       "counts": {
+        "00": 3014,
+        "01": 1060,
+        "10": 1097,
+        "11": 3021
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.125,
+     "seed": 1040000,
+     "winRate": 0.6341552734375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.306884765625,
+       "counts": {
+        "00": 1260,
+        "01": 2795,
+        "10": 2883,
+        "11": 1254
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.96240234375,
+       "counts": {
+        "00": 3905,
+        "01": 160,
+        "10": 148,
+        "11": 3979
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.962646484375,
+       "counts": {
+        "00": 3926,
+        "01": 166,
+        "10": 140,
+        "11": 3960
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.3046875,
+       "counts": {
+        "00": 2847,
+        "01": 1196,
+        "10": 1300,
+        "11": 2849
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.15625,
+     "seed": 1050000,
+     "winRate": 0.6669921875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.3563232421875,
+       "counts": {
+        "00": 1431,
+        "01": 2613,
+        "10": 2660,
+        "11": 1488
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9757080078125,
+       "counts": {
+        "00": 4021,
+        "01": 92,
+        "10": 107,
+        "11": 3972
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9781494140625,
+       "counts": {
+        "00": 4074,
+        "01": 88,
+        "10": 91,
+        "11": 3939
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.3577880859375,
+       "counts": {
+        "00": 2603,
+        "01": 1454,
+        "10": 1477,
+        "11": 2658
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.1875,
+     "seed": 1060000,
+     "winRate": 0.69427490234375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.3966064453125,
+       "counts": {
+        "00": 1627,
+        "01": 2472,
+        "10": 2471,
+        "11": 1622
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9898681640625,
+       "counts": {
+        "00": 4053,
+        "01": 39,
+        "10": 44,
+        "11": 4056
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9881591796875,
+       "counts": {
+        "00": 4115,
+        "01": 52,
+        "10": 45,
+        "11": 3980
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.4024658203125,
+       "counts": {
+        "00": 2387,
+        "01": 1720,
+        "10": 1577,
+        "11": 2508
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.21875,
+     "seed": 1070000,
+     "winRate": 0.726593017578125,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.458984375,
+       "counts": {
+        "00": 1820,
+        "01": 2166,
+        "10": 2266,
+        "11": 1940
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9979248046875,
+       "counts": {
+        "00": 4031,
+        "01": 11,
+        "10": 6,
+        "11": 4144
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.997314453125,
+       "counts": {
+        "00": 4013,
+        "01": 11,
+        "10": 11,
+        "11": 4157
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.4521484375,
+       "counts": {
+        "00": 2165,
+        "01": 1862,
+        "10": 1842,
+        "11": 2323
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.25,
+     "seed": 1080000,
+     "winRate": 0.750030517578125,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.5052490234375,
+       "counts": {
+        "00": 2081,
+        "01": 2057,
+        "10": 1996,
+        "11": 2058
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 1.0,
+       "counts": {
+        "00": 4107,
+        "01": 0,
+        "10": 0,
+        "11": 4085
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 1.0,
+       "counts": {
+        "00": 4051,
+        "01": 0,
+        "10": 0,
+        "11": 4141
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.494873046875,
+       "counts": {
+        "00": 2072,
+        "01": 2002,
+        "10": 2052,
+        "11": 2066
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.28125,
+     "seed": 1090000,
+     "winRate": 0.77301025390625,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.5430908203125,
+       "counts": {
+        "00": 2209,
+        "01": 1859,
+        "10": 1884,
+        "11": 2240
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9970703125,
+       "counts": {
+        "00": 4033,
+        "01": 9,
+        "10": 15,
+        "11": 4135
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9979248046875,
+       "counts": {
+        "00": 4217,
+        "01": 10,
+        "10": 7,
+        "11": 3958
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.553955078125,
+       "counts": {
+        "00": 1844,
+        "01": 2299,
+        "10": 2239,
+        "11": 1810
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.3125,
+     "seed": 1100000,
+     "winRate": 0.796722412109375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.6070556640625,
+       "counts": {
+        "00": 2432,
+        "01": 1615,
+        "10": 1604,
+        "11": 2541
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.98974609375,
+       "counts": {
+        "00": 4095,
+        "01": 39,
+        "10": 45,
+        "11": 4013
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9913330078125,
+       "counts": {
+        "00": 4036,
+        "01": 37,
+        "10": 34,
+        "11": 4085
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.5987548828125,
+       "counts": {
+        "00": 1635,
+        "01": 2487,
+        "10": 2418,
+        "11": 1652
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.34375,
+     "seed": 1110000,
+     "winRate": 0.809722900390625,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.6357421875,
+       "counts": {
+        "00": 2653,
+        "01": 1509,
+        "10": 1475,
+        "11": 2555
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9764404296875,
+       "counts": {
+        "00": 3980,
+        "01": 89,
+        "10": 104,
+        "11": 4019
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9788818359375,
+       "counts": {
+        "00": 3972,
+        "01": 83,
+        "10": 90,
+        "11": 4047
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.6478271484375,
+       "counts": {
+        "00": 1430,
+        "01": 2616,
+        "10": 2691,
+        "11": 1455
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.375,
+     "seed": 1120000,
+     "winRate": 0.828125,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.6951904296875,
+       "counts": {
+        "00": 2879,
+        "01": 1273,
+        "10": 1224,
+        "11": 2816
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9625244140625,
+       "counts": {
+        "00": 4012,
+        "01": 139,
+        "10": 168,
+        "11": 3873
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.958740234375,
+       "counts": {
+        "00": 3858,
+        "01": 160,
+        "10": 178,
+        "11": 3996
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.696044921875,
+       "counts": {
+        "00": 1301,
+        "01": 2907,
+        "10": 2795,
+        "11": 1189
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.40625,
+     "seed": 1130000,
+     "winRate": 0.83905029296875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.7384033203125,
+       "counts": {
+        "00": 2993,
+        "01": 1026,
+        "10": 1117,
+        "11": 3056
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.944580078125,
+       "counts": {
+        "00": 3871,
+        "01": 230,
+        "10": 224,
+        "11": 3867
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.94287109375,
+       "counts": {
+        "00": 3819,
+        "01": 244,
+        "10": 224,
+        "11": 3905
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.7303466796875,
+       "counts": {
+        "00": 1118,
+        "01": 3060,
+        "10": 2923,
+        "11": 1091
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.4375,
+     "seed": 1140000,
+     "winRate": 0.847381591796875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.7821044921875,
+       "counts": {
+        "00": 3164,
+        "01": 878,
+        "10": 907,
+        "11": 3243
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.915771484375,
+       "counts": {
+        "00": 3735,
+        "01": 346,
+        "10": 344,
+        "11": 3767
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9102783203125,
+       "counts": {
+        "00": 3747,
+        "01": 381,
+        "10": 354,
+        "11": 3710
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.7813720703125,
+       "counts": {
+        "00": 880,
+        "01": 3238,
+        "10": 3163,
+        "11": 911
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.46875,
+     "seed": 1150000,
+     "winRate": 0.8533935546875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.81787109375,
+       "counts": {
+        "00": 3281,
+        "01": 770,
+        "10": 722,
+        "11": 3419
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.8953857421875,
+       "counts": {
+        "00": 3657,
+        "01": 430,
+        "10": 427,
+        "11": 3678
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.8856201171875,
+       "counts": {
+        "00": 3648,
+        "01": 474,
+        "10": 463,
+        "11": 3607
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.814697265625,
+       "counts": {
+        "00": 744,
+        "01": 3328,
+        "10": 3346,
+        "11": 774
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.5,
+     "seed": 1160000,
+     "winRate": 0.853240966796875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.8546142578125,
+       "counts": {
+        "00": 3507,
+        "01": 592,
+        "10": 599,
+        "11": 3494
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.8555908203125,
+       "counts": {
+        "00": 3571,
+        "01": 599,
+        "10": 584,
+        "11": 3438
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.8447265625,
+       "counts": {
+        "00": 3445,
+        "01": 598,
+        "10": 674,
+        "11": 3475
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.8580322265625,
+       "counts": {
+        "00": 584,
+        "01": 3447,
+        "10": 3582,
+        "11": 579
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.53125,
+     "seed": 1170000,
+     "winRate": 0.850372314453125,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.885009765625,
+       "counts": {
+        "00": 3648,
+        "01": 475,
+        "10": 467,
+        "11": 3602
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.8148193359375,
+       "counts": {
+        "00": 3374,
+        "01": 737,
+        "10": 780,
+        "11": 3301
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.81640625,
+       "counts": {
+        "00": 3309,
+        "01": 720,
+        "10": 784,
+        "11": 3379
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.88525390625,
+       "counts": {
+        "00": 454,
+        "01": 3643,
+        "10": 3609,
+        "11": 486
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.5625,
+     "seed": 1180000,
+     "winRate": 0.843017578125,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9112548828125,
+       "counts": {
+        "00": 3817,
+        "01": 361,
+        "10": 366,
+        "11": 3648
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.7711181640625,
+       "counts": {
+        "00": 3160,
+        "01": 966,
+        "10": 909,
+        "11": 3157
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.7730712890625,
+       "counts": {
+        "00": 3083,
+        "01": 948,
+        "10": 911,
+        "11": 3250
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9166259765625,
+       "counts": {
+        "00": 349,
+        "01": 3744,
+        "10": 3765,
+        "11": 334
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.59375,
+     "seed": 1190000,
+     "winRate": 0.838775634765625,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.943359375,
+       "counts": {
+        "00": 3889,
+        "01": 242,
+        "10": 222,
+        "11": 3839
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.736328125,
+       "counts": {
+        "00": 3056,
+        "01": 1068,
+        "10": 1092,
+        "11": 2976
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.735107421875,
+       "counts": {
+        "00": 3085,
+        "01": 1111,
+        "10": 1059,
+        "11": 2937
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9403076171875,
+       "counts": {
+        "00": 248,
+        "01": 3889,
+        "10": 3814,
+        "11": 241
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.625,
+     "seed": 1200000,
+     "winRate": 0.82525634765625,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9580078125,
+       "counts": {
+        "00": 3944,
+        "01": 164,
+        "10": 180,
+        "11": 3904
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.682861328125,
+       "counts": {
+        "00": 2706,
+        "01": 1308,
+        "10": 1290,
+        "11": 2888
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.6990966796875,
+       "counts": {
+        "00": 2819,
+        "01": 1244,
+        "10": 1221,
+        "11": 2908
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9610595703125,
+       "counts": {
+        "00": 168,
+        "01": 3950,
+        "10": 3923,
+        "11": 151
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.65625,
+     "seed": 1210000,
+     "winRate": 0.810760498046875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9822998046875,
+       "counts": {
+        "00": 4089,
+        "01": 78,
+        "10": 67,
+        "11": 3958
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.6375732421875,
+       "counts": {
+        "00": 2602,
+        "01": 1546,
+        "10": 1423,
+        "11": 2621
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.6458740234375,
+       "counts": {
+        "00": 2599,
+        "01": 1432,
+        "10": 1469,
+        "11": 2692
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.977294921875,
+       "counts": {
+        "00": 99,
+        "01": 4143,
+        "10": 3863,
+        "11": 87
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.6875,
+     "seed": 1220000,
+     "winRate": 0.79315185546875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.990478515625,
+       "counts": {
+        "00": 4119,
+        "01": 38,
+        "10": 40,
+        "11": 3995
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.598388671875,
+       "counts": {
+        "00": 2404,
+        "01": 1643,
+        "10": 1647,
+        "11": 2498
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.59326171875,
+       "counts": {
+        "00": 2440,
+        "01": 1670,
+        "10": 1662,
+        "11": 2420
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.990478515625,
+       "counts": {
+        "00": 34,
+        "01": 3944,
+        "10": 4170,
+        "11": 44
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.71875,
+     "seed": 1230000,
+     "winRate": 0.77203369140625,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9970703125,
+       "counts": {
+        "00": 4023,
+        "01": 11,
+        "10": 13,
+        "11": 4145
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.539306640625,
+       "counts": {
+        "00": 2198,
+        "01": 1888,
+        "10": 1886,
+        "11": 2220
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.5540771484375,
+       "counts": {
+        "00": 2305,
+        "01": 1799,
+        "10": 1854,
+        "11": 2234
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9976806640625,
+       "counts": {
+        "00": 7,
+        "01": 4076,
+        "10": 4097,
+        "11": 12
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.75,
+     "seed": 1240000,
+     "winRate": 0.748016357421875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 1.0,
+       "counts": {
+        "00": 4061,
+        "01": 0,
+        "10": 0,
+        "11": 4131
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.4942626953125,
+       "counts": {
+        "00": 2016,
+        "01": 2065,
+        "10": 2078,
+        "11": 2033
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.497802734375,
+       "counts": {
+        "00": 2007,
+        "01": 2081,
+        "10": 2033,
+        "11": 2071
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 1.0,
+       "counts": {
+        "00": 0,
+        "01": 4070,
+        "10": 4122,
+        "11": 0
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.78125,
+     "seed": 1250000,
+     "winRate": 0.724609375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9971923828125,
+       "counts": {
+        "00": 4162,
+        "01": 11,
+        "10": 12,
+        "11": 4007
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.4532470703125,
+       "counts": {
+        "00": 1803,
+        "01": 2252,
+        "10": 2227,
+        "11": 1910
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.44970703125,
+       "counts": {
+        "00": 1881,
+        "01": 2265,
+        "10": 2243,
+        "11": 1803
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.998291015625,
+       "counts": {
+        "00": 6,
+        "01": 4095,
+        "10": 4083,
+        "11": 8
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.8125,
+     "seed": 1260000,
+     "winRate": 0.696075439453125,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9901123046875,
+       "counts": {
+        "00": 4029,
+        "01": 45,
+        "10": 36,
+        "11": 4082
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.4090576171875,
+       "counts": {
+        "00": 1675,
+        "01": 2445,
+        "10": 2396,
+        "11": 1676
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.3948974609375,
+       "counts": {
+        "00": 1624,
+        "01": 2490,
+        "10": 2467,
+        "11": 1611
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.990234375,
+       "counts": {
+        "00": 30,
+        "01": 4002,
+        "10": 4110,
+        "11": 50
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.84375,
+     "seed": 1270000,
+     "winRate": 0.6673583984375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.98046875,
+       "counts": {
+        "00": 4009,
+        "01": 78,
+        "10": 82,
+        "11": 4023
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.3555908203125,
+       "counts": {
+        "00": 1436,
+        "01": 2626,
+        "10": 2653,
+        "11": 1477
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.3516845703125,
+       "counts": {
+        "00": 1444,
+        "01": 2674,
+        "10": 2637,
+        "11": 1437
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.981689453125,
+       "counts": {
+        "00": 80,
+        "01": 4000,
+        "10": 4042,
+        "11": 70
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.875,
+     "seed": 1280000,
+     "winRate": 0.634521484375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.963134765625,
+       "counts": {
+        "00": 3973,
+        "01": 162,
+        "10": 140,
+        "11": 3917
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.304443359375,
+       "counts": {
+        "00": 1242,
+        "01": 2852,
+        "10": 2846,
+        "11": 1252
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.3060302734375,
+       "counts": {
+        "00": 1286,
+        "01": 2938,
+        "10": 2747,
+        "11": 1221
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9644775390625,
+       "counts": {
+        "00": 143,
+        "01": 3956,
+        "10": 3945,
+        "11": 148
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.90625,
+     "seed": 1290000,
+     "winRate": 0.60638427734375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9425048828125,
+       "counts": {
+        "00": 3778,
+        "01": 244,
+        "10": 227,
+        "11": 3943
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.2666015625,
+       "counts": {
+        "00": 1067,
+        "01": 2961,
+        "10": 3047,
+        "11": 1117
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.27294921875,
+       "counts": {
+        "00": 1178,
+        "01": 2962,
+        "10": 2994,
+        "11": 1058
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9434814453125,
+       "counts": {
+        "00": 226,
+        "01": 3868,
+        "10": 3861,
+        "11": 237
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.9375,
+     "seed": 1300000,
+     "winRate": 0.573394775390625,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.92236328125,
+       "counts": {
+        "00": 3735,
+        "01": 315,
+        "10": 321,
+        "11": 3821
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.2265625,
+       "counts": {
+        "00": 917,
+        "01": 3206,
+        "10": 3130,
+        "11": 939
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.2225341796875,
+       "counts": {
+        "00": 930,
+        "01": 3179,
+        "10": 3190,
+        "11": 893
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.922119140625,
+       "counts": {
+        "00": 310,
+        "01": 3752,
+        "10": 3802,
+        "11": 328
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.96875,
+     "seed": 1310000,
+     "winRate": 0.5325927734375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.8843994140625,
+       "counts": {
+        "00": 3710,
+        "01": 468,
+        "10": 479,
+        "11": 3535
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.1822509765625,
+       "counts": {
+        "00": 763,
+        "01": 3390,
+        "10": 3309,
+        "11": 730
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.1759033203125,
+       "counts": {
+        "00": 749,
+        "01": 3400,
+        "10": 3351,
+        "11": 692
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.8878173828125,
+       "counts": {
+        "00": 454,
+        "01": 3695,
+        "10": 3578,
+        "11": 465
+       }
+      }
+     ]
+    },
+    {
+     "dial": 1.0,
+     "seed": 1320000,
+     "winRate": 0.5001220703125,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.8529052734375,
+       "counts": {
+        "00": 3475,
+        "01": 586,
+        "10": 619,
+        "11": 3512
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.1458740234375,
+       "counts": {
+        "00": 599,
+        "01": 3501,
+        "10": 3496,
+        "11": 596
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.1444091796875,
+       "counts": {
+        "00": 567,
+        "01": 3544,
+        "10": 3465,
+        "11": 616
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.8572998046875,
+       "counts": {
+        "00": 593,
+        "01": 3470,
+        "10": 3553,
+        "11": 576
+       }
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "ibm-noise-model",
+   "provenance": {
+    "source": "pre-run-simulator",
+    "backend": "aer_simulator_from(fake_kingston)",
+    "noiseModel": {
+     "name": "fake_kingston",
+     "calibrated": "2026-04-15T09:15:15+02:00",
+     "qubitSelection": "lowest CZ plus readout error in the snapshot"
+    },
+    "qubits": [
+     147,
+     148
+    ],
+    "shots": 8192,
+    "qiskitVersion": "2.6.2",
+    "aerVersion": "0.18.2",
+    "runtimeVersion": "0.51.0",
+    "date": "2026-11-07",
+    "jobId": null
+   },
+   "points": [
+    {
+     "dial": 0.0,
+     "seed": 2000000,
+     "winRate": 0.499298095703125,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.15283203125,
+       "counts": {
+        "00": 601,
+        "01": 3450,
+        "10": 3490,
+        "11": 651
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.8455810546875,
+       "counts": {
+        "00": 3487,
+        "01": 613,
+        "10": 652,
+        "11": 3440
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.8450927734375,
+       "counts": {
+        "00": 3472,
+        "01": 625,
+        "10": 644,
+        "11": 3451
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.1536865234375,
+       "counts": {
+        "00": 3487,
+        "01": 636,
+        "10": 623,
+        "11": 3446
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.03125,
+     "seed": 2010000,
+     "winRate": 0.5330810546875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.1966552734375,
+       "counts": {
+        "00": 822,
+        "01": 3281,
+        "10": 3300,
+        "11": 789
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.8741455078125,
+       "counts": {
+        "00": 3617,
+        "01": 534,
+        "10": 497,
+        "11": 3544
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.8741455078125,
+       "counts": {
+        "00": 3589,
+        "01": 506,
+        "10": 525,
+        "11": 3572
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.1873779296875,
+       "counts": {
+        "00": 3302,
+        "01": 754,
+        "10": 781,
+        "11": 3355
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.0625,
+     "seed": 2020000,
+     "winRate": 0.56927490234375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.2353515625,
+       "counts": {
+        "00": 952,
+        "01": 3118,
+        "10": 3146,
+        "11": 976
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.90283203125,
+       "counts": {
+        "00": 3758,
+        "01": 422,
+        "10": 374,
+        "11": 3638
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9078369140625,
+       "counts": {
+        "00": 3762,
+        "01": 368,
+        "10": 387,
+        "11": 3675
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.2310791015625,
+       "counts": {
+        "00": 3157,
+        "01": 916,
+        "10": 977,
+        "11": 3142
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.09375,
+     "seed": 2030000,
+     "winRate": 0.59735107421875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.259521484375,
+       "counts": {
+        "00": 1069,
+        "01": 3078,
+        "10": 2988,
+        "11": 1057
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9300537109375,
+       "counts": {
+        "00": 3709,
+        "01": 292,
+        "10": 281,
+        "11": 3910
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9290771484375,
+       "counts": {
+        "00": 3736,
+        "01": 302,
+        "10": 279,
+        "11": 3875
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.270751953125,
+       "counts": {
+        "00": 2979,
+        "01": 1110,
+        "10": 1108,
+        "11": 2995
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.125,
+     "seed": 2040000,
+     "winRate": 0.63330078125,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.320068359375,
+       "counts": {
+        "00": 1330,
+        "01": 2731,
+        "10": 2839,
+        "11": 1292
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9481201171875,
+       "counts": {
+        "00": 3804,
+        "01": 227,
+        "10": 198,
+        "11": 3963
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9542236328125,
+       "counts": {
+        "00": 3942,
+        "01": 168,
+        "10": 207,
+        "11": 3875
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.310791015625,
+       "counts": {
+        "00": 2865,
+        "01": 1247,
+        "10": 1299,
+        "11": 2781
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.15625,
+     "seed": 2050000,
+     "winRate": 0.664276123046875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.36376953125,
+       "counts": {
+        "00": 1473,
+        "01": 2568,
+        "10": 2644,
+        "11": 1507
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9677734375,
+       "counts": {
+        "00": 3965,
+        "01": 123,
+        "10": 141,
+        "11": 3963
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.96728515625,
+       "counts": {
+        "00": 4002,
+        "01": 127,
+        "10": 141,
+        "11": 3922
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.3582763671875,
+       "counts": {
+        "00": 2600,
+        "01": 1474,
+        "10": 1461,
+        "11": 2657
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.1875,
+     "seed": 2060000,
+     "winRate": 0.690765380859375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.403564453125,
+       "counts": {
+        "00": 1660,
+        "01": 2455,
+        "10": 2431,
+        "11": 1646
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9764404296875,
+       "counts": {
+        "00": 3970,
+        "01": 84,
+        "10": 109,
+        "11": 4029
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.977294921875,
+       "counts": {
+        "00": 4003,
+        "01": 99,
+        "10": 87,
+        "11": 4003
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.40576171875,
+       "counts": {
+        "00": 2457,
+        "01": 1679,
+        "10": 1645,
+        "11": 2411
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.21875,
+     "seed": 2070000,
+     "winRate": 0.719329833984375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.4566650390625,
+       "counts": {
+        "00": 1867,
+        "01": 2296,
+        "10": 2155,
+        "11": 1874
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9832763671875,
+       "counts": {
+        "00": 3986,
+        "01": 71,
+        "10": 66,
+        "11": 4069
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.98193359375,
+       "counts": {
+        "00": 3981,
+        "01": 64,
+        "10": 84,
+        "11": 4063
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.4554443359375,
+       "counts": {
+        "00": 2239,
+        "01": 1885,
+        "10": 1846,
+        "11": 2222
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.25,
+     "seed": 2080000,
+     "winRate": 0.741790771484375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.502197265625,
+       "counts": {
+        "00": 2034,
+        "01": 2056,
+        "10": 2022,
+        "11": 2080
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9853515625,
+       "counts": {
+        "00": 4005,
+        "01": 56,
+        "10": 64,
+        "11": 4067
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.98486328125,
+       "counts": {
+        "00": 4027,
+        "01": 61,
+        "10": 63,
+        "11": 4041
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.4947509765625,
+       "counts": {
+        "00": 2045,
+        "01": 1985,
+        "10": 2068,
+        "11": 2094
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.28125,
+     "seed": 2090000,
+     "winRate": 0.765167236328125,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.5479736328125,
+       "counts": {
+        "00": 2202,
+        "01": 1861,
+        "10": 1842,
+        "11": 2287
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9814453125,
+       "counts": {
+        "00": 4016,
+        "01": 86,
+        "10": 66,
+        "11": 4024
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9847412109375,
+       "counts": {
+        "00": 4020,
+        "01": 62,
+        "10": 63,
+        "11": 4047
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.5465087890625,
+       "counts": {
+        "00": 1890,
+        "01": 2236,
+        "10": 2241,
+        "11": 1825
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.3125,
+     "seed": 2100000,
+     "winRate": 0.78948974609375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.6021728515625,
+       "counts": {
+        "00": 2424,
+        "01": 1620,
+        "10": 1639,
+        "11": 2509
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9759521484375,
+       "counts": {
+        "00": 4012,
+        "01": 99,
+        "10": 98,
+        "11": 3983
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.979736328125,
+       "counts": {
+        "00": 4034,
+        "01": 90,
+        "10": 76,
+        "11": 3992
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.60009765625,
+       "counts": {
+        "00": 1695,
+        "01": 2482,
+        "10": 2434,
+        "11": 1581
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.34375,
+     "seed": 2110000,
+     "winRate": 0.8028564453125,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.6435546875,
+       "counts": {
+        "00": 2693,
+        "01": 1511,
+        "10": 1409,
+        "11": 2579
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9661865234375,
+       "counts": {
+        "00": 4012,
+        "01": 124,
+        "10": 153,
+        "11": 3903
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9661865234375,
+       "counts": {
+        "00": 3942,
+        "01": 147,
+        "10": 130,
+        "11": 3973
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.635498046875,
+       "counts": {
+        "00": 1513,
+        "01": 2621,
+        "10": 2585,
+        "11": 1473
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.375,
+     "seed": 2120000,
+     "winRate": 0.81878662109375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.6904296875,
+       "counts": {
+        "00": 2809,
+        "01": 1286,
+        "10": 1250,
+        "11": 2847
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.949951171875,
+       "counts": {
+        "00": 3862,
+        "01": 225,
+        "10": 185,
+        "11": 3920
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.950927734375,
+       "counts": {
+        "00": 3867,
+        "01": 204,
+        "10": 198,
+        "11": 3923
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.683837890625,
+       "counts": {
+        "00": 1258,
+        "01": 2789,
+        "10": 2813,
+        "11": 1332
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.40625,
+     "seed": 2130000,
+     "winRate": 0.82684326171875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.730712890625,
+       "counts": {
+        "00": 3094,
+        "01": 1107,
+        "10": 1099,
+        "11": 2892
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.93212890625,
+       "counts": {
+        "00": 3850,
+        "01": 278,
+        "10": 278,
+        "11": 3786
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9248046875,
+       "counts": {
+        "00": 3768,
+        "01": 313,
+        "10": 303,
+        "11": 3808
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.7197265625,
+       "counts": {
+        "00": 1141,
+        "01": 2947,
+        "10": 2949,
+        "11": 1155
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.4375,
+     "seed": 2140000,
+     "winRate": 0.838470458984375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.7703857421875,
+       "counts": {
+        "00": 3244,
+        "01": 913,
+        "10": 968,
+        "11": 3067
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9019775390625,
+       "counts": {
+        "00": 3682,
+        "01": 410,
+        "10": 393,
+        "11": 3707
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9085693359375,
+       "counts": {
+        "00": 3690,
+        "01": 389,
+        "10": 360,
+        "11": 3753
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.77294921875,
+       "counts": {
+        "00": 936,
+        "01": 3144,
+        "10": 3188,
+        "11": 924
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.46875,
+     "seed": 2150000,
+     "winRate": 0.840118408203125,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.8037109375,
+       "counts": {
+        "00": 3267,
+        "01": 813,
+        "10": 795,
+        "11": 3317
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.8785400390625,
+       "counts": {
+        "00": 3602,
+        "01": 480,
+        "10": 515,
+        "11": 3595
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.88134765625,
+       "counts": {
+        "00": 3577,
+        "01": 497,
+        "10": 475,
+        "11": 3643
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.796875,
+       "counts": {
+        "00": 812,
+        "01": 3349,
+        "10": 3179,
+        "11": 852
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.5,
+     "seed": 2160000,
+     "winRate": 0.847991943359375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.846435546875,
+       "counts": {
+        "00": 3444,
+        "01": 644,
+        "10": 614,
+        "11": 3490
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.85205078125,
+       "counts": {
+        "00": 3476,
+        "01": 581,
+        "10": 631,
+        "11": 3504
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.8477783203125,
+       "counts": {
+        "00": 3425,
+        "01": 629,
+        "10": 618,
+        "11": 3520
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.845703125,
+       "counts": {
+        "00": 660,
+        "01": 3525,
+        "10": 3403,
+        "11": 604
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.53125,
+     "seed": 2170000,
+     "winRate": 0.845184326171875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.8812255859375,
+       "counts": {
+        "00": 3611,
+        "01": 471,
+        "10": 502,
+        "11": 3608
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.813720703125,
+       "counts": {
+        "00": 3384,
+        "01": 748,
+        "10": 778,
+        "11": 3282
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.8096923828125,
+       "counts": {
+        "00": 3306,
+        "01": 784,
+        "10": 775,
+        "11": 3327
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.8760986328125,
+       "counts": {
+        "00": 509,
+        "01": 3546,
+        "10": 3631,
+        "11": 506
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.5625,
+     "seed": 2180000,
+     "winRate": 0.836822509765625,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.903076171875,
+       "counts": {
+        "00": 3722,
+        "01": 402,
+        "10": 392,
+        "11": 3676
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.7713623046875,
+       "counts": {
+        "00": 3235,
+        "01": 947,
+        "10": 926,
+        "11": 3084
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.76806640625,
+       "counts": {
+        "00": 3138,
+        "01": 940,
+        "10": 960,
+        "11": 3154
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.90478515625,
+       "counts": {
+        "00": 388,
+        "01": 3672,
+        "10": 3740,
+        "11": 392
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.59375,
+     "seed": 2190000,
+     "winRate": 0.83013916015625,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9302978515625,
+       "counts": {
+        "00": 3885,
+        "01": 286,
+        "10": 285,
+        "11": 3736
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.729736328125,
+       "counts": {
+        "00": 2998,
+        "01": 1107,
+        "10": 1107,
+        "11": 2980
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.7283935546875,
+       "counts": {
+        "00": 2980,
+        "01": 1121,
+        "10": 1104,
+        "11": 2987
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.93212890625,
+       "counts": {
+        "00": 278,
+        "01": 3821,
+        "10": 3815,
+        "11": 278
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.625,
+     "seed": 2200000,
+     "winRate": 0.818084716796875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9500732421875,
+       "counts": {
+        "00": 3886,
+        "01": 217,
+        "10": 192,
+        "11": 3897
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.6885986328125,
+       "counts": {
+        "00": 2792,
+        "01": 1305,
+        "10": 1246,
+        "11": 2849
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.686767578125,
+       "counts": {
+        "00": 2770,
+        "01": 1267,
+        "10": 1299,
+        "11": 2856
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9468994140625,
+       "counts": {
+        "00": 225,
+        "01": 3994,
+        "10": 3763,
+        "11": 210
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.65625,
+     "seed": 2210000,
+     "winRate": 0.807098388671875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.96728515625,
+       "counts": {
+        "00": 4002,
+        "01": 128,
+        "10": 140,
+        "11": 3922
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.64306640625,
+       "counts": {
+        "00": 2623,
+        "01": 1440,
+        "10": 1484,
+        "11": 2645
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.64892578125,
+       "counts": {
+        "00": 2622,
+        "01": 1452,
+        "10": 1424,
+        "11": 2694
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9691162109375,
+       "counts": {
+        "00": 120,
+        "01": 3964,
+        "10": 3975,
+        "11": 133
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.6875,
+     "seed": 2220000,
+     "winRate": 0.7833251953125,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.977294921875,
+       "counts": {
+        "00": 3946,
+        "01": 89,
+        "10": 97,
+        "11": 4060
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.5902099609375,
+       "counts": {
+        "00": 2467,
+        "01": 1648,
+        "10": 1709,
+        "11": 2368
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.5908203125,
+       "counts": {
+        "00": 2408,
+        "01": 1689,
+        "10": 1663,
+        "11": 2432
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9749755859375,
+       "counts": {
+        "00": 103,
+        "01": 4033,
+        "10": 3954,
+        "11": 102
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.71875,
+     "seed": 2230000,
+     "winRate": 0.76239013671875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9844970703125,
+       "counts": {
+        "00": 4086,
+        "01": 64,
+        "10": 63,
+        "11": 3979
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.5382080078125,
+       "counts": {
+        "00": 2210,
+        "01": 1880,
+        "10": 1903,
+        "11": 2199
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.542724609375,
+       "counts": {
+        "00": 2235,
+        "01": 1841,
+        "10": 1905,
+        "11": 2211
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.984130859375,
+       "counts": {
+        "00": 56,
+        "01": 4022,
+        "10": 4040,
+        "11": 74
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.75,
+     "seed": 2240000,
+     "winRate": 0.74249267578125,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9871826171875,
+       "counts": {
+        "00": 4043,
+        "01": 49,
+        "10": 56,
+        "11": 4044
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.5020751953125,
+       "counts": {
+        "00": 2058,
+        "01": 2020,
+        "10": 2059,
+        "11": 2055
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.4947509765625,
+       "counts": {
+        "00": 2066,
+        "01": 2084,
+        "10": 2055,
+        "11": 1987
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9859619140625,
+       "counts": {
+        "00": 62,
+        "01": 4082,
+        "10": 3995,
+        "11": 53
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.78125,
+     "seed": 2250000,
+     "winRate": 0.719940185546875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9852294921875,
+       "counts": {
+        "00": 4006,
+        "01": 62,
+        "10": 59,
+        "11": 4065
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.4512939453125,
+       "counts": {
+        "00": 1823,
+        "01": 2246,
+        "10": 2249,
+        "11": 1874
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.458740234375,
+       "counts": {
+        "00": 1867,
+        "01": 2206,
+        "10": 2228,
+        "11": 1891
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9844970703125,
+       "counts": {
+        "00": 74,
+        "01": 3986,
+        "10": 4079,
+        "11": 53
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.8125,
+     "seed": 2260000,
+     "winRate": 0.690582275390625,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.976318359375,
+       "counts": {
+        "00": 3985,
+        "01": 103,
+        "10": 91,
+        "11": 4013
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.4010009765625,
+       "counts": {
+        "00": 1611,
+        "01": 2503,
+        "10": 2404,
+        "11": 1674
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.40625,
+       "counts": {
+        "00": 1681,
+        "01": 2430,
+        "10": 2434,
+        "11": 1647
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.978759765625,
+       "counts": {
+        "00": 82,
+        "01": 4005,
+        "10": 4013,
+        "11": 92
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.84375,
+     "seed": 2270000,
+     "winRate": 0.66119384765625,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9677734375,
+       "counts": {
+        "00": 3951,
+        "01": 141,
+        "10": 123,
+        "11": 3977
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.3558349609375,
+       "counts": {
+        "00": 1447,
+        "01": 2664,
+        "10": 2613,
+        "11": 1468
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.3519287109375,
+       "counts": {
+        "00": 1415,
+        "01": 2682,
+        "10": 2627,
+        "11": 1468
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.96923828125,
+       "counts": {
+        "00": 126,
+        "01": 3951,
+        "10": 3989,
+        "11": 126
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.875,
+     "seed": 2280000,
+     "winRate": 0.63201904296875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.9495849609375,
+       "counts": {
+        "00": 3827,
+        "01": 206,
+        "10": 207,
+        "11": 3952
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.3121337890625,
+       "counts": {
+        "00": 1260,
+        "01": 2833,
+        "10": 2802,
+        "11": 1297
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.31396484375,
+       "counts": {
+        "00": 1337,
+        "01": 2791,
+        "10": 2829,
+        "11": 1235
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.952392578125,
+       "counts": {
+        "00": 189,
+        "01": 3905,
+        "10": 3897,
+        "11": 201
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.90625,
+     "seed": 2290000,
+     "winRate": 0.6005859375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.931640625,
+       "counts": {
+        "00": 3869,
+        "01": 301,
+        "10": 259,
+        "11": 3763
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.270263671875,
+       "counts": {
+        "00": 1086,
+        "01": 2931,
+        "10": 3047,
+        "11": 1128
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.2757568359375,
+       "counts": {
+        "00": 1116,
+        "01": 2899,
+        "10": 3034,
+        "11": 1143
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.9246826171875,
+       "counts": {
+        "00": 354,
+        "01": 3824,
+        "10": 3751,
+        "11": 263
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.9375,
+     "seed": 2300000,
+     "winRate": 0.569671630859375,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.90771484375,
+       "counts": {
+        "00": 3729,
+        "01": 372,
+        "10": 384,
+        "11": 3707
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.23046875,
+       "counts": {
+        "00": 930,
+        "01": 3178,
+        "10": 3126,
+        "11": 958
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.2340087890625,
+       "counts": {
+        "00": 977,
+        "01": 3109,
+        "10": 3166,
+        "11": 940
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.906494140625,
+       "counts": {
+        "00": 397,
+        "01": 3628,
+        "10": 3798,
+        "11": 369
+       }
+      }
+     ]
+    },
+    {
+     "dial": 0.96875,
+     "seed": 2310000,
+     "winRate": 0.53277587890625,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.8798828125,
+       "counts": {
+        "00": 3619,
+        "01": 489,
+        "10": 495,
+        "11": 3589
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.186279296875,
+       "counts": {
+        "00": 738,
+        "01": 3338,
+        "10": 3328,
+        "11": 788
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.186767578125,
+       "counts": {
+        "00": 739,
+        "01": 3402,
+        "10": 3260,
+        "11": 791
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.878173828125,
+       "counts": {
+        "00": 496,
+        "01": 3544,
+        "10": 3650,
+        "11": 502
+       }
+      }
+     ]
+    },
+    {
+     "dial": 1.0,
+     "seed": 2320000,
+     "winRate": 0.4969482421875,
+     "pairs": [
+      {
+       "x": 0,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.839599609375,
+       "counts": {
+        "00": 3478,
+        "01": 628,
+        "10": 686,
+        "11": 3400
+       }
+      },
+      {
+       "x": 0,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.1536865234375,
+       "counts": {
+        "00": 653,
+        "01": 3486,
+        "10": 3447,
+        "11": 606
+       }
+      },
+      {
+       "x": 1,
+       "y": 0,
+       "shots": 8192,
+       "winRate": 0.1480712890625,
+       "counts": {
+        "00": 564,
+        "01": 3409,
+        "10": 3570,
+        "11": 649
+       }
+      },
+      {
+       "x": 1,
+       "y": 1,
+       "shots": 8192,
+       "winRate": 0.846435546875,
+       "counts": {
+        "00": 610,
+        "01": 3496,
+        "10": 3438,
+        "11": 648
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
