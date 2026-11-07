@@ -1,0 +1,138 @@
+// The DOM over the film: brass plaques, a lift dial, intertitles and ticket stubs. A hotel floor indicator over a noir title card.
+export type HudKey = 'bank' | 'delta' | 'rate' | 'hands' | 'limit' | 'even' | 'odds' | 'tt' | 'x' | 'y' | 'a' | 'b' | 'res' | 'amt';
+export type HudAction = 'deal' | 'entangle' | 'run' | 'restart';
+export type SideName = 'cage' | 'wheel';
+
+export interface HudButton {
+  label: string;
+  act?: HudAction;
+  disabled?: boolean;
+  brass?: boolean;
+}
+
+export interface HudOptions {
+  stages: readonly string[];
+  /** The slider's range and step, matching the exported dial grid. */
+  dial: { min: number; max: number; step: number };
+  onAction: (action: HudAction) => void;
+  onDial: (value: number) => void;
+  onSound: (on: boolean) => void;
+}
+
+export type Hud = ReturnType<typeof createHud>;
+
+const NS = 'http://www.w3.org/2000/svg';
+const svg = (tag: string, attrs: Record<string, string | number>, parent?: Element | null, text?: string) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, String(attrs[k])); if (text != null) e.textContent = text; if (parent) parent.appendChild(e); return e; };
+const LIFT_A = (i: number) => -76 + i * 38;   // stage angle in degrees either side of straight up
+const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
+
+export function createHud(root: HTMLElement, { stages, dial: dialRange, onAction, onDial, onSound }: HudOptions) {
+  root.classList.add('deco');
+
+  const hud = el('div', 'dc-hud');
+  const plaque = el('div', 'dc-plaque', `
+    <div class="dc-cell"><div class="dc-k">Bankroll</div><div class="dc-v" data-v="bank"></div><div class="dc-s" data-v="delta">&nbsp;</div></div>
+    <div class="dc-cell"><div class="dc-k">Win rate</div><div class="dc-v" data-v="rate"></div><div class="dc-s" data-v="hands"></div></div>
+    <div class="dc-cell is-limit"><div class="dc-k">The limit</div><div class="dc-v" data-v="limit"></div><div class="dc-s" data-v="even"></div></div>`);
+  const mid = el('div', 'dc-mid');
+  const title = el('div', 'dc-title', `<h1>The Impossible <br>Casino</h1><p>Built inside a dilution refrigerator</p>`);
+  mid.appendChild(title);
+  const ticket = el('div', 'dc-ticket', `<b data-v="tt">Hand</b>
+    <div class="row"><span>Your question</span><span data-v="x"></span></div>
+    <div class="row"><span>Theirs</span><span data-v="y"></span></div>
+    <div class="row"><span>Your answer</span><span data-v="a"></span></div>
+    <div class="row"><span>Theirs</span><span data-v="b"></span></div>
+    <div class="res"><span data-v="res"></span><span data-v="amt"></span></div>`);
+  const base = el('div', 'dc-base');
+  const card = el('div', 'dc-card'); const line = el('p'); line.setAttribute('aria-live', 'polite'); card.appendChild(line);
+  const dial = el('div', 'dc-dial', `<label for="dc-dial-input"><span>Your dial</span><output data-v="odds"></output></label>
+    <input id="dc-dial-input" type="range" aria-label="Measurement angle dial">`);
+  const row = el('div', 'dc-row');
+  const main = el('button', 'dc-btn'); main.type = 'button';
+  const alt = el('button', 'dc-btn'); alt.type = 'button'; alt.hidden = true;
+  row.append(main, alt);
+  const stubs = el('div', 'dc-row');
+  const clockBtn = el('button', 'dc-stub', 'The cage'); clockBtn.type = 'button';
+  const winBtn = el('button', 'dc-stub', 'The wheel'); winBtn.type = 'button';
+  const soundBtn = el('button', 'dc-stub', 'Sound off'); soundBtn.type = 'button'; soundBtn.setAttribute('aria-pressed', 'false');
+  // The receipt stub and its paper marker go at the front of this row.
+  stubs.append(clockBtn, winBtn, soundBtn);
+  stubs.classList.add('dc-stubs');
+  base.append(card, dial, row);
+  const lift = el('div', 'dc-lift'); lift.setAttribute('role', 'img');
+  const face = svg('svg', { viewBox: '-150 -128 300 136', 'aria-hidden': 'true' }, lift);
+  const defs = svg('defs', {}, face), lg = svg('linearGradient', { id: 'dcBrass', x1: '0', y1: '0', x2: '1', y2: '.3' }, defs);
+  [['0', '#6f5426'], ['.3', '#f6e5ae'], ['.55', '#a9843a'], ['.8', '#fff0bd'], ['1', '#8a6b30']].forEach(([o = '', c = '']) => svg('stop', { offset: o, 'stop-color': c }, lg));
+  for (let i = 0; i < 25; i++) { const a = (-84 + i * 7) * Math.PI / 180, r0 = 22, r1 = i % 2 ? 74 : 86;
+    svg('path', { d: `M${r0 * Math.sin(a - .012)} ${-r0 * Math.cos(a - .012)} L${r1 * Math.sin(a - .05)} ${-r1 * Math.cos(a - .05)} L${r1 * Math.sin(a + .05)} ${-r1 * Math.cos(a + .05)} L${r0 * Math.sin(a + .012)} ${-r0 * Math.cos(a + .012)}Z`, fill: '#2a2110' }, face); }
+  svg('path', { d: 'M-92.6 -22.1 A95 95 0 0 1 92.6 -22.1', fill: 'none', stroke: 'url(#dcBrass)', 'stroke-width': 3 }, face);
+  const stageT = stages.map((label, i) => { const a = LIFT_A(i) * Math.PI / 180, x = Math.sin(a), y = -Math.cos(a);
+    svg('line', { x1: 90 * x, y1: 90 * y, x2: 101 * x, y2: 101 * y, stroke: '#f6e5ae', 'stroke-width': 2.4 }, face);
+    return svg('text', { class: 't', x: 108 * x + (i === 2 ? 0 : x * 4), y: 108 * y + (i === 2 ? -3 : 4), 'text-anchor': i < 2 ? 'end' : i > 2 ? 'start' : 'middle' }, face, label); });
+  const arrow = svg('g', { class: 'dc-lift-g' }, face);
+  svg('path', { d: 'M-5 0 L-1.4 -56 L-7 -62 L0 -88 L7 -62 L1.4 -56 L5 0Z', fill: 'url(#dcBrass)', stroke: '#000', 'stroke-width': .8 }, arrow);
+  svg('circle', { r: 10, fill: 'url(#dcBrass)', stroke: '#000', 'stroke-width': .8 }, face);
+  const tempEl = el('div', 'dc-temp');
+  lift.appendChild(tempEl);
+  hud.append(plaque, mid, base, stubs, ticket, lift);
+  const hint = el('div', 'dc-hint');
+  hud.appendChild(hint);
+
+  root.append(hud);
+
+  const v = new Map<string, HTMLElement>(); root.querySelectorAll<HTMLElement>('[data-v]').forEach((n) => { if (n.dataset.v) v.set(n.dataset.v, n); });
+  const cache = new Map<string, string | number>();
+  const put = (k: HudKey, s: string) => { if (cache.get(k) !== s) { cache.set(k, s); v.get(k)!.textContent = s; } };
+  const input = dial.querySelector('input')!;
+  input.min = String(dialRange.min); input.max = String(dialRange.max); input.step = String(dialRange.step);
+
+  let swapTimer = 0;
+  function say(text: string) {
+    if (cache.get('say') === text) return; cache.set('say', text);
+    clearTimeout(swapTimer); line.classList.add('is-swap');
+    swapTimer = window.setTimeout(() => { line.textContent = text; line.classList.remove('is-swap'); }, line.textContent ? 170 : 0);
+  }
+  let mainAct: HudAction | undefined, altAct: HudAction | undefined, onSide: (name: SideName | 'back') => void = () => undefined;
+  function buttons(m: HudButton, a?: HudButton) {
+    main.textContent = m.label; main.disabled = !!m.disabled; mainAct = m.act;
+    main.classList.toggle('is-brass', !!m.brass);
+    alt.hidden = !a; if (a) { alt.textContent = a.label; altAct = a.act; }
+  }
+  const clickMain = () => { if (mainAct) onAction(mainAct); };
+  const clickAlt = () => { if (altAct) onAction(altAct); };
+  const onInput = () => { onDial(+input.value); };
+  const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onSide('back'); };
+  const onClock = () => { onSide('cage'); }, onWin = () => { onSide('wheel'); };
+  let soundOn = false;
+  const onSnd = () => { soundOn = !soundOn; soundBtn.textContent = soundOn ? 'Sound on' : 'Sound off'; soundBtn.setAttribute('aria-pressed', String(soundOn)); onSound(soundOn); };
+  main.addEventListener('click', clickMain); alt.addEventListener('click', clickAlt); input.addEventListener('input', onInput);
+  clockBtn.addEventListener('click', onClock); winBtn.addEventListener('click', onWin); soundBtn.addEventListener('click', onSnd);
+  root.addEventListener('keydown', onKey);
+
+  return {
+    put, say, buttons, input, hud,
+    /** The world answers the side-room buttons once it exists. */
+    setSide(fn: (name: SideName | 'back') => void) { onSide = fn; },
+    gauge(label: string, frac: number, here: number) {
+      if (cache.get('t') !== label) { cache.set('t', label); tempEl.textContent = label; lift.setAttribute('aria-label', `Lift dial: ${label}`); }
+      const rot = Math.round(frac * 152 - 76);
+      if (cache.get('rot') !== rot) { cache.set('rot', rot); arrow.style.transform = `rotate(${rot}deg)`; }
+      if (cache.get('here') !== here) { cache.set('here', here); stageT.forEach((t, i) => t.classList.toggle('is-here', i === here)); }
+    },
+    stubs(on: boolean) { clockBtn.disabled = !on; winBtn.disabled = !on; },
+    title(on: boolean) { title.classList.toggle('is-gone', !on); },
+    dial(on: boolean) { dial.classList.toggle('is-on', on); },
+    ticket(on: boolean) { ticket.classList.toggle('is-on', on); },
+    colour(on: boolean) { root.classList.toggle('is-colour', on); },
+    side(name: SideName | null) { root.classList.toggle('is-side', !!name); clockBtn.textContent = name === 'cage' ? 'Back to the table' : 'The cage'; winBtn.textContent = name === 'wheel' ? 'Back to the table' : 'The wheel'; },
+    hot(on: boolean) { root.querySelector('canvas')?.classList.toggle('is-hot', on); hint.classList.toggle('is-on', on); },
+    hint(text: string, x: number, y: number) { hint.textContent = text; hint.style.left = `${x}px`; hint.style.top = `${y}px`; },
+    dispose() {
+      clearTimeout(swapTimer);
+      main.removeEventListener('click', clickMain); alt.removeEventListener('click', clickAlt); input.removeEventListener('input', onInput);
+      clockBtn.removeEventListener('click', onClock); winBtn.removeEventListener('click', onWin); soundBtn.removeEventListener('click', onSnd);
+      root.removeEventListener('keydown', onKey);
+      hud.remove(); root.classList.remove('deco', 'is-colour', 'is-side');
+    },
+  };
+}

@@ -1,0 +1,137 @@
+.deco { --step: 6px; --ox: #17120b; --paper: #e9e0c9; --ink: #17120b; --silver: #cfccc4; --line: #d4ae5d;
+  --brass: linear-gradient(103deg, #5f4920 0%, #c5a255 14%, #f6e5ae 24%, #a9843a 40%, #6f5426 58%, #dcbb6b 78%, #fff0bd 86%, #8a6b30 100%);
+  --brass-plate: linear-gradient(103deg, #a98a45 0%, #c5a255 14%, #f6e5ae 24%, #b8964a 40%, #a88742 58%, #dcbb6b 78%, #fff0bd 86%, #a8873f 100%);
+  --out: cubic-bezier(.23,1,.32,1); position: absolute; inset: 0; overflow: hidden; background: #000; color: var(--silver);
+  font-family: "Bodoni Moda", Didot, "Hoefler Text", Georgia, serif; -webkit-font-smoothing: antialiased; touch-action: manipulation; }
+.deco canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.deco canvas.is-hot { cursor: pointer; }
+.dc-hud { position: absolute; inset: 0; pointer-events: none; display: grid; grid-template-rows: auto 1fr auto auto; justify-items: center;
+  padding: max(14px, env(safe-area-inset-top)) 16px 14px; gap: 10px; box-sizing: border-box; }
+.dc-hud > * { min-width: 0; }
+.deco.is-colour { --ox: #7d1420; }
+
+/* The lift dial: temperature stages where the floor numbers would be. */
+.dc-lift { position: absolute; left: 20px; top: 16px; width: 252px; padding: 12px 10px 9px; box-sizing: border-box; text-align: center; background: rgba(4,4,4,.86); outline: 1px solid rgba(212,174,93,.75); outline-offset: -5px; box-shadow: 0 0 0 1px #000; }
+.dc-lift svg { display: block; width: 100%; height: auto; overflow: visible; }
+.dc-lift .t { font: 400 15px/1 "Federo", Georgia, serif; fill: #bdb6a6; transition: fill .3s ease; }
+.dc-lift .t.is-here { fill: #fff0bd; }
+.dc-lift-g { transition: transform .4s var(--out); transform-origin: 0 0; }
+.dc-temp { margin-top: 2px; font: 400 24px/1 "Limelight", Georgia, serif; color: #f6e5ae; font-variant-numeric: lining-nums; }
+
+.dc-plaque { display: grid; grid-template-columns: minmax(0,1.15fr) minmax(0,1.3fr) minmax(0,.9fr); width: min(620px, 100%); pointer-events: auto;
+  background: var(--brass-plate); color: var(--ink); box-shadow: 0 10px 34px rgba(0,0,0,.7);
+  clip-path: polygon(calc(var(--step)*2) 0, calc(100% - var(--step)*2) 0, calc(100% - var(--step)*2) var(--step), calc(100% - var(--step)) var(--step), calc(100% - var(--step)) calc(var(--step)*2), 100% calc(var(--step)*2),
+    100% calc(100% - var(--step)*2), calc(100% - var(--step)) calc(100% - var(--step)*2), calc(100% - var(--step)) calc(100% - var(--step)), calc(100% - var(--step)*2) calc(100% - var(--step)), calc(100% - var(--step)*2) 100%,
+    calc(var(--step)*2) 100%, calc(var(--step)*2) calc(100% - var(--step)), var(--step) calc(100% - var(--step)), var(--step) calc(100% - var(--step)*2), 0 calc(100% - var(--step)*2),
+    0 calc(var(--step)*2), var(--step) calc(var(--step)*2), var(--step) var(--step), calc(var(--step)*2) var(--step)); }
+.dc-cell { padding: 9px 14px 8px; text-align: center; position: relative; min-width: 0; }
+.dc-cell + .dc-cell::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 2px; background: linear-gradient(90deg, rgba(40,28,8,.65) 50%, rgba(255,244,205,.6) 50%); }
+.dc-k { font: 400 13px/1.1 "Federo", "Bodoni Moda", Georgia, serif; letter-spacing: .02em; text-shadow: 0 1px 0 rgba(255,244,205,.5); white-space: nowrap; }
+.dc-v { font: 400 clamp(21px, 5.2vw, 29px)/1.12 "Limelight", "Bodoni Moda", Didot, Georgia, serif; font-variant-numeric: lining-nums; text-shadow: 0 1px 0 rgba(255,244,205,.55); white-space: nowrap; }
+.dc-v small { font: 400 12px/1 "Federo", Georgia, serif; }
+.dc-s { font: italic 500 13px/1.15 "Bodoni Moda", Georgia, serif; text-shadow: 0 1px 0 rgba(255,244,205,.45); white-space: nowrap; }
+.dc-cell.is-limit { transition: color .3s; }
+
+.dc-mid { align-self: stretch; display: grid; width: 100%; min-height: 0; grid-template-rows: auto 1fr; justify-items: center; }
+.dc-title { grid-row: 1; margin: clamp(6px, 1.6vh, 18px) 0 0; text-align: center; color: #f3f0e8; opacity: 1; transition: opacity .5s ease, transform .9s var(--out), filter .5s ease; }
+.dc-title { position: absolute; left: clamp(28px, 6vw, 96px); top: 33%; width: min(36vw, 520px); text-align: left; }
+.dc-title.is-gone { opacity: 0; transform: scale(1.03); filter: blur(6px); }
+.dc-title h1 { margin: 0; font: 400 clamp(36px, 3.9vw, 66px)/1.04 "Limelight", "Bodoni Moda", Didot, Georgia, serif; text-shadow: 0 0 32px rgba(0,0,0,.95), 0 2px 0 #000; }
+.dc-title p { margin: 6px 0 0; font: italic 400 clamp(15px, 1.6vw, 21px)/1.2 "Bodoni Moda", Georgia, serif; color: #f1eee6; text-shadow: 0 0 14px #000, 0 0 4px #000, 0 1px 2px #000; }
+
+.dc-ticket { position: absolute; left: 16px; top: 50%; transform: translateY(-50%) rotate(-1.4deg); width: 168px; color: var(--ink); background: var(--paper); padding: 9px 12px 9px 12px;
+  font: 400 13px/1.3 "Courier Prime", "Courier New", monospace; opacity: 0; transition: opacity .25s ease; pointer-events: none;
+  -webkit-mask: radial-gradient(circle 7px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 7px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+          mask: radial-gradient(circle 7px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 7px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat; }
+.dc-ticket.is-on { opacity: 1; }
+.dc-ticket b { font: 400 17px/1.1 "Limelight", Georgia, serif; display: block; margin-bottom: 3px; }
+.dc-ticket .row { display: flex; justify-content: space-between; }
+.dc-ticket .res { margin-top: 4px; border-top: 1px dashed rgba(23,18,11,.5); padding-top: 4px; font-weight: 700; display: flex; justify-content: space-between; }
+
+.dc-base { width: min(880px, 100%); display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px 14px; align-items: center; pointer-events: none; }
+.dc-base .dc-dial { grid-column: 1 / -1; grid-row: 1; }
+.dc-card { width: 100%; box-sizing: border-box; padding: 12px 20px 13px; background: rgba(3,3,3,.985); text-align: center; position: relative;
+  outline: 1px solid rgba(207,204,196,.55); outline-offset: -5px; box-shadow: 0 0 0 1px #000; }
+.dc-card::before, .dc-card::after { content: ""; position: absolute; left: 50%; width: 46px; height: 7px; margin-left: -23px; background: repeating-linear-gradient(90deg, var(--line) 0 2px, transparent 2px 5px); }
+.dc-card::before { top: -3px; } .dc-card::after { bottom: -3px; }
+.dc-card p { margin: 0; font: italic 400 clamp(16px, 1.45vw, 19px)/1.34 "Bodoni Moda", Didot, Georgia, serif; color: #f1eee6; text-wrap: balance; transition: opacity .2s ease, filter .2s ease; }
+.dc-card p.is-swap { opacity: 0; filter: blur(3px); }
+
+.dc-dial { width: min(600px, 100%); justify-self: center; pointer-events: auto; display: none; gap: 4px; opacity: 0; transform: translateY(6px); transition: opacity .3s ease, transform .3s var(--out); visibility: hidden; }
+.dc-dial.is-on { display: grid; opacity: 1; transform: none; visibility: visible; }
+.dc-dial label { padding: 4px 10px; background: rgba(3,3,3,.78); display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font: 400 15px/1.2 "Federo", Georgia, serif; color: #f1eee6; text-shadow: 0 1px 6px #000; }
+.dc-dial output { font: 400 22px/1 "Limelight", Georgia, serif; }
+.dc-dial input { -webkit-appearance: none; appearance: none; width: 100%; height: 40px; margin: 0; background: transparent; cursor: grab; touch-action: none; }
+.dc-dial input:active { cursor: grabbing; }
+.dc-dial input::-webkit-slider-runnable-track { height: 8px; background: var(--brass); box-shadow: 0 1px 0 #000, 0 0 12px rgba(0,0,0,.8); }
+.dc-dial input::-moz-range-track { height: 8px; background: var(--brass); box-shadow: 0 1px 0 #000; }
+.dc-dial input::-webkit-slider-thumb { -webkit-appearance: none; width: 34px; height: 34px; margin-top: -13px; border-radius: 50%; border: 0;
+  background: radial-gradient(circle, #16100c 0 40%, #d4ae5d 41% 46%, #16100c 47% 62%, transparent 63%), conic-gradient(var(--ox) 0 10%, #e9e0c9 0 25%, var(--ox) 0 35%, #e9e0c9 0 50%, var(--ox) 0 60%, #e9e0c9 0 75%, var(--ox) 0 85%, #e9e0c9 0); box-shadow: 0 3px 9px rgba(0,0,0,.8); }
+.dc-dial input::-moz-range-thumb { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--ox); box-shadow: inset 0 0 0 5px #e9e0c9; }
+
+.dc-row { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; pointer-events: auto; }
+.dc-btn { appearance: none; border: 0; cursor: pointer; color: var(--ink); background: var(--paper); font: 400 20px/1 "Limelight", "Bodoni Moda", Georgia, serif; padding: 14px 34px 13px; min-height: 48px; position: relative;
+  -webkit-mask: radial-gradient(circle 8px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 8px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+          mask: radial-gradient(circle 8px at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 8px at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat;
+  transition: transform .14s var(--out), background-color .16s ease; }
+.dc-btn::after { content: ""; position: absolute; top: 5px; bottom: 5px; left: 16px; right: 16px; border-left: 1px dashed rgba(23,18,11,.45); border-right: 1px dashed rgba(23,18,11,.45); pointer-events: none; }
+.dc-btn:active { transform: scale(.97); }
+.dc-btn[disabled] { background: #807b6e; cursor: default; }
+.dc-btn.is-brass { background: var(--brass); }
+.dc-focus { display: contents; }
+.dc-hud button:focus-visible, .dc-hud input:focus-visible, .dc-receipt button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.dc-btn:focus-visible { -webkit-mask: none; mask: none; }
+.dc-stub { appearance: none; border: 0; cursor: pointer; background: rgba(4,4,4,.72); color: var(--silver); font: 400 15px/1 "Federo", Georgia, serif; padding: 9px 13px; min-height: 36px; box-shadow: inset 0 0 0 1px rgba(207,204,196,.5); transition: color .16s ease, box-shadow .16s ease, transform .14s var(--out); }
+.dc-stub:hover { color: #fff; box-shadow: inset 0 0 0 1px #fff; }
+.dc-stub:active { transform: scale(.97); }
+.dc-stub:disabled { opacity: .5; cursor: default; }
+.dc-stub[aria-pressed="true"] { color: #fff; box-shadow: inset 0 0 0 1px var(--line); }
+.dc-stubs { position: absolute; left: 16px; bottom: 14px; flex-direction: column; align-items: stretch; gap: 6px; }
+.dc-stubs .dc-stub { text-align: left; }
+.dc-hint { position: absolute; left: 0; top: 0; transform: translate(-50%, -150%); background: #040404; color: #f1eee6; padding: 5px 9px; font: 400 14px/1 "Federo", Georgia, serif; outline: 1px solid rgba(207,204,196,.6); pointer-events: none; opacity: 0; transition: opacity .12s ease; white-space: nowrap; }
+.dc-hint.is-on { opacity: 1; }
+
+.dc-receipt { position: absolute; inset: 0; display: grid; place-items: center; padding: 14px; box-sizing: border-box; background: rgba(0,0,0,.6); opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility .2s; z-index: 5; }
+.dc-receipt.is-on { opacity: 1; visibility: visible; }
+.dc-marker { width: min(560px, 100%); max-height: 100%; overflow: auto; box-sizing: border-box; color: var(--ink); padding: 22px 24px 18px; transform: translateY(14px) rotate(-.7deg) scale(.98); transition: transform .26s var(--out);
+  background: repeating-linear-gradient(0deg, transparent 0 26px, rgba(120,60,40,.09) 26px 27px), radial-gradient(120% 90% at 30% 10%, #f1e9d4, #ddd1b1); box-shadow: 0 24px 60px rgba(0,0,0,.8); position: relative; }
+.dc-receipt.is-on .dc-marker { transform: rotate(-.7deg); }
+.dc-marker::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 7px; background: radial-gradient(circle 3px at 7px 0, #000 96%, transparent) 0 0 / 14px 7px repeat-x; opacity: .85; }
+.dc-marker h2 { margin: 2px 0 0; font: 400 32px/1 "Limelight", Georgia, serif; }
+.dc-marker .sub { margin: 4px 0 12px; font: italic 400 15px/1.3 "Bodoni Moda", Georgia, serif; }
+.dc-marker pre { margin: 0 0 12px; padding: 10px 0; border-top: 1px solid var(--ink); border-bottom: 1px solid var(--ink); font: 400 13px/1.42 "Courier Prime", "Courier New", monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.dc-marker dl { display: grid; grid-template-columns: auto 1fr; gap: 2px 14px; margin: 0 0 12px; font: 400 14px/1.3 "Courier Prime", "Courier New", monospace; }
+.dc-marker dt { font-family: "Federo", Georgia, serif; }
+.dc-marker dd { margin: 0; font-weight: 700; }
+.dc-stamp { display: block; padding: 7px 10px; border: 2px solid var(--ox); color: var(--ox); font: 700 14px/1.28 "Courier Prime", "Courier New", monospace; transform: rotate(-.6deg); }
+.dc-marker .dc-btn { margin-top: 12px; font-size: 18px; min-height: 44px; padding: 11px 30px; background: var(--ink); color: var(--paper); }
+.dc-marker .dc-btn::after { border-color: rgba(233,224,201,.4); }
+
+.dc-static { position: absolute; inset: 0; background:
+    radial-gradient(ellipse 34% 7% at 50% 66%, rgba(226,188,105,.9), transparent 72%),
+    radial-gradient(ellipse 26% 5% at 50% 50%, rgba(226,188,105,.6), transparent 72%),
+    radial-gradient(ellipse 40% 8% at 50% 32%, rgba(226,188,105,.5), transparent 72%),
+    repeating-conic-gradient(from -90deg at 50% 66%, #171208 0 3deg, #050506 3deg 8deg); }
+.dc-static p { position: absolute; left: 50%; top: 42%; transform: translateX(-50%); margin: 0; width: min(420px, calc(100% - 32px)); text-align: center; font: italic 400 16px/1.3 "Bodoni Moda", Georgia, serif; color: #f6e5ae; }
+
+@media (max-width: 1240px) { .dc-lift { top: 104px; width: 196px; } .dc-temp { font-size: 20px; } .dc-lift .t { font-size: 16px; } .dc-ticket { top: 240px; transform: rotate(-1.4deg); } }
+@media (max-width: 1260px) { .dc-stubs { position: static; flex-direction: row; grid-row: 4; } .dc-stubs .dc-stub { text-align: center; } }
+@media (max-width: 620px) {
+  .dc-hud { padding-left: 12px; padding-right: 12px; gap: 8px; }
+  .dc-cell { padding: 7px 5px 6px; } .dc-k { font-size: 12px; } .dc-s { font-size: min(12px, 3.05vw); }
+  .dc-v { font-size: 20px; }
+  .dc-ticket { display: none; }
+  .dc-lift { left: auto; right: 12px; top: 186px; width: 118px; padding: 9px 6px 7px; } .dc-lift .t { display: none; } .dc-temp { font-size: 17px; }
+  .dc-base { grid-template-columns: minmax(0,1fr); justify-items: stretch; }
+  .dc-stubs { flex-wrap: nowrap; gap: 5px; }
+  .dc-card { padding: 10px 12px 11px; } .dc-card p { font-size: 15.5px; line-height: 1.3; }
+  .dc-title { position: static; width: auto; text-align: center; } .dc-title h1 { font-size: min(34px, 7.4vw); } .dc-title h1 br { display: none; }
+  .dc-btn { font-size: 18px; padding: 13px 26px 12px; }
+  .dc-stub { font-size: 14px; padding: 8px 10px; }
+  .dc-title { margin-bottom: 8px; }
+  .is-side .dc-lift { top: 84px; }
+}
+@media (max-height: 560px) {
+  .dc-title { display: none; } .dc-ticket { display: none; } .dc-lift { display: none; } .dc-card { padding: 7px 14px; } .dc-dial input { height: 32px; }
+}
+@media (prefers-reduced-motion: reduce) { .deco * { transition-duration: .01s !important; } }
