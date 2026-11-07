@@ -185,7 +185,7 @@ describe('createDprController', () => {
       const c = createDprController(2);
       const justSlow = SLOW_FRAME_SECONDS * 1.005;
       feedWindow(c, justSlow);
-      feedWindow(c, SLOW_FRAME_SECONDS); // flat, but back under the line
+      feedWindow(c, SLOW_FRAME_SECONDS * 0.999); // flat, but back under the line
       feedWindow(c, justSlow); // a later load spike starts fresh
       feedWindow(c, justSlow);
       expect(c.latched).toBe(false);

@@ -539,7 +539,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     renderer.shadowMap.autoUpdate = true;
     frameNo += 1;
     // Reflect the camera in the floor, unless it is looking at the ceiling. Nothing lives below the floor, so no clip plane is needed.
-    if (tmpV.y < .6 && (tier < 3 || frameNo % 2 === 0 || frameNo < 3)) {
+    if (tmpV.y < .6 && (tier < 1 || frameNo % 2 === 0 || frameNo < 3)) {
       tmpU.copy(camera.position).add(tmpV); camUp.set(0, 1, 0).applyQuaternion(camera.quaternion);
       const m = FLOOR_Y * 2;
       mirrorCam.position.set(camera.position.x, m - camera.position.y, camera.position.z);

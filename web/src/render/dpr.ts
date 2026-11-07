@@ -2,8 +2,8 @@
 export const DPR_CAP = 1.75;
 export const DPR_FLOOR = 0.75;
 export const DPR_STEP = 0.15;
-/** Frames averaged before a decision is made. */
-export const SAMPLE_FRAMES = 50;
+/** Frames averaged before a decision is made: about two seconds, so a short busy moment does not cost sharpness for good. */
+export const SAMPLE_FRAMES = 100;
 /** Average frame time that counts as too slow: about 46 fps, which leaves 60 Hz screens alone. */
 export const SLOW_FRAME_SECONDS = 0.0215;
 /** A frame longer than this is a stall, such as a shader compile. */
