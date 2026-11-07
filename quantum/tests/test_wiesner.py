@@ -1,6 +1,7 @@
 import math
 import random
 from itertools import product
+from typing import Any
 
 import pytest
 from qiskit import QuantumCircuit, qasm2
@@ -8,6 +9,7 @@ from qiskit.quantum_info import Statevector
 from qiskit_aer import AerSimulator
 from qiskit_ibm_runtime.fake_provider import FakeKingston
 
+from quantum.export_wiesner import noise_simulator
 from quantum.wiesner import (
     ATTACKER_ANGLES,
     BANK_ANGLES,
@@ -289,3 +291,38 @@ def test_a_layout_shorter_than_the_chip_is_rejected():
 def test_malformed_outcomes_are_rejected(outcome):
     with pytest.raises(ValueError):
         passed(outcome, 2)
+
+
+@pytest.mark.parametrize("batch", [1, 7, 32, 256])
+def test_batching_gives_the_same_counts_as_one_job(batch: int) -> None:
+    device = FakeKingston()
+    qubits = [50, 148, 21, 68]
+    backend = noise_simulator(device, qubits)
+    whole = run_forgery(4, 256, backend=backend, seed=2024, layout=qubits)
+    assert run_forgery(4, 256, backend=backend, seed=2024, layout=qubits, batch=batch) == whole
+
+
+def test_batching_runs_one_job_per_batch() -> None:
+    backend = AerSimulator()
+    jobs: list[int] = []
+    run = backend.run
+
+    def counting_run(*args: Any, **kwargs: Any) -> Any:
+        jobs.append(len(next(iter(kwargs["parameter_binds"][0].values()))))
+        return run(*args, **kwargs)
+
+    backend.run = counting_run  # type: ignore[method-assign]
+    run_forgery(2, 70, backend=backend, seed=5, batch=32)
+    assert jobs == [32, 32, 6]
+
+
+def test_batching_keeps_a_fresh_ticket_per_shot() -> None:
+    backend = AerSimulator()
+    passes = run_forgery(1, 4096, backend=backend, seed=5, batch=32)
+    assert abs(passes / 4096 - 0.75) < 0.05
+
+
+@pytest.mark.parametrize("batch", [0, -1, 1.5])
+def test_batching_refuses_a_bad_size(batch: Any) -> None:
+    with pytest.raises(ValueError, match="batch"):
+        run_forgery(1, 8, seed=1, batch=batch)

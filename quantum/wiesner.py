@@ -34,6 +34,8 @@ from qiskit_aer import AerSimulator
 MAX_LENGTH = 8
 LENGTHS: tuple[int, ...] = tuple(range(1, MAX_LENGTH + 1))
 BASES: tuple[str, str] = ("Z", "X")
+# Aer seeds binding i of a job as seed + i * this, so a job can start partway through a stream.
+AER_SEED_STEP = 2113
 
 # RY angles that make each bank state from |0>, keyed by (bit, basis).
 BANK_ANGLES: dict[tuple[int, str], float] = {
@@ -200,20 +202,34 @@ def run_forgery(
     backend: BackendV2 | None = None,
     seed: int | None = None,
     layout: Sequence[int] | None = None,
+    batch: int | None = None,
 ) -> int:
-    """Forge one fresh random ticket per shot. Returns the number that pass."""
+    """Forge one fresh random ticket per shot. Returns the number that pass.
+
+    A seeded run gives the same count at any batch size. Aer holds the GIL for
+    a whole job, so a live server splits the shots to stay responsive.
+    """
     _check_length(length)
     if not isinstance(shots, int) or shots < 1:
         raise ValueError(f"shots must be a positive integer, got {shots!r}")
+    if batch is not None and (not isinstance(batch, int) or batch < 1):
+        raise ValueError(f"batch must be a positive integer, got {batch!r}")
     backend = backend or AerSimulator()
     tickets = random_tickets(length, shots, random.Random(seed))
     compiled = compile_forgery(length, backend, layout=layout, seed=seed)
-    result = backend.run(
-        compiled, parameter_binds=[forgery_binds(tickets)], shots=1, seed_simulator=seed
-    ).result()
-    return sum(
-        n
-        for i in range(shots)
-        for outcome, n in result.get_counts(i).items()
-        if passed(outcome, length)
-    )
+    total = 0
+    for start in range(0, shots, batch or shots):
+        part = tickets[start : start + (batch or shots)]
+        result = backend.run(
+            compiled,
+            parameter_binds=[forgery_binds(part)],
+            shots=1,
+            seed_simulator=None if seed is None else seed + start * AER_SEED_STEP,
+        ).result()
+        total += sum(
+            n
+            for i in range(len(part))
+            for outcome, n in result.get_counts(i).items()
+            if passed(outcome, length)
+        )
+    return total

@@ -43,11 +43,13 @@ class Settings:
     cors_origin_regex: str = PREVIEW_AND_DEV_ORIGINS
     # Only Cloud Run's own proxy makes X-Forwarded-For worth reading.
     trust_forwarded_for: bool = False
-    run_limit_per_minute: int = 60
+    run_limit_per_minute: int = 20
+    # Per instance, across all clients: about 200 runs a minute for a room of players.
+    run_cap_per_hour: int = 12_000
     chip_limit_per_minute: int = 5
     max_clients: int = 10_000
     max_body_bytes: int = 1024
-    max_concurrent_runs: int = 2
+    max_concurrent_runs: int = 1
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "Settings":
@@ -72,6 +74,7 @@ class Settings:
             cors_origins=SITE_ORIGINS if cors_origins is None else _cors_origins(cors_origins),
             trust_forwarded_for="K_SERVICE" in env,
             run_limit_per_minute=number("RUN_LIMIT_PER_MINUTE", cls.run_limit_per_minute),
+            run_cap_per_hour=number("RUN_CAP_PER_HOUR", cls.run_cap_per_hour),
             chip_limit_per_minute=number("CHIP_LIMIT_PER_MINUTE", cls.chip_limit_per_minute),
             max_clients=number("MAX_CLIENTS", cls.max_clients),
             max_body_bytes=number("MAX_BODY_BYTES", cls.max_body_bytes),

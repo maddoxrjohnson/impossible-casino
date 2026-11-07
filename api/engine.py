@@ -21,6 +21,9 @@ from quantum.wiesner import MAX_LENGTH
 CHSH_SHOTS = export_chsh.SHOTS
 # Every Wiesner shot is its own binding, about 1.2 ms each at length 8 on one core.
 WIESNER_SHOTS = 512
+# Aer holds the GIL for a whole job, so one long job would freeze the event loop.
+# Batches of this size keep stalls near 50 ms, for about 20% more run time.
+WIESNER_BATCH = 32
 CHSH_NOISE_SCOPE = "gate and readout errors on the chosen qubits only"
 SEED_BOUND = 2**31
 
@@ -64,7 +67,7 @@ class Engine:
     def wiesner(self, length: int) -> dict[str, Any]:
         seed = secrets.randbelow(SEED_BOUND)
         point = export_wiesner.sample_point(
-            length, WIESNER_SHOTS, seed, self._wiesner_backend, self._qubits
+            length, WIESNER_SHOTS, seed, self._wiesner_backend, self._qubits, WIESNER_BATCH
         )
         return {
             "experiment": "wiesner",

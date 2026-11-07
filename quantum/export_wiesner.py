@@ -130,8 +130,9 @@ def sample_point(
     seed: int,
     backend: BackendV2,
     layout: Sequence[int] | None = None,
+    batch: int | None = None,
 ) -> dict[str, Any]:
-    passes = run_forgery(length, shots, backend=backend, seed=seed, layout=layout)
+    passes = run_forgery(length, shots, backend=backend, seed=seed, layout=layout, batch=batch)
     return {
         "length": length,
         "seed": seed,

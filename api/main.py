@@ -21,6 +21,8 @@ from quantum.wiesner import MAX_LENGTH
 
 MAX_PASSPHRASE_CHARS = 256
 PREFLIGHT_CACHE_SECONDS = 600
+HOUR_SECONDS = 3600
+SERVICE_WIDE = "all"
 
 
 class Simulations(Protocol):
@@ -63,6 +65,7 @@ def create_app(
     slots = RunSlots(config.max_concurrent_runs)
     run_limit = RateLimiter(config.run_limit_per_minute, config.max_clients, clock)
     chip_limit = RateLimiter(config.chip_limit_per_minute, config.max_clients, clock)
+    hourly_cap = RateLimiter(config.run_cap_per_hour, 1, clock, HOUR_SECONDS)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -95,6 +98,12 @@ def create_app(
     run_guard = Depends(limited_by(run_limit))
     chip_guard = Depends(limited_by(chip_limit))
 
+    async def simulate(work: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+        wait = hourly_cap.check(SERVICE_WIDE)
+        if wait is not None:
+            raise HTTPException(429, "Too many requests.", {"Retry-After": str(wait)})
+        return await slots.run(work)
+
     @app.exception_handler(RequestValidationError)
     async def refuse_quietly(_: Request, __: RequestValidationError) -> JSONResponse:
         # The default handler echoes the input, which could be a passphrase.
@@ -107,19 +116,19 @@ def create_app(
             status_code=501,
         )
 
-    @app.get("/healthz")
-    async def healthz() -> dict[str, str]:
+    @app.get("/health")
+    async def health() -> dict[str, str]:
         return {"status": "ok"}
 
     @app.post("/v1/chsh", dependencies=[run_guard])
     async def chsh(body: ChshRequest, request: Request) -> dict[str, Any]:
         engine: Simulations = request.app.state.engine
-        return await slots.run(lambda: engine.chsh(body.dial))
+        return await simulate(lambda: engine.chsh(body.dial))
 
     @app.post("/v1/wiesner", dependencies=[run_guard])
     async def wiesner(body: WiesnerRequest, request: Request) -> dict[str, Any]:
         engine: Simulations = request.app.state.engine
-        return await slots.run(lambda: engine.wiesner(body.length))
+        return await simulate(lambda: engine.wiesner(body.length))
 
     @app.post("/v1/chip/run", dependencies=[chip_guard])
     async def chip_run(body: ChipRequest) -> dict[str, Any]:

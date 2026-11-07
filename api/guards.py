@@ -14,7 +14,7 @@ from starlette.datastructures import Headers
 from starlette.responses import JSONResponse
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-WINDOW_SECONDS = 60
+MINUTE_SECONDS = 60
 IPV6_NETWORK_BITS = 64
 BUSY_RETRY_SECONDS = 1
 
@@ -55,8 +55,15 @@ class RateLimiter:
     which at worst gives that client a fresh count.
     """
 
-    def __init__(self, limit: int, max_clients: int, clock: Callable[[], float]) -> None:
+    def __init__(
+        self,
+        limit: int,
+        max_clients: int,
+        clock: Callable[[], float],
+        window_seconds: int = MINUTE_SECONDS,
+    ) -> None:
         self._limit = limit
+        self._window_seconds = window_seconds
         self._max_clients = max_clients
         self._clock = clock
         # client -> (window start, requests), oldest window first.
@@ -70,11 +77,11 @@ class RateLimiter:
         """Count one request. Returns the seconds to wait if it is over the limit."""
         now = self._clock()
         started, count = self._windows.get(client, (now, 0))
-        if now - started >= WINDOW_SECONDS:
+        if now - started >= self._window_seconds:
             started, count = now, 0
             self._windows.pop(client, None)
         if count >= self._limit:
-            return max(1, math.ceil(started + WINDOW_SECONDS - now))
+            return max(1, math.ceil(started + self._window_seconds - now))
         self._windows[client] = (started, count + 1)
         if len(self._windows) > self._max_clients:
             self._windows.popitem(last=False)

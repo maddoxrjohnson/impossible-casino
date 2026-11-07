@@ -41,6 +41,7 @@ def test_cloud_run_turns_on_the_forwarded_header() -> None:
     "name",
     [
         "RUN_LIMIT_PER_MINUTE",
+        "RUN_CAP_PER_HOUR",
         "CHIP_LIMIT_PER_MINUTE",
         "MAX_CLIENTS",
         "MAX_BODY_BYTES",
@@ -51,6 +52,13 @@ def test_cloud_run_turns_on_the_forwarded_header() -> None:
 def test_numbers_must_be_positive_integers(name: str, value: str) -> None:
     with pytest.raises(ConfigError, match=name):
         Settings.from_env({name: value})
+
+
+def test_spending_defaults() -> None:
+    settings = Settings()
+    assert settings.max_concurrent_runs == 1
+    assert settings.run_limit_per_minute == 20
+    assert settings.run_cap_per_hour == 12_000
 
 
 def test_numbers_come_from_the_environment() -> None:

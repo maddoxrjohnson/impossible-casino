@@ -62,9 +62,36 @@ def test_the_window_reopens(make_client: MakeClient) -> None:
     assert post(client) == 200
 
 
+def test_the_hourly_cap_holds_across_clients(make_client: MakeClient) -> None:
+    clock = Clock()
+    settings = Settings(run_cap_per_hour=2, trust_forwarded_for=True)
+    client = make_client(settings, engine_factory=StubEngine, clock=clock)
+    ips = [{"x-forwarded-for": f"203.0.113.{i}"} for i in range(3)]
+    assert [post(client, headers=ip) for ip in ips] == [200, 200, 429]
+    refused = client.post("/v1/wiesner", json={"length": 1})
+    assert refused.status_code == 429
+    assert int(refused.headers["retry-after"]) > 60
+    clock.now += 3600
+    assert post(client) == 200
+
+
+def test_refused_requests_do_not_spend_the_hourly_cap(make_client: MakeClient) -> None:
+    client = make_client(Settings(run_cap_per_hour=1), engine_factory=StubEngine)
+    assert client.post("/v1/chsh", json={"dial": 0.51}).status_code == 422
+    assert post(client) == 200
+
+
+def test_a_custom_window_sets_the_wait() -> None:
+    clock = Clock()
+    limiter = RateLimiter(limit=1, max_clients=1, clock=clock, window_seconds=3600)
+    assert limiter.check("all") is None
+    clock.now += 600
+    assert limiter.check("all") == 3000
+
+
 def test_the_ping_is_not_limited(make_client: MakeClient) -> None:
     client = make_client(Settings(run_limit_per_minute=1), engine_factory=StubEngine)
-    assert {client.get("/healthz").status_code for _ in range(5)} == {200}
+    assert {client.get("/health").status_code for _ in range(5)} == {200}
 
 
 def test_the_rightmost_forwarded_address_is_the_client(make_client: MakeClient) -> None:
@@ -158,7 +185,7 @@ def test_runs_past_the_cap_are_refused_at_once(make_client: MakeClient) -> None:
         response = client.post("/v1/wiesner", json={"length": 1})
         assert response.status_code == 503
         assert "retry-after" in response.headers
-        assert client.get("/healthz").status_code == 200
+        assert client.get("/health").status_code == 200
     finally:
         engine.release.set()
         held.join()

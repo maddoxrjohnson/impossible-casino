@@ -81,7 +81,7 @@ def test_chip_guesses_have_their_own_limit(make_client: MakeClient) -> None:
     client = client_for(make_client, settings)
     assert client.post(PATH, json={}).status_code == 403
     assert client.post(PATH, json={}).status_code == 429
-    assert client.get("/healthz").status_code == 200
+    assert client.get("/health").status_code == 200
 
 
 def test_the_runner_only_runs_behind_the_gate(make_client: MakeClient) -> None:

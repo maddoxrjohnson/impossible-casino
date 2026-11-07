@@ -51,9 +51,14 @@ def test_the_ping_does_no_quantum_work(make_client: MakeClient) -> None:
             raise AssertionError
 
     client = make_client(engine_factory=Untouchable)
-    response = client.get("/healthz")
+    response = client.get("/health")
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
+
+def test_the_old_ping_path_is_gone(make_client: MakeClient) -> None:
+    # Cloud Run's front end reserves some paths ending in z, so one must never come back.
+    assert make_client().get("/healthz").status_code == 404
 
 
 def test_the_grid_matches_the_export() -> None:
