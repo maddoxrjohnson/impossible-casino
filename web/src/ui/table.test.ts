@@ -3,7 +3,8 @@ import { RUN_HANDS, STAKES } from '../game/rules';
 import { createPrerunSource, parseChshExport, parseWiesnerExport, provenanceLabel, type ChipProvenance, type ChshResult } from '../game/results';
 import chshJson from '../../public/data/chsh.v1.json';
 import wiesnerJson from '../../public/data/wiesner.v1.json';
-import { flatFloor, flatHand, flatRate, settledLine, sourceLine, stakeChoices, tableButtons } from './table';
+import { withChipRuns } from '../game/chip';
+import { chipDials, dialFractions, dialNote, dialValueText, flatFloor, flatHand, flatRate, settledLine, sourceLine, stakeChoices, tableButtons } from './table';
 
 const limits = { classical: 0.75, quantum: 0.8535533905932737 };
 const idle = { locked: false, inRoom: false };
@@ -210,5 +211,48 @@ describe('the flat table', () => {
 
   it('labels a hand kept across Entangle as the last one', () => {
     expect(flatHand({ phase: 'entangled', rounds: 0, last: hand }, null)?.title).toBe('Last hand');
+  });
+});
+
+describe('chip dials', () => {
+  const exports = { chsh: parseChshExport(chshJson), wiesner: parseWiesnerExport(wiesnerJson) };
+  const sim = createPrerunSource(exports, 'ibm-noise-model');
+  const chip = withChipRuns(sim, exports);
+
+  it('lists none when the source has no chip data', () => {
+    expect(chipDials(sim)).toEqual([]);
+  });
+
+  it('lists exactly the dials whose odds come from the chip run, in dial order', () => {
+    const found = chipDials(chip);
+    expect(found).toEqual(chip.dials.filter((d) => chip.previewProvenance(d).source === 'ibm-chip'));
+    expect(found.length).toBeGreaterThan(0);
+    expect(found.length).toBeLessThan(chip.dials.length);
+    expect(found).toEqual([...found].sort((a, b) => a - b));
+  });
+
+  it('follows a source that makes one more dial chip data', () => {
+    const chipProv = chip.previewProvenance(chipDials(chip)[0] as number);
+    const pressed = { ...chip, previewProvenance: (d: number) => (chip.snapDial(d) === 0.5 ? chipProv : chip.previewProvenance(d)) };
+    expect(chipDials(pressed)).toContain(0.5);
+    expect(chipDials(sim)).not.toContain(0.5);
+  });
+
+  it('places dials along the slider from 0 to 1', () => {
+    const at = dialFractions([0, 0.25, 0.5, 1], chip.dials);
+    expect(at).toEqual([0, 0.25, 0.5, 1]);
+    expect(dialFractions([0.5], [0.5, 0.5])).toEqual([0]);
+    expect(dialFractions([0.25, 0.75], [0, 0.5, 1])).toEqual([0.25, 0.75]);
+    // The grid's own spacing: 33 dials, each 1/32 along.
+    expect(dialFractions([chip.dials[8] as number], chip.dials)).toEqual([8 / (chip.dials.length - 1)]);
+  });
+
+  it('labels a dial by its real provenance, never calling a simulator dial chip', () => {
+    const [chipDial] = chipDials(chip) as [number];
+    const simDial = chip.dials.find((d) => !chipDials(chip).includes(d)) as number;
+    expect(dialNote(chip.previewProvenance(chipDial))).toEqual({ text: 'Measured on IBM chip', chip: true });
+    expect(dialNote(chip.previewProvenance(simDial))).toEqual({ text: 'Simulator at this angle', chip: false });
+    expect(dialValueText('81.0% at this angle', chip.previewProvenance(chipDial))).toBe('81.0% at this angle, measured on IBM chip');
+    expect(dialValueText('81.0% at this angle', chip.previewProvenance(simDial))).toBe('81.0% at this angle, simulator');
   });
 });

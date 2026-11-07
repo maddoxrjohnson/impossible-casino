@@ -5,12 +5,12 @@ import type { ForgeAttempt } from '../game/cage';
 import type { GameState, Phase } from '../game/store';
 import type { Hud } from './hud';
 import { type LineKey, money, pct, signedAmount } from './lines';
-import { settledLine, sourceLine, stakeChoices, tableButtons, type TableMoment } from './table';
+import { chipDials, dialFractions, dialNote, dialValueText, settledLine, sourceLine, stakeChoices, tableButtons, type TableMoment } from './table';
 
-export type HudSurface = Pick<Hud, 'put' | 'say' | 'buttons' | 'input' | 'stubs' | 'source' | 'title' | 'dial' | 'dialLocked' | 'stakes' | 'ticket' | 'colour' | 'progress'>;
+export type HudSurface = Pick<Hud, 'put' | 'say' | 'buttons' | 'input' | 'stubs' | 'source' | 'title' | 'dial' | 'dialTicks' | 'dialNote' | 'dialLocked' | 'stakes' | 'ticket' | 'colour' | 'progress'>;
 
 export interface HudSyncOptions {
-  source: Pick<ResultSource, 'limits' | 'previewProvenance'>;
+  source: Pick<ResultSource, 'dials' | 'limits' | 'previewProvenance'>;
   lines: Record<LineKey, string>;
   /** Read on every sync, so the caller can lock the table or leave it for a side room. */
   moment: () => TableMoment & { readonly inCage?: boolean };
@@ -39,7 +39,11 @@ export function createHudSync(hud: HudSurface, { source, lines, moment }: HudSyn
       hud.put('hands', s.rounds ? `over ${s.rounds} hand${s.rounds === 1 ? '' : 's'}` : 'dealt yet');
       hud.put('limit', LIMIT); hud.put('even', `break even ${EVEN}`);
       const odds = `${pct(s.target, 1)} at this angle`;
-      hud.put('odds', odds); hud.input.setAttribute('aria-valuetext', odds);
+      const preview = source.previewProvenance(s.dial);
+      hud.put('odds', odds); hud.input.setAttribute('aria-valuetext', dialValueText(odds, preview));
+      // A pressed run can turn a dial into chip data mid-game, so the ticks are read again each time.
+      hud.dialTicks(dialFractions(chipDials(source), source.dials));
+      hud.dialNote(dialNote(preview));
       hud.put('pays', `a win pays ${money(winPayout(s.stake))}`);
       if (+hud.input.value !== s.dial) hud.input.value = String(s.dial);
       if (s.last) {
@@ -65,7 +69,7 @@ export function createHudSync(hud: HudSurface, { source, lines, moment }: HudSyn
       hud.dial((p === 'entangled' || p === 'beyond') && !lock && !inRoom && !s.broke);
       hud.dialLocked(b);
       hud.stakes(stakeChoices(s, lock || s.forging), s.stake);
-      hud.source(inRoom ? null : sourceLine(s, source.previewProvenance(s.dial)));
+      hud.source(inRoom ? null : sourceLine(s, preview));
       const key = `${p}|${b}|${lock}|${inRoom}|${s.broke}|${!!s.result}|${inCage}|${!!s.forge}|${s.forging}`;
       if (buttonKey !== key) {
         buttonKey = key;

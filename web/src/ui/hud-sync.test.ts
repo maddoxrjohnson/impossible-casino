@@ -39,6 +39,8 @@ function fakeHud() {
     colour: false,
     cleared: null as readonly string[] | null,
     source: null as string | null,
+    ticks: null as readonly number[] | null,
+    note: null as string | null,
     stakesDisabled: [] as boolean[],
   };
   const hud: HudSurface = {
@@ -50,6 +52,8 @@ function fakeHud() {
     source: (text) => { seen.source = text; },
     title: (on) => { seen.title = on; },
     dial: (on) => { seen.dial = on; },
+    dialTicks: (at) => { seen.ticks = [...at]; },
+    dialNote: ({ text }) => { seen.note = text; },
     dialLocked: (on) => { seen.dialLocked = on; },
     stakes: (choices) => { seen.stakesDisabled = choices.map((c) => c.disabled); },
     ticket: (on) => { seen.ticket = on; },
@@ -99,6 +103,12 @@ describe('createHudSync', () => {
     expect(said(seen)).toBe(LINES.intro);
     expect(seen.title).toBe(true);
     expect(seen.main).toMatchObject({ label: 'Deal', act: 'deal' });
+  });
+
+  it('marks no chip dials on a simulator-only source, and says so at the dial', () => {
+    const { seen } = table({ save: { version: 1, bankroll: 10000, phase: 'entangled', dial: 0.5, stake: 100, cleared: [] } });
+    expect(seen.ticks).toEqual([]);
+    expect(seen.note).toBe('Simulator at this angle');
   });
 
   it('holds a band line back so the phase line gets its moment, then owes it after a story beat', () => {

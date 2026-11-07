@@ -65,7 +65,8 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   const card = el('div', 'dc-card'); const line = el('p'); line.setAttribute('aria-live', 'polite'); card.appendChild(line);
   const sourceTag = el('div', 'dc-source'); sourceTag.hidden = true; card.appendChild(sourceTag);
   const dial = el('div', 'dc-dial', `<label for="dc-dial-input"><span>Your dial</span><output data-v="odds"></output></label>
-    <input id="dc-dial-input" type="range" aria-label="Measurement angle dial">
+    <div class="dc-track"><div class="dc-ticks" aria-hidden="true"></div><input id="dc-dial-input" type="range" aria-label="Measurement angle dial"></div>
+    <div class="dc-dial-note" hidden><span data-note></span><span class="dc-legend">Gold ticks: IBM chip data</span></div>
     <div class="dc-stakes" role="radiogroup" aria-label="Stake per hand"><span>Stake</span>${stakes.map((value) => `<label class="dc-stake"><input type="radio" name="dc-stake" value="${value}"><span>${value.toLocaleString('en-US')}</span></label>`).join('')}<output data-v="pays"></output></div>`);
   const row = el('div', 'dc-row');
   const main = el('button', 'dc-btn'); main.type = 'button';
@@ -131,6 +132,9 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   const cache = new Map<string, string | number>();
   const put = (k: HudKey, s: string) => { if (cache.get(k) !== s) { cache.set(k, s); v.get(k)!.textContent = s; } };
   const input = dial.querySelector<HTMLInputElement>('#dc-dial-input')!;
+  const ticks = dial.querySelector<HTMLElement>('.dc-ticks')!;
+  const dialNoteRow = dial.querySelector<HTMLElement>('.dc-dial-note')!;
+  const dialNoteText = dialNoteRow.querySelector<HTMLElement>('[data-note]')!;
   const stakeRow = dial.querySelector<HTMLElement>('.dc-stakes')!;
   const stakeInputs = [...stakeRow.querySelectorAll('input')];
   input.min = String(dialRange.min); input.max = String(dialRange.max); input.step = String(dialRange.step);
@@ -248,6 +252,25 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
     source(text: string | null) { const s = text ?? ''; if (cache.get('source') !== s) { cache.set('source', s); sourceTag.textContent = s; sourceTag.hidden = !s; } },
     title(on: boolean) { title.classList.toggle('is-gone', !on); },
     dial(on: boolean) { dial.classList.toggle('is-on', on); },
+    /** Gold marks on the slider at each dial with chip data, as fractions of its length. */
+    dialTicks(at: readonly number[]) {
+      const key = at.join();
+      if (cache.get('ticks') === key) return;
+      cache.set('ticks', key);
+      ticks.replaceChildren(...at.map((f) => {
+        const tick = document.createElement('i');
+        tick.style.setProperty('--at', String(f));
+        tick.title = 'Measured on IBM chip';
+        return tick;
+      }));
+      dialNoteRow.hidden = !at.length;
+    },
+    /** Says whether the odds at the current dial were measured on a chip. */
+    dialNote({ text, chip }: { text: string; chip: boolean }) {
+      if (cache.get('dialnote') === text) return;
+      cache.set('dialnote', text);
+      dialNoteText.textContent = text; dialNoteRow.classList.toggle('is-chip', chip);
+    },
     dialLocked(on: boolean) { input.disabled = on; },
     stakes(choices: readonly StakeChoice[], stake: number) { stakeInputs.forEach((box, i) => { box.checked = +box.value === stake; box.disabled = !!choices[i]?.disabled; }); },
     ticket(on: boolean) { ticket.classList.toggle('is-on', on); },

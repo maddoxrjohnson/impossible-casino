@@ -1,6 +1,6 @@
 // What the table offers at each moment: buttons, stakes, and which line the dealer owes. No DOM, no drawing.
 import { BREAK_EVEN, RUN_HANDS, STAKES } from '../game/rules';
-import { provenanceLabel, type Provenance } from '../game/results';
+import { provenanceLabel, type Provenance, type ResultSource } from '../game/results';
 import type { GameState, Phase } from '../game/store';
 import type { HudButton } from './hud';
 import { bandFor, pastClassical, pct, signedAmount, type Limits, type LineKey } from './lines';
@@ -66,6 +66,28 @@ export function sourceLine(
   const odds = provenanceLabel(showingRun ? result.provenance : preview);
   const hands = result && rounds > 0 ? provenanceLabel(result.provenance) : odds;
   return hands === odds ? `Source: ${odds}` : `Odds source: ${odds} · Last run source: ${hands}`;
+}
+
+/** The dials the source answers from a real chip run, read off its provenance rather than listed here. */
+export function chipDials(source: Pick<ResultSource, 'dials' | 'previewProvenance'>): number[] {
+  return source.dials.filter((dial) => source.previewProvenance(dial).source === 'ibm-chip');
+}
+
+/** Where each dial sits along the slider, from 0 at its low end to 1 at its high end. */
+export function dialFractions(dials: readonly number[], range: readonly number[]): number[] {
+  const lo = range[0] ?? 0, hi = range[range.length - 1] ?? 1;
+  return hi > lo ? dials.map((dial) => (dial - lo) / (hi - lo)) : dials.map(() => 0);
+}
+
+/** Whether the odds at this dial were measured on a chip. Everything else is a simulator. */
+export function dialNote(preview: Provenance): { text: string; chip: boolean } {
+  const chip = preview.source === 'ibm-chip';
+  return { text: chip ? 'Measured on IBM chip' : 'Simulator at this angle', chip };
+}
+
+/** What a screen reader hears for the dial: the odds and where they came from. */
+export function dialValueText(odds: string, preview: Provenance): string {
+  return `${odds}, ${dialNote(preview).chip ? 'measured on IBM chip' : 'simulator'}`;
 }
 
 /**
