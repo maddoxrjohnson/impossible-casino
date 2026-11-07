@@ -193,7 +193,7 @@ export function rouletteView(state: RouletteState, board: RouletteBoard, text: R
       ['Pays', `${money(board.pays)} on ${money(board.payoutStake)}, so +${money(forgeWin(board.pays, state.stake, board.payoutStake))} at your stake`],
       ['House limit', `${oneIn(board.houseLimit)} on one pocket of the exact wheel, against a perfect house`],
       ['Best return', `Playing every draft to the spin, no strategy gets back more than ${per100(board.edge.bestReturn)} per 100 in this run. Leaving bad drafts, the most is ${per100(board.edge.worstSpin.return)} per 100${board.edge.worstSpin.return < 1 ? ', still under 100' : ''}.`],
-      ['Clear chance', `${pct(board.edge.clearChance, 1)} a spin on the best line, in this run`],
+      ['Clear chance', `${pct(board.edge.clearChance, 1)} a spin on the best line, betting one of its top pockets, averaged over them, in this run`],
     ],
     note: drafting
       ? clause(stage === 'spin' ? text.bet : text.houseRule)

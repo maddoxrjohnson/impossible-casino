@@ -222,6 +222,8 @@
 .dc-rl-pocket:has(input:checked) i { color: var(--ink); }
 .dc-rl-pocket.is-landed { outline: 2px solid #fff; outline-offset: -2px; }
 .dc-rl-pocket:has(input:focus-visible) { outline: 2px solid #fff; outline-offset: 1px; z-index: 1; }
+/* Stake, button and result stay pinned to the panel's foot, so a short window never scrolls them out of view. */
+.dc-rl-foot { position: sticky; bottom: 0; z-index: 1; padding-bottom: 2px; background: #040404; box-shadow: 0 -8px 8px -4px #040404; }
 .dc-rl-rows { display: grid; grid-template-columns: auto minmax(0,1fr); gap: 1px 10px; margin: 7px 0 0; font: 400 13px/1.25 "Federo", Georgia, serif; }
 .dc-rl-rows dt { color: var(--silver); }
 .dc-rl-rows dd { margin: 0; color: #f1eee6; }
@@ -253,6 +255,15 @@
 @media (max-width: 800px) { .is-cage .dc-lift, .is-roulette .dc-lift { display: none; } }
 /* Short windows keep the Forge button in view without scrolling the board. */
 @media (max-height: 700px) { .dc-cage h2, .dc-roulette h2 { display: none; } .dc-rl-pocket { min-height: 28px; } .dc-rl-card { min-height: 26px; } .dc-roulette .dc-stake span { min-height: 28px; } .dc-cage-row { min-height: 24px; } .dc-cage .dc-stake span { min-height: 28px; } }
+/* Short windows: the deck on one row and a slimmer note, so all 32 pockets fit above the pinned foot. */
+@media (max-height: 760px) {
+  .dc-roulette { padding-top: 10px; } .dc-roulette .dc-cage-goal { display: none; }
+  .dc-rl-deck { grid-template-columns: repeat(6, minmax(0,1fr)); gap: 3px; } .dc-rl-card { min-height: 26px; padding: 2px 3px; font-size: 13px; }
+  .dc-rl-draft { margin-bottom: 3px; font-size: 13px; } .dc-rl-turn { margin-top: 4px; font-size: 13px; }
+  .dc-rl-last { min-height: 1.2em; margin: 2px 0 4px; font-size: 12.5px; }
+  .dc-rl-pocket { min-height: 26px; font-size: 14px; } .dc-rl-pocket i { font-size: 9.5px; }
+  .dc-roulette .dc-stakes, .dc-roulette .dc-cage-act { margin-top: 5px; }
+}
 /* Too short for the lift to hang beside the dial panel. */
 @media (max-width: 620px) and (max-height: 680px) { .dc-lift { display: none; } }
 @media (max-height: 560px) {

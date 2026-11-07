@@ -27,9 +27,11 @@ export function createRoulettePanel({ board, text, stakes, onOpen, onPlay, onSpi
     <p class="dc-rl-turn" role="status"><span></span><b></b></p>
     <p class="dc-rl-last" aria-live="polite"></p>
     <div class="dc-rl-wheel" role="radiogroup" aria-label="Pocket to bet on">${Array.from({ length: ROULETTE_POCKETS }, (_, n) => `<label class="dc-rl-pocket"><input type="radio" name="dc-rl-pocket" value="${n}"><span>${n}</span><i></i></label>`).join('')}</div>
+    <div class="dc-rl-foot">
+      <div class="dc-stakes" role="radiogroup" aria-label="Stake on this round"><span>Stake</span>${stakes.map((value) => `<label class="dc-stake"><input type="radio" name="dc-rl-stake" value="${value}"><span>${value.toLocaleString('en-US')}</span></label>`).join('')}</div>
+      <div class="dc-cage-act"><button type="button" class="dc-btn"></button><div class="dc-cage-result" role="status"><b></b><span></span></div></div>
+    </div>
     <dl class="dc-rl-rows"></dl>
-    <div class="dc-stakes" role="radiogroup" aria-label="Stake on this round"><span>Stake</span>${stakes.map((value) => `<label class="dc-stake"><input type="radio" name="dc-rl-stake" value="${value}"><span>${value.toLocaleString('en-US')}</span></label>`).join('')}</div>
-    <div class="dc-cage-act"><button type="button" class="dc-btn"></button><div class="dc-cage-result" role="status"><b></b><span></span></div></div>
     <p class="dc-cage-note"></p>
     <p class="dc-source dc-cage-source"></p>`;
 
