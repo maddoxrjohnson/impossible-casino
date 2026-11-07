@@ -150,6 +150,22 @@ describe('wiesnerReceipt', () => {
     expect(receipt.sub).not.toMatch(/pre-run|earlier|live/i);
   });
 
+  it('says a live rate is a sample of its own shots, next to the limit', async () => {
+    const { forge } = await receiptAt();
+    const provenance: SimulatorProvenance = { ...(forge.result.provenance as SimulatorProvenance), source: 'live-simulator' };
+    const live = { ...forge, result: { ...forge.result, provenance, shots: 512, passes: 300, passRate: 300 / 512 } };
+    const rows = wiesnerReceipt(live, board).rows;
+    const labels = rows.map(([label]) => label);
+    const note = rows.find(([label]) => label === 'Reading this')?.[1];
+    expect(note).toBe('The limit is a long-run value. This figure is a 512-shot sample, so it can land above or below it.');
+    expect(labels.indexOf('Reading this')).toBe(labels.indexOf('Proven limit') + 1);
+  });
+
+  it('keeps pre-run wording as it was', async () => {
+    const { receipt } = await receiptAt();
+    expect(receipt.rows.map(([label]) => label)).not.toContain('Reading this');
+  });
+
   it('reads shots and passes from the result, and the limit from the export', async () => {
     const { forge, receipt } = await receiptAt();
     expect(value(receipt, 'Shots')).toBe(forge.result.shots.toLocaleString('en-US'));

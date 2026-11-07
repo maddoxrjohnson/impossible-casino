@@ -49,28 +49,29 @@ function wiesnerBody(length: number): Record<string, unknown> {
 }
 
 function fakeClock(): LiveClock & { advance(ms: number): void; pending(): number[] } {
-  let now = 0;
+  let time = 0;
   const timers = new Map<number, { at: number; fn: () => void }>();
   let nextId = 0;
   return {
+    now: () => time,
     schedule(fn, ms) {
       const id = nextId;
       nextId += 1;
-      timers.set(id, { at: now + ms, fn });
+      timers.set(id, { at: time + ms, fn });
       return () => {
         timers.delete(id);
       };
     },
     advance(ms) {
-      now += ms;
+      time += ms;
       for (const [id, timer] of [...timers]) {
-        if (timer.at <= now) {
+        if (timer.at <= time) {
           timers.delete(id);
           timer.fn();
         }
       }
     },
-    pending: () => [...timers.values()].map((t) => t.at - now),
+    pending: () => [...timers.values()].map((t) => t.at - time),
   };
 }
 
@@ -85,9 +86,9 @@ function fakeFetch(answer: (url: string, init: RequestInit) => ReturnType<LiveFe
   const calls: Call[] = [];
   const fn: LiveFetch = (url, init) => {
     calls.push({ url, init });
-    return url.endsWith('/healthz') ? Promise.resolve(reply(200)) : answer(url, init);
+    return url.endsWith('/health') ? Promise.resolve(reply(200)) : answer(url, init);
   };
-  return { fn, calls, runs: () => calls.filter((c) => !c.url.endsWith('/healthz')) };
+  return { fn, calls, runs: () => calls.filter((c) => !c.url.endsWith('/health')) };
 }
 
 const happy = (url: string, init: RequestInit): ReturnType<LiveFetch> => {
@@ -166,13 +167,13 @@ describe('warm', () => {
     const { source, net } = setup();
     await Promise.all([source.warm(), source.warm()]);
     await source.warm();
-    expect(net.calls.map((c) => c.url)).toEqual([`${URL}/healthz`]);
+    expect(net.calls.map((c) => c.url)).toEqual([`${URL}/health`]);
   });
 
   it('tolerates a trailing slash on the url', async () => {
     const { source, net } = setup(happy, { url: `${URL}/` });
     await source.warm();
-    expect(net.calls[0]?.url).toBe(`${URL}/healthz`);
+    expect(net.calls[0]?.url).toBe(`${URL}/health`);
   });
 
   it('gives a cold start far longer than a run', () => {
@@ -272,6 +273,62 @@ describe('a live run', () => {
   it('leaves no timer behind', async () => {
     const { source, clock } = await awake();
     await source.chsh(0.5);
+    expect(clock.pending()).toEqual([]);
+  });
+});
+
+describe('an idle service', () => {
+  const IDLE_MS = 300_000;
+
+  it('still tries live at exactly the idle limit', async () => {
+    const { source, clock, net } = await awake();
+    clock.advance(IDLE_MS);
+    expect((await source.chsh(0.5)).provenance.source).toBe('live-simulator');
+    expect(net.runs()).toHaveLength(1);
+  });
+
+  it('goes straight to pre-run past the limit, and wakes the service behind it', async () => {
+    const { source, clock, net } = await awake();
+    clock.advance(IDLE_MS + 1);
+    const result = await source.chsh(0.5);
+    expect(result).toEqual(await base.chsh(0.5));
+    expect(net.runs()).toEqual([]);
+    expect(clock.pending()).toEqual([45_000]);
+    await flush();
+    expect(net.calls.map((c) => c.url)).toEqual([`${URL}/health`, `${URL}/health`]);
+    expect((await source.chsh(0.5)).provenance.source).toBe('live-simulator');
+  });
+
+  it('does not wait for that wake-up', async () => {
+    const clock = fakeClock();
+    let pings = 0;
+    const fetchFn: LiveFetch = () => {
+      pings += 1;
+      return pings === 1 ? Promise.resolve(reply(200)) : never();
+    };
+    const source = createLiveSource(base, { url: URL, fetch: fetchFn, clock });
+    await source.warm();
+    clock.advance(IDLE_MS + 1);
+    expect((await source.chsh(0.5)).provenance.source).toBe('pre-run-simulator');
+    expect((await source.wiesner(1)).provenance.source).toBe('pre-run-simulator');
+    expect(pings).toBe(2);
+  });
+
+  it('counts each live run as contact', async () => {
+    const { source, clock, net } = await awake();
+    clock.advance(IDLE_MS - 1);
+    await source.chsh(0.5);
+    clock.advance(IDLE_MS - 1);
+    await source.chsh(0.5);
+    expect(net.runs()).toHaveLength(2);
+  });
+
+  it('does not count an idle wake-up as a failure', async () => {
+    const { source, clock } = await awake();
+    clock.advance(IDLE_MS + 1);
+    await source.chsh(0.5);
+    await flush();
+    clock.advance(1);
     expect(clock.pending()).toEqual([]);
   });
 });

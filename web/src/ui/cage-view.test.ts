@@ -178,7 +178,7 @@ describe('cageView sources', () => {
     const forge = settleForge({ ...real, provenance: live }, 100, board.payoutStake, () => 0);
     expect(cageView(state({ forge }), board).sources).toEqual([
       `Odds source: ${provenanceLabel(board.provenance)}`,
-      'Last forge source: Live Qiskit simulator',
+      'Last forge source: Live Qiskit simulator, fake_kingston noise model',
     ]);
   });
 });

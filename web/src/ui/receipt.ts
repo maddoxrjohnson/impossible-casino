@@ -83,6 +83,10 @@ export function wiesnerReceipt(forge: ForgeAttempt, board: CageBoard): Receipt {
       ['Shots', money(shots)],
       ['Passes', `${money(passes)}, or ${pct(passRate, 1)}`],
       ...(limit === undefined ? [] : [['Proven limit', `${pct(limit, 1)} for this attack`] as const]),
+      // Few live shots land either side of the limit often enough to look like a broken proof.
+      ...(p.source === 'live-simulator' && limit !== undefined
+        ? [['Reading this', `The limit is a long-run value. This figure is a ${money(shots)}-shot sample, so it can land above or below it.`] as const]
+        : []),
       ['Job', p.jobId ?? 'None. Simulators take no job.'],
       ['Software', software(p)],
       ['Run date', p.date],

@@ -12,8 +12,11 @@ const WARM_TIMEOUT_MS = 45_000;
 const RUN_TIMEOUT_MS = 1_500;
 const FIRST_RETRY_MS = 5_000;
 const MAX_RETRY_MS = 300_000;
+/** Cloud Run may scale to zero about now. Past this, a run would only stall on a cold start. */
+const IDLE_LIMIT_MS = 300_000;
 
 export interface LiveClock {
+  now(): number;
   /** Calls `fn` after `ms`. Returns a cancel function. */
   schedule(fn: () => void, ms: number): () => void;
 }
@@ -35,6 +38,7 @@ export interface LiveSource extends ResultSource {
 }
 
 const browserClock: LiveClock = {
+  now: () => Date.now(),
   schedule(fn, ms) {
     const id = setTimeout(fn, ms);
     return () => {
@@ -49,6 +53,7 @@ export function createLiveSource(base: ResultSource, options: LiveOptions): Live
   const clock = options.clock ?? browserClock;
 
   let awake = false;
+  let lastContact = 0;
   let warming = false;
   let retryQueued = false;
   // Only a live run clears this, so a service that pings fine but fails runs still backs off.
@@ -100,16 +105,25 @@ export function createLiveSource(base: ResultSource, options: LiveOptions): Live
   const warm = async (): Promise<void> => {
     if (url === undefined || url === '' || awake || warming) return;
     warming = true;
-    const answer = await request('/healthz', { method: 'GET' }, WARM_TIMEOUT_MS, (body) => {
+    const answer = await request('/health', { method: 'GET' }, WARM_TIMEOUT_MS, (body) => {
       return (body as { status?: unknown } | null)?.status === 'ok' ? true : null;
     });
     warming = false;
-    if (answer) awake = true;
-    else queueRetry();
+    if (answer) {
+      awake = true;
+      lastContact = clock.now();
+    } else {
+      queueRetry();
+    }
   };
 
   const tryLive = async <T>(path: string, body: unknown, parse: (raw: unknown) => T): Promise<T | null> => {
     if (!awake) return null;
+    if (clock.now() - lastContact > IDLE_LIMIT_MS) {
+      awake = false;
+      void warm();
+      return null;
+    }
     const init = {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -121,6 +135,7 @@ export function createLiveSource(base: ResultSource, options: LiveOptions): Live
       queueRetry();
     } else {
       failures = 0;
+      lastContact = clock.now();
     }
     return value;
   };
