@@ -390,7 +390,7 @@ describe('createHudSync in the cage', () => {
     expect(seen.receipt).toBe(false);
   });
 
-  it('leaves the wheel room with the table receipt', async () => {
+  it('keeps the receipt off outside the Cage after a forge, while the table has no run', async () => {
     const { store, seen, moment } = cage();
     moment.inCage = false;
     await store.forge(1, PAYS);

@@ -16,7 +16,7 @@ describe('the room list', () => {
     ]);
   });
 
-  it('has the Roulette Wheel built but not yet open', () => {
+  it('lists the Roulette Wheel but has not opened it yet', () => {
     expect(roomInfo('tables').open).toBe(true);
     expect(roomInfo('cage').open).toBe(true);
     expect(roomInfo('roulette').open).toBe(false);

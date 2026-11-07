@@ -373,7 +373,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
   const onDown = (e: PointerEvent) => { downAt = [e.clientX, e.clientY]; };
   const onUp = (e: PointerEvent) => {
     if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 8) return;
-    if (e.target instanceof Element && e.target.closest('button, input, .dc-receipt, .dc-cage, .dc-elevator')) return;
+    if (e.target instanceof Element && e.target.closest('button, input, .dc-receipt, .dc-cage')) return;
     if (side) { closeSide(); return; }
     const n = clickable() ? hit(e) : null;
     if (n) openSide(n);

@@ -977,7 +977,7 @@ describe('rooms', () => {
     const forgePays = (length: number): number =>
       exportsData.wiesner.payouts.table.find((row) => row.length === length)?.pays ?? 0;
 
-    it('carries the Tables winnings into the Cage and the Cage winnings back, through a reload', async () => {
+    it('keeps one bankroll from a Tables loss through a Cage win, and across a reload', async () => {
       const storage = memoryStorage();
       let draw: Rng = seeded(7);
       const store = make({ storage, rng: () => draw() });
@@ -998,7 +998,10 @@ describe('rooms', () => {
       const store = make({ storage, rng: () => 0.999999 });
       await store.forge(1, PAYS);
       expect(store.state.bankroll).toBe(START_BANKROLL - 100);
-      expect(make({ storage }).state).toMatchObject({ phase: 'intro', bankroll: START_BANKROLL - 100 });
+      const reloaded = make({ storage });
+      expect(reloaded.state).toMatchObject({ phase: 'intro', bankroll: START_BANKROLL - 100 });
+      await reachWall(reloaded);
+      expect(reloaded.state).toMatchObject({ phase: 'wall', bankroll: START_BANKROLL - 100 - 300 });
     });
 
     it('keeps both clears and the bankroll together in one save', async () => {
@@ -1010,7 +1013,7 @@ describe('rooms', () => {
       expect(make({ storage }).state.cleared).toEqual(['tables', 'cage']);
     });
 
-    it('leaves restart as the only way on, whichever room went broke', async () => {
+    it('leaves restart as the only way on at the Tables once the Cage takes the last chips', async () => {
       const table = make({ storage: saved({ bankroll: 100, phase: 'entangled' }), rng: () => 0.999999 });
       await table.forge(1, PAYS);
       expect(table.state).toMatchObject({ bankroll: 0, broke: true });

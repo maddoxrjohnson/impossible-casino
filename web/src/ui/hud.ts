@@ -1,6 +1,6 @@
 // The DOM over the film: brass plaques, a lift dial, intertitles, ticket stubs and a paper marker. A hotel floor indicator over a noir title card.
 import type { CageBoard } from '../game/cage';
-import { ROOM_LIST, colourLevel, colourStep, elevatorStops, nextStop, roomInfo } from '../game/rooms';
+import { ROOM_LIST, colourStep, elevatorStops, nextStop, roomInfo } from '../game/rooms';
 import type { RoomId } from '../game/rules';
 import type { GameState } from '../game/store';
 import { createCagePanel } from './cage-panel';
@@ -209,7 +209,8 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   let downOnLift = false;
   const onLiftDown = (e: PointerEvent) => { downOnLift = e.target === elevator; };
   const onLiftBackdrop = (e: MouseEvent) => { if (downOnLift && e.target === elevator) closeLift(); };
-  const onKey = (e: KeyboardEvent) => { if (e.key !== 'Escape') return; if (isOpen()) onReceiptClose(); else if (isLiftOpen()) closeLift(); else onSide('back'); };
+  // A held Escape closes one thing, and never carries on out of the room behind it.
+  const onKey = (e: KeyboardEvent) => { if (e.key !== 'Escape') return; if (isOpen()) onReceiptClose(); else if (e.repeat) return; else if (isLiftOpen()) closeLift(); else onSide('back'); };
   let soundOn = false;
   const onSnd = () => { soundOn = !soundOn; soundBtn.textContent = soundOn ? 'Sound on' : 'Sound off'; soundBtn.setAttribute('aria-pressed', String(soundOn)); onSound(soundOn); };
   main.addEventListener('click', clickMain); alt.addEventListener('click', clickAlt); input.addEventListener('input', onInput); stakeRow.addEventListener('change', onStakeChange);
@@ -241,7 +242,7 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
       const key = done.join();
       if (key === progressKey) return;
       progressKey = key; cleared = [...done];
-      root.dataset.colour = String(colourStep(cleared)); root.style.setProperty('--dc-wash', String(colourLevel(cleared)));
+      root.dataset.colour = String(colourStep(cleared));
       paintLift();
     },
     source(text: string | null) { const s = text ?? ''; if (cache.get('source') !== s) { cache.set('source', s); sourceTag.textContent = s; sourceTag.hidden = !s; } },
@@ -268,7 +269,7 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
       liftBtn.removeEventListener('click', onLiftOpen); floors.removeEventListener('click', onFloor); stay.removeEventListener('click', onStay); elevator.removeEventListener('pointerdown', onLiftDown); elevator.removeEventListener('click', onLiftBackdrop); soundBtn.removeEventListener('click', onSnd);
       document.removeEventListener('keydown', onKey);
       hud.remove(); receipt.remove(); elevator.remove(); root.classList.remove('deco', 'is-colour', 'is-side', 'is-cage');
-      delete root.dataset.colour; root.style.removeProperty('--dc-wash');
+      delete root.dataset.colour;
     },
   };
 }

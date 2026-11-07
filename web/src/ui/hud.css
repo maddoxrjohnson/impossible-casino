@@ -108,7 +108,6 @@
 .dc-lift-stub.is-next::after { content: ""; display: inline-block; width: 6px; height: 6px; margin-left: 7px; vertical-align: middle; border-radius: 50%; background: #f6e5ae; }
 
 /* The elevator: a brass floor panel. Every stop is listed top to bottom of the fridge. */
-.dc-elevator { z-index: 6; }
 .dc-car { width: min(400px, 100%); max-height: 100%; overflow: auto; box-sizing: border-box; padding: 16px 18px 14px; background: rgba(4,4,4,.96); color: var(--silver);
   outline: 1px solid rgba(212,174,93,.75); outline-offset: -5px; box-shadow: 0 0 0 1px #000, 0 24px 60px rgba(0,0,0,.8); transform: translateY(10px); transition: transform .26s var(--out); }
 .dc-elevator.is-on .dc-car { transform: none; }
@@ -143,6 +142,7 @@
 .dc-press-form .dc-stub[aria-disabled="true"] { opacity: .5; cursor: default; }
 .dc-press-line:empty, .dc-press-form[hidden] { display: none; }
 .dc-receipt { position: absolute; inset: 0; display: grid; grid-template-rows: minmax(0, 1fr); place-items: center; padding: 14px; box-sizing: border-box; background: rgba(0,0,0,.6); opacity: 0; visibility: hidden; transition: opacity .2s ease, visibility .2s; z-index: 5; }
+.dc-receipt.dc-elevator { z-index: 6; }
 .dc-receipt.is-on { opacity: 1; visibility: visible; transition-property: opacity; } /* visible at once, or the focus call on open finds it hidden */
 .dc-marker { width: min(560px, 100%); max-height: 100%; overflow: auto; box-sizing: border-box; color: var(--ink); padding: 22px 24px 18px; transform: translateY(14px) rotate(-.7deg) scale(.98); transition: transform .26s var(--out);
   background: repeating-linear-gradient(0deg, transparent 0 26px, rgba(120,60,40,.09) 26px 27px), radial-gradient(120% 90% at 30% 10%, #f1e9d4, #ddd1b1); box-shadow: 0 24px 60px rgba(0,0,0,.8); position: relative; }

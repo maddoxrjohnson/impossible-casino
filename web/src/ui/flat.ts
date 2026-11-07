@@ -59,8 +59,9 @@ export function createFlatTable(root: HTMLElement, { store, source, hud, audio, 
   const lines = createLines(limits);
   const { sync, clearBand } = createHudSync(hud, { source, lines, moment: () => moment });
 
-  // The Cage is the one room that needs no building, so it opens over the same HUD.
+  // The Cage is the one room that needs no building, so it opens over the same HUD. A room with no flat view is ignored.
   hud.setSide((name) => {
+    if (name !== 'back' && name !== 'cage') return;
     const enter = name === 'cage';
     if (enter === moment.inCage) return;
     moment.inRoom = moment.inCage = enter;
