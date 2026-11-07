@@ -53,15 +53,19 @@ export function stakeChoices(
 /**
  * The source of the quantum numbers on the table, or null while none are showing.
  * Classical hands come from a plan, not a circuit, so they carry no source.
+ * The plaque keeps the last run's hands through a dial turn, so when they came from
+ * somewhere other than the odds on the dial, the line names both.
  */
 export function sourceLine(
-  { phase, dial, target, result }: Pick<GameState, 'phase' | 'dial' | 'target' | 'result'>,
+  { phase, dial, target, result, rounds }: Pick<GameState, 'phase' | 'dial' | 'target' | 'result' | 'rounds'>,
   preview: Provenance,
 ): string | null {
   if (phase !== 'entangled' && phase !== 'beyond') return null;
   // Any turn of the dial puts the preview rate back on screen, even if it returns to the run's dial.
   const showingRun = result?.dial === dial && result.winRate === target;
-  return `Source: ${provenanceLabel(showingRun ? result.provenance : preview)}`;
+  const odds = provenanceLabel(showingRun ? result.provenance : preview);
+  const hands = result && rounds > 0 ? provenanceLabel(result.provenance) : odds;
+  return hands === odds ? `Source: ${odds}` : `Odds source: ${odds} · Last run source: ${hands}`;
 }
 
 /**

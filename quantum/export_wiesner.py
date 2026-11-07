@@ -86,15 +86,26 @@ def length_seed(base: int, length: int) -> int:
 
 def quietest_qubits(backend: BackendV2, count: int) -> list[int]:
     """The qubits with the lowest error over one chip's measures and sx gates."""
-    target = backend.target
+    measure = backend.target["measure"]
+    sx = backend.target["sx"]
+
+    def usable(qubit: int) -> bool:
+        """A real chip's target leaves out faulty qubits and can lack an error figure."""
+        read, gate = measure.get((qubit,)), sx.get((qubit,))
+        return (
+            read is not None
+            and gate is not None
+            and read.error is not None
+            and gate.error is not None
+        )
 
     def cost(qubit: int) -> float:
         return (
-            MEASURES_PER_QUBIT * target["measure"][(qubit,)].error
-            + SX_PER_QUBIT * target["sx"][(qubit,)].error
+            MEASURES_PER_QUBIT * measure[(qubit,)].error
+            + SX_PER_QUBIT * sx[(qubit,)].error
         )
 
-    return sorted(range(backend.num_qubits), key=cost)[:count]
+    return sorted(filter(usable, range(backend.num_qubits)), key=cost)[:count]
 
 
 def noise_model_label(device: BackendV2) -> dict[str, str]:

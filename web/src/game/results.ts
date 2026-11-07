@@ -23,12 +23,15 @@ export interface SimulatorProvenance extends ProvenanceBase {
   readonly source: Exclude<ProvenanceSource, 'ibm-chip'>;
   readonly noiseModel: NoiseModel | null;
   readonly jobId: null;
+  /** A simulator's pick sits on its noise model. */
+  readonly qubitSelection?: null;
 }
 
 export interface ChipProvenance extends ProvenanceBase {
   readonly source: 'ibm-chip';
   readonly noiseModel: null;
   readonly jobId: string;
+  readonly qubitSelection: string;
 }
 
 export type Provenance = SimulatorProvenance | ChipProvenance;
@@ -171,9 +174,9 @@ export interface WiesnerResult {
 export interface ResultSource {
   readonly dials: readonly number[];
   readonly limits: { readonly classical: number; readonly quantum: number };
-  /** Where `previewWinRate` reads from. A run reports its own provenance on its result. */
-  readonly previewProvenance: Provenance;
   snapDial(value: number): number;
+  /** Where `previewWinRate` reads from at this dial. A run reports its own provenance on its result. */
+  previewProvenance(dial: number): Provenance;
   /** Synchronous lookup for live dial feedback. Snaps its input. */
   previewWinRate(dial: number): number;
   chsh(dial: number): Promise<ChshResult>;
@@ -300,10 +303,14 @@ export function parseProvenance(value: unknown, path = 'provenance'): Provenance
     }
     if (noiseModel) fail(`${path}.noiseModel`, 'a chip run cannot have a noise model');
     if (!CHIP_BACKEND.test(backend)) fail(`${path}.backend`, 'not an IBM chip name');
-    return { ...base, source, noiseModel, jobId };
+    const qubitSelection = text(raw.qubitSelection, `${path}.qubitSelection`);
+    return { ...base, source, noiseModel, jobId, qubitSelection };
   }
   if (jobId !== null) fail(`${path}.jobId`, 'a simulator run cannot have a job id');
   if (CHIP_BACKEND.test(backend)) fail(`${path}.backend`, 'a simulator cannot name a chip');
+  if (raw.qubitSelection !== undefined && raw.qubitSelection !== null) {
+    fail(`${path}.qubitSelection`, 'a simulator names its pick on the noise model');
+  }
   return { ...base, source, noiseModel, jobId };
 }
 
@@ -654,7 +661,7 @@ export function createPrerunSource(exports: GameExports, runId: string): ResultS
   return {
     dials,
     limits: { classical: chsh.limits.classical.value, quantum: chsh.limits.quantum.value },
-    previewProvenance: chshRun.provenance,
+    previewProvenance: () => chshRun.provenance,
     snapDial,
     previewWinRate: (dial) => pointAt(dial).winRate,
     chsh(dial) {

@@ -143,7 +143,7 @@ export function createLiveSource(base: ResultSource, options: LiveOptions): Live
   return {
     dials: base.dials,
     limits: base.limits,
-    previewProvenance: base.previewProvenance,
+    previewProvenance: (dial) => base.previewProvenance(dial),
     snapDial: (value) => base.snapDial(value),
     previewWinRate: (dial) => base.previewWinRate(dial),
     warm,

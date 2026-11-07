@@ -32,6 +32,7 @@ const chip: ChipProvenance = {
   runtimeVersion: '0.51.0',
   date: '2026-11-07',
   jobId: 'd4example',
+  qubitSelection: 'best-case pick: a test coupler',
 };
 
 describe('chshReceipt', () => {
@@ -110,6 +111,24 @@ describe('chshReceipt', () => {
     const receipt = chshReceipt({ ...result, provenance: live }, hand, limits);
     expect(value(receipt, 'Source')).toMatch(/^Live Qiskit simulator/);
     expect(receipt.stamp).toMatch(/never/i);
+  });
+
+  it('shows a chip run was a best-case pick, even with no qubits to list', async () => {
+    const result = await noisy.chsh(0.5);
+    const receipt = chshReceipt({ ...result, provenance: chip }, hand, limits);
+    expect(value(receipt, 'Qubits')).toBe('147, 148');
+    expect(value(receipt, 'Qubit choice')).toBe(chip.qubitSelection);
+    const bare = chshReceipt({ ...result, provenance: { ...chip, qubits: null } }, hand, limits);
+    expect(value(bare, 'Qubit choice')).toBe(chip.qubitSelection);
+  });
+
+  it('never reads as a simulator or prints Aer on a chip run', async () => {
+    const receipt = chshReceipt({ ...(await noisy.chsh(0.5)), provenance: chip }, hand, limits);
+    const printed = [...receipt.rows.flat(), receipt.stamp, receipt.sub, receipt.circuitNote].join(' ');
+    expect(printed).not.toMatch(/simulat|\baer\b/i);
+    expect(value(receipt, 'Software')).toBe('Qiskit 2.6.2, Runtime 0.51.0');
+    expect(value(receipt, 'Noise model')).toBeUndefined();
+    expect(receipt.stamp).toBe('Ran on ibm_kingston. IBM job d4example.');
   });
 
   it('names the chip and its job only for a chip run', async () => {

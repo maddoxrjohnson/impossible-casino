@@ -1,5 +1,7 @@
 import json
 import math
+import subprocess
+import sys
 from datetime import date
 from pathlib import Path
 
@@ -12,8 +14,13 @@ from qiskit_aer import AerSimulator
 from qiskit_ibm_runtime.fake_provider import FakeKingston
 
 import quantum.chsh
+import quantum.export
+import quantum.export_chsh
+from quantum.chip_chsh import run_from_counts
 from quantum.chsh import QUESTION_PAIRS, chsh_circuits, compile_chsh, pair_win_rate, win_rate
+from quantum.export import write_record
 from quantum.export_chsh import (
+    CHIP_JOBS,
     DIAL_GRID,
     EXPORT_PATH,
     IDEAL_BASE_SEED,
@@ -21,15 +28,19 @@ from quantum.export_chsh import (
     OUTCOMES,
     SHOTS,
     build_export,
+    chip_runs,
     dial_seed,
     limits,
     logical_circuits,
+    main,
     noisy_run,
     quietest_pair,
+    refresh_chip_runs,
     sample_point,
 )
 
 QUANTUM_LIMIT = math.cos(math.pi / 8) ** 2
+PILOT_JOB = "dbnna5gqtr0c73adbo90"
 CURRENT_VERSIONS = {
     "qiskitVersion": qiskit.__version__,
     "aerVersion": qiskit_aer.__version__,
@@ -49,9 +60,75 @@ def run_named(export, run_id):
     return next(r for r in export["runs"] if r["id"] == run_id)
 
 
+def simulator_runs(export):
+    return [r for r in export["runs"] if r["provenance"]["source"] != "ibm-chip"]
+
+
+def committed_chip_runs(export):
+    return [r for r in export["runs"] if r["provenance"]["source"] == "ibm-chip"]
+
+
+def small_build():
+    """Only the simulators: a chip run's dials are not this export's."""
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(quantum.export_chsh, "CHIP_JOBS", ())
+        return build_export(dials=(0.25, 0.5), shots=2048, today=date(2026, 11, 7))
+
+
+def assert_honest_chip_run(run):
+    provenance = run["provenance"]
+    assert provenance["source"] == "ibm-chip"
+    assert provenance["backend"].startswith("ibm_")
+    assert provenance["jobId"].strip()
+    assert provenance["noiseModel"] is None
+    assert "best-case" in provenance["qubitSelection"]
+    assert {p["dial"] for p in run["points"]} <= set(DIAL_GRID)
+    for point in run["points"]:
+        pairs = counts_by_pair(point)
+        assert list(pairs) == list(QUESTION_PAIRS)
+        assert point["winRate"] == win_rate(pairs)
+        for pair in point["pairs"]:
+            assert pair["shots"] == provenance["shots"]
+            assert sum(pair["counts"].values()) == pair["shots"]
+            assert pair["winRate"] == pair_win_rate(pair["counts"], pair["x"], pair["y"])
+
+
+def chip_run_from(export, job_id="job123", dials=(0.25, 0.5)):
+    """Built from an exported simulator's counts, purely to exercise the file handling."""
+    source = run_named(export, "ideal")
+    counts = {dial: counts_by_pair(point_at(source, dial)) for dial in dials}
+    shots = source["provenance"]["shots"]
+    return run_from_counts(
+        "ibm-chip", "ibm_kingston", [61, 62], shots, date(2026, 11, 7), job_id, counts
+    )
+
+
+@pytest.fixture
+def records(monkeypatch, tmp_path):
+    """Chip records in a temp folder, listed in CHIP_JOBS as they are written."""
+    monkeypatch.setattr(quantum.export, "RUNS_DIR", tmp_path)
+    monkeypatch.setattr(quantum.export_chsh, "CHIP_JOBS", ())
+
+    def add(job_id, **fields):
+        write_record({"experiment": "chsh", "jobId": job_id, **fields})
+        jobs = (*quantum.export_chsh.CHIP_JOBS, job_id)
+        monkeypatch.setattr(quantum.export_chsh, "CHIP_JOBS", jobs)
+
+    return add
+
+
+@pytest.fixture
+def export_copy(tmp_path, committed):
+    """A copy of the committed file holding its simulators and no chip run."""
+    path = tmp_path / "chsh.json"
+    bare = {**committed, "runs": simulator_runs(committed)}
+    quantum.export.write_export(path, bare)
+    return path
+
+
 @pytest.fixture(scope="module")
 def small_export():
-    return build_export(dials=(0.25, 0.5), shots=2048, today=date(2026, 11, 7))
+    return small_build()
 
 
 @pytest.fixture(scope="module")
@@ -157,8 +234,7 @@ def test_provenance_records_the_requested_shots_and_date(small_export):
 
 
 def test_export_is_reproducible(small_export):
-    again = build_export(dials=(0.25, 0.5), shots=2048, today=date(2026, 11, 7))
-    assert again == small_export
+    assert small_build() == small_export
 
 
 def test_limits_come_from_brute_force_and_the_statevector(export):
@@ -185,14 +261,92 @@ def test_every_counts_table_has_all_four_outcomes(export):
                 assert tuple(pair["counts"]) == OUTCOMES
 
 
-def test_committed_export_covers_the_whole_grid_for_both_runs(committed):
+def test_committed_export_covers_the_whole_grid_for_both_simulators(committed):
     assert committed["schemaVersion"] == 1
     assert committed["experiment"] == "chsh"
     assert committed["outcomeOrder"] == "ba"
-    assert {r["id"] for r in committed["runs"]} == {"ideal", "ibm-noise-model"}
-    for run in committed["runs"]:
+    simulators = simulator_runs(committed)
+    assert {r["id"] for r in simulators} == {"ideal", "ibm-noise-model"}
+    for run in simulators:
         assert [p["dial"] for p in run["points"]] == list(DIAL_GRID)
         assert run["provenance"]["shots"] == SHOTS
+
+
+def test_committed_chip_runs_are_labelled_and_match_their_counts(committed):
+    for run in committed_chip_runs(committed):
+        assert_honest_chip_run(run)
+
+
+def test_the_chip_run_check_passes_a_run_collect_would_write(committed):
+    assert_honest_chip_run(chip_run_from(committed))
+
+
+def test_the_pilot_is_never_listed_for_export():
+    assert PILOT_JOB not in CHIP_JOBS
+
+
+def test_chip_runs_skips_a_job_with_no_run_yet(records, committed):
+    run = chip_run_from(committed)
+    records("collected", run=run)
+    records("queued")
+    assert chip_runs() == [run]
+
+
+def test_build_export_appends_chip_runs_after_the_simulators(records, small_export):
+    run = chip_run_from(small_export)
+    records("collected", run=run)
+    built = build_export(dials=(0.25, 0.5), shots=2048, today=date(2026, 11, 7))
+    assert [r["id"] for r in built["runs"]] == ["ideal", "ibm-noise-model", "ibm-chip"]
+    assert built["runs"][:2] == small_export["runs"]
+    assert built["runs"][2] == run
+
+
+def test_chip_only_leaves_the_file_alone_with_nothing_collected(records, export_copy):
+    records("queued")
+    before = export_copy.read_bytes()
+    refresh_chip_runs(export_copy)
+    assert export_copy.read_bytes() == before
+
+
+def test_chip_only_adds_the_chip_run_and_keeps_the_simulators(records, export_copy, committed):
+    run = chip_run_from(committed)
+    records("collected", run=run)
+    refresh_chip_runs(export_copy)
+    written = json.loads(export_copy.read_text())
+    assert written["runs"] == [*simulator_runs(committed), run]
+    assert {k: v for k, v in written.items() if k != "runs"} == {
+        k: v for k, v in committed.items() if k != "runs"
+    }
+
+
+def test_chip_only_replaces_chip_runs_rather_than_stacking_them(records, export_copy, committed):
+    records("first", run=chip_run_from(committed, "first"))
+    refresh_chip_runs(export_copy)
+    newer = chip_run_from(committed, "second")
+    write_record({"experiment": "chsh", "jobId": "first", "run": newer})
+    refresh_chip_runs(export_copy)
+    assert committed_chip_runs(json.loads(export_copy.read_text())) == [newer]
+
+
+def test_chip_only_flag_never_regenerates_the_simulators(
+    records, export_copy, committed, monkeypatch
+):
+    def no_regeneration(*_args, **_kwargs):
+        raise AssertionError("the simulators were rebuilt")
+
+    monkeypatch.setattr(quantum.export_chsh, "build_export", no_regeneration)
+    monkeypatch.setattr(quantum.export_chsh, "EXPORT_PATH", export_copy)
+    run = chip_run_from(committed)
+    records("collected", run=run)
+    main(["--chip-only"])
+    assert committed_chip_runs(json.loads(export_copy.read_text())) == [run]
+
+
+def test_the_exporter_does_not_load_the_chip_module():
+    """The live service imports this file, and must stay clear of chip submission."""
+    code = "import sys, quantum.export_chsh; sys.exit('quantum.chip' in sys.modules)"
+    root = Path(__file__).resolve().parents[2]
+    assert subprocess.run([sys.executable, "-c", code], cwd=root, check=False).returncode == 0
 
 
 def test_committed_shared_blocks_match_the_current_code(committed):

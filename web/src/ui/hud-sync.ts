@@ -64,7 +64,7 @@ export function createHudSync(hud: HudSurface, { source, lines, moment }: HudSyn
       hud.dial((p === 'entangled' || p === 'beyond') && !lock && !inRoom && !s.broke);
       hud.dialLocked(b);
       hud.stakes(stakeChoices(s, lock || s.forging), s.stake);
-      hud.source(inRoom ? null : sourceLine(s, source.previewProvenance));
+      hud.source(inRoom ? null : sourceLine(s, source.previewProvenance(s.dial)));
       const key = `${p}|${b}|${lock}|${inRoom}|${s.broke}|${!!s.result}|${inCage}|${!!s.forge}|${s.forging}`;
       if (buttonKey !== key) {
         buttonKey = key;

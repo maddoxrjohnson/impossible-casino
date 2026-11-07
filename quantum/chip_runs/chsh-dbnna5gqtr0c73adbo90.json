@@ -1,0 +1,98 @@
+{
+ "jobId": "dbnna5gqtr0c73adbo90",
+ "experiment": "chsh",
+ "backend": "ibm_kingston",
+ "qubits": [
+  61,
+  62
+ ],
+ "qubitSelection": "lowest CZ plus readout error in that day's calibration",
+ "errors": {
+  "cz": 0.0017222214144113623,
+  "readoutPlayer": 0.00244140625,
+  "readoutPartner": 0.00390625
+ },
+ "calibrated": "2026-11-07T13:40:37-05:00",
+ "dials": [
+  0.5
+ ],
+ "shots": 4096,
+ "maxSeconds": 30,
+ "submitted": "2026-11-07T18:59:34.701063+00:00",
+ "usageSeconds": 6,
+ "run": {
+  "id": "ibm-chip",
+  "provenance": {
+   "source": "ibm-chip",
+   "backend": "ibm_kingston",
+   "noiseModel": null,
+   "qubits": [
+    61,
+    62
+   ],
+   "shots": 4096,
+   "qiskitVersion": "2.6.2",
+   "aerVersion": "0.18.2",
+   "runtimeVersion": "0.51.0",
+   "date": "2026-11-07",
+   "jobId": "dbnna5gqtr0c73adbo90"
+  },
+  "points": [
+   {
+    "dial": 0.5,
+    "seed": 20261107,
+    "winRate": 0.83514404296875,
+    "pairs": [
+     {
+      "x": 0,
+      "y": 0,
+      "shots": 4096,
+      "winRate": 0.82958984375,
+      "counts": {
+       "00": 1733,
+       "01": 306,
+       "10": 392,
+       "11": 1665
+      }
+     },
+     {
+      "x": 0,
+      "y": 1,
+      "shots": 4096,
+      "winRate": 0.840087890625,
+      "counts": {
+       "00": 1803,
+       "01": 344,
+       "10": 311,
+       "11": 1638
+      }
+     },
+     {
+      "x": 1,
+      "y": 0,
+      "shots": 4096,
+      "winRate": 0.85205078125,
+      "counts": {
+       "00": 1758,
+       "01": 303,
+       "10": 303,
+       "11": 1732
+      }
+     },
+     {
+      "x": 1,
+      "y": 1,
+      "shots": 4096,
+      "winRate": 0.81884765625,
+      "counts": {
+       "00": 340,
+       "01": 1708,
+       "10": 1646,
+       "11": 402
+      }
+     }
+    ]
+   }
+  ]
+ }
+}

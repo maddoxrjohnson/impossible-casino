@@ -136,29 +136,43 @@ describe('settledLine', () => {
 
 describe('sourceLine', () => {
   const source = createPrerunSource({ chsh: parseChshExport(chshJson), wiesner: parseWiesnerExport(wiesnerJson) }, 'ibm-noise-model');
-  const preview = source.previewProvenance;
+  const preview = source.previewProvenance(0.5);
 
   it('stays off while the table plays classical hands', () => {
     for (const phase of ['intro', 'classical', 'wall'] as const) {
-      expect(sourceLine({ phase, dial: 0.5, target: 0.8, result: null }, preview)).toBeNull();
+      expect(sourceLine({ phase, dial: 0.5, target: 0.8, result: null, rounds: 0 }, preview)).toBeNull();
     }
   });
 
   it('labels the dial preview before a run, because those rates are quantum results', () => {
     for (const phase of ['entangled', 'beyond'] as const) {
-      expect(sourceLine({ phase, dial: 0.5, target: 0.8, result: null }, preview)).toBe(`Source: ${provenanceLabel(preview)}`);
+      expect(sourceLine({ phase, dial: 0.5, target: 0.8, result: null, rounds: 0 }, preview)).toBe(`Source: ${provenanceLabel(preview)}`);
     }
   });
 
   it("follows the run's own source over the preview", async () => {
-    const chip: ChipProvenance = { ...preview, source: 'ibm-chip', noiseModel: null, backend: 'ibm_kingston', jobId: 'd4example' };
+    const chip: ChipProvenance = { ...preview, source: 'ibm-chip', noiseModel: null, backend: 'ibm_kingston', jobId: 'd4example', qubitSelection: 'best-case pick' };
     const result: ChshResult = { ...(await source.chsh(0.5)), provenance: chip };
-    const ran = { phase: 'entangled', dial: 0.5, target: result.winRate, result } as const;
+    const ran = { phase: 'entangled', dial: 0.5, target: result.winRate, result, rounds: 0 } as const;
     expect(sourceLine(ran, preview)).toBe('Source: IBM chip ibm_kingston, job d4example');
     const previewLabel = `Source: ${provenanceLabel(preview)}`;
     expect(sourceLine({ ...ran, dial: 0.25, target: source.previewWinRate(0.25) }, preview)).toBe(previewLabel);
     // Turned away and back: same dial, but the rate on screen is the preview again.
     expect(sourceLine({ ...ran, target: 0.7 }, preview)).toBe(previewLabel);
+  });
+
+  it('names both sources while the plaque holds hands from somewhere else', async () => {
+    const chip: ChipProvenance = { ...preview, source: 'ibm-chip', noiseModel: null, backend: 'ibm_kingston', jobId: 'd4example', qubitSelection: 'best-case pick' };
+    const result: ChshResult = { ...(await source.chsh(0.5)), provenance: chip };
+    const turned = { phase: 'entangled', dial: 0.25, target: source.previewWinRate(0.25), result, rounds: 100 } as const;
+    expect(sourceLine(turned, preview)).toBe(`Odds source: ${provenanceLabel(preview)} · Last run source: IBM chip ibm_kingston, job d4example`);
+    expect(sourceLine({ ...turned, dial: 0.5, target: result.winRate }, preview)).toBe('Source: IBM chip ibm_kingston, job d4example');
+  });
+
+  it('stays one source when the hands and the odds read the same', async () => {
+    const result = await source.chsh(0.5);
+    const turned = { phase: 'entangled', dial: 0.25, target: source.previewWinRate(0.25), result, rounds: 100 } as const;
+    expect(sourceLine(turned, preview)).toBe(`Source: ${provenanceLabel(preview)}`);
   });
 });
 

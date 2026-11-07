@@ -134,7 +134,7 @@ describe('createLiveSource delegation', () => {
     const { source } = setup();
     expect(source.dials).toBe(base.dials);
     expect(source.limits).toBe(base.limits);
-    expect(source.previewProvenance).toBe(base.previewProvenance);
+    expect(source.previewProvenance(0.25)).toBe(base.previewProvenance(0.25));
     expect(source.snapDial(0.51)).toBe(base.snapDial(0.51));
     expect(source.previewWinRate(0.25)).toBe(base.previewWinRate(0.25));
   });
@@ -459,14 +459,16 @@ describe('the source badge', () => {
     return createGameStore({ source, storage, handMs: 0 });
   }
 
-  it('reads live after a live run, and the preview after a dial turn', async () => {
+  it('reads live after a live run, and names both sources after a dial turn', async () => {
     const { source } = await awake();
     const store = tableAt(source);
     await store.run(1);
     expect(store.state.result?.provenance.source).toBe('live-simulator');
-    expect(sourceLine(store.state, source.previewProvenance)).toBe(LIVE_LABEL);
+    expect(sourceLine(store.state, source.previewProvenance(store.state.dial))).toBe(LIVE_LABEL);
     store.setDial(0.25);
-    expect(sourceLine(store.state, source.previewProvenance)).toBe(PRERUN_LABEL);
+    expect(sourceLine(store.state, source.previewProvenance(store.state.dial))).toBe(
+      'Odds source: Pre-run Qiskit simulator, fake_kingston noise model · Last run source: Live Qiskit simulator, fake_kingston noise model',
+    );
     store.dispose();
   });
 
@@ -475,7 +477,7 @@ describe('the source badge', () => {
     const store = tableAt(source);
     await store.run(1);
     expect(store.state.rounds).toBe(1);
-    expect(sourceLine(store.state, source.previewProvenance)).toBe(PRERUN_LABEL);
+    expect(sourceLine(store.state, source.previewProvenance(store.state.dial))).toBe(PRERUN_LABEL);
     store.dispose();
   });
 
@@ -483,7 +485,7 @@ describe('the source badge', () => {
     const source = createLiveSource(base, { url: undefined });
     const store = tableAt(source);
     await store.run(1);
-    expect(sourceLine(store.state, source.previewProvenance)).toBe(PRERUN_LABEL);
+    expect(sourceLine(store.state, source.previewProvenance(store.state.dial))).toBe(PRERUN_LABEL);
     store.dispose();
   });
 });

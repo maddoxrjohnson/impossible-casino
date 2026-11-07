@@ -1,15 +1,20 @@
 """Export the CHSH win-rate curve for the Impossible Tables.
 
 Run from the repo root: .venv/bin/python -m quantum.export_chsh
+Add --chip-only to rewrite just the chip runs and leave the simulators as written.
 
 The noisy run uses Aer with a noise model built from IBM's stored fake_kingston
 calibration, pinned to that snapshot's quietest coupler. It is a simulation, and
-the provenance says so.
+the provenance says so. Chip runs come from the records in CHIP_JOBS, and cover
+only the dials those jobs ran.
 """
 
-from collections.abc import Sequence
+import argparse
+import json
+from collections.abc import Mapping, Sequence
 from datetime import date
 from itertools import product
+from pathlib import Path
 from typing import Any
 
 from qiskit import qasm2
@@ -27,7 +32,14 @@ from quantum.chsh import (
     run_chsh,
     win_rate,
 )
-from quantum.export import DATA_DIR, SCHEMA_VERSION, simulator_provenance, write_export
+from quantum.export import (
+    CHIP_SOURCE,
+    DATA_DIR,
+    SCHEMA_VERSION,
+    collected_runs,
+    simulator_provenance,
+    write_export,
+)
 
 EXPORT_PATH = DATA_DIR / f"chsh.v{SCHEMA_VERSION}.json"
 SHOTS = 8192
@@ -35,6 +47,7 @@ DIAL_STEPS = 32
 DIAL_GRID: tuple[float, ...] = tuple(i / DIAL_STEPS for i in range(DIAL_STEPS + 1))
 OUTCOMES: tuple[str, ...] = tuple("".join(bits) for bits in product("01", repeat=2))
 QUBIT_SELECTION = "lowest CZ plus readout error in the snapshot"
+CHIP_JOBS: tuple[str, ...] = ("dbnneo0qtr0c73adbufg",)
 
 # Aer steps the seed by about 2,100 per circuit inside a job. This spacing keeps
 # each dial's four streams in their own band, so neighbouring dials stay independent.
@@ -80,6 +93,15 @@ def sample_point(
     layout: Sequence[int] | None = None,
 ) -> dict[str, Any]:
     counts = run_chsh(dial, shots=shots, backend=backend, seed=seed, layout=layout)
+    return point_from_counts(dial, shots, seed, counts)
+
+
+def point_from_counts(
+    dial: float,
+    shots: int,
+    seed: int,
+    counts: Mapping[tuple[int, int], Mapping[str, int]],
+) -> dict[str, Any]:
     return {
         "dial": dial,
         "seed": seed,
@@ -130,6 +152,10 @@ def noisy_run(dials: Sequence[float], shots: int, today: date) -> dict[str, Any]
     }
 
 
+def chip_runs() -> list[dict[str, Any]]:
+    return collected_runs("chsh", CHIP_JOBS)
+
+
 def limits() -> dict[str, dict[str, Any]]:
     return {
         "classical": {
@@ -166,10 +192,29 @@ def build_export(
         "outcomeOrder": "ba",
         "limits": limits(),
         "logicalCircuits": logical_circuits(dials),
-        "runs": [ideal_run(dials, shots, today), noisy_run(dials, shots, today)],
+        "runs": [
+            ideal_run(dials, shots, today),
+            noisy_run(dials, shots, today),
+            *chip_runs(),
+        ],
     }
 
 
-if __name__ == "__main__":
-    write_export(EXPORT_PATH, build_export())
+def refresh_chip_runs(path: Path) -> None:
+    export = json.loads(path.read_text())
+    simulators = [r for r in export["runs"] if r["provenance"]["source"] != CHIP_SOURCE]
+    write_export(path, {**export, "runs": [*simulators, *chip_runs()]})
+
+
+def main(argv: Sequence[str] | None = None) -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--chip-only", action="store_true")
+    if parser.parse_args(argv).chip_only:
+        refresh_chip_runs(EXPORT_PATH)
+    else:
+        write_export(EXPORT_PATH, build_export())
     print(f"wrote {EXPORT_PATH}")
+
+
+if __name__ == "__main__":
+    main()

@@ -90,9 +90,12 @@ const simulator: SimulatorProvenance = {
   jobId: null,
 };
 
+/** A collected chip run joins the committed export without changing the simulators. */
+const simulated = (run: { provenance: Provenance }): boolean => run.provenance.source !== 'ibm-chip';
+
 describe('parsers', () => {
   it('accept both real exports', () => {
-    expect(chsh.runs.map((r) => r.id)).toEqual(['ideal', 'ibm-noise-model']);
+    expect(chsh.runs.filter(simulated).map((r) => r.id)).toEqual(['ideal', 'ibm-noise-model']);
     expect(chsh.runs[0]?.points).toHaveLength(33);
     expect(wiesner.runs.map((r) => r.id)).toEqual(['ideal', 'ibm-noise-model']);
     expect(wiesner.runs[0]?.points).toHaveLength(8);
@@ -222,6 +225,7 @@ describe('parsers', () => {
     good.runs[0]!.provenance.source = 'ibm-chip';
     good.runs[0]!.provenance.backend = 'ibm_kingston';
     good.runs[0]!.provenance.jobId = 'd1abc';
+    good.runs[0]!.provenance.qubitSelection = 'best-case pick';
     expect(parseChshExport(good).runs[0]?.provenance.jobId).toBe('d1abc');
   });
 
@@ -249,11 +253,29 @@ describe('parseProvenance', () => {
   });
 
   it('accepts a chip backend only in the ibm_ form', () => {
-    const chip = { ...simulator, source: 'ibm-chip', jobId: 'abc' };
+    const chip = { ...simulator, source: 'ibm-chip', jobId: 'abc', qubitSelection: 'best-case pick' };
     expect(parseProvenance({ ...chip, backend: 'ibm_kingston' }).jobId).toBe('abc');
     for (const backend of ['aer_simulator', 'ibm_', 'IBM_KINGSTON', 'fake_kingston']) {
       expect(() => parseProvenance({ ...chip, backend })).toThrow(/backend/);
     }
+  });
+});
+
+describe('qubitSelection on a provenance', () => {
+  const chip = { ...simulator, source: 'ibm-chip', jobId: 'abc', backend: 'ibm_kingston' };
+
+  it('is required on a chip run', () => {
+    expect(() => parseProvenance(chip)).toThrow(/qubitSelection/);
+    expect(() => parseProvenance({ ...chip, qubitSelection: null })).toThrow(/qubitSelection/);
+    expect(() => parseProvenance({ ...chip, qubitSelection: '' })).toThrow(/qubitSelection/);
+    const parsed = parseProvenance({ ...chip, qubitSelection: 'best-case pick' });
+    expect(parsed.qubitSelection).toBe('best-case pick');
+  });
+
+  it('is null or absent on a simulator', () => {
+    expect(parseProvenance(simulator).qubitSelection).toBeUndefined();
+    expect(parseProvenance({ ...simulator, qubitSelection: null }).source).toBe('pre-run-simulator');
+    expect(() => parseProvenance({ ...simulator, qubitSelection: 'x' })).toThrow(/qubitSelection/);
   });
 });
 
@@ -374,7 +396,7 @@ describe('snapDial', () => {
 
 describe('previewWinRate', () => {
   it('says where the preview rates come from', () => {
-    expect(ideal.previewProvenance).toBe(chsh.runs[0]?.provenance);
+    expect(ideal.previewProvenance(0.5)).toBe(chsh.runs[0]?.provenance);
   });
 
   it('is a lookup of the exported win rate and snaps its input', () => {
@@ -405,7 +427,7 @@ describe('provenanceLabel', () => {
   });
 
   it('never says chip on a simulator', () => {
-    for (const run of [...chsh.runs, ...wiesner.runs]) {
+    for (const run of [...chsh.runs, ...wiesner.runs].filter(simulated)) {
       expect(provenanceLabel(run.provenance).toLowerCase()).not.toContain('chip');
     }
     const live: Provenance = { ...simulator, source: 'live-simulator' };
@@ -419,6 +441,7 @@ describe('provenanceLabel', () => {
       backend: 'ibm_kingston',
       noiseModel: null,
       jobId: 'd1abc',
+      qubitSelection: 'best-case pick',
     };
     expect(provenanceLabel(chip)).toBe('IBM chip ibm_kingston, job d1abc');
   });

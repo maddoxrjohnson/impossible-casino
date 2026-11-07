@@ -2,6 +2,7 @@ import './styles.css';
 import './ui/hud.css';
 import { createAudio } from './audio/audio';
 import { cageBoard, type ForgeAttempt } from './game/cage';
+import { withChipRuns } from './game/chip';
 import { createLiveSource } from './game/live';
 import { createPrerunSource, loadExports } from './game/results';
 import { STAKES } from './game/rules';
@@ -13,7 +14,7 @@ import { dialStep } from './ui/lines';
 import { markerFor } from './ui/receipt';
 import { stakeChoices } from './ui/table';
 
-/** The exported run the table plays. Noisy on purpose: it is the closest stand-in for a real chip. */
+/** The exported run the table plays where it has no chip data. Noisy on purpose: it is the closest stand-in for a real chip. */
 const RUN_ID = 'ibm-noise-model';
 
 const FONTS = ['64px "Limelight"', '40px "Federo"', 'italic 20px "Bodoni Moda"'];
@@ -68,8 +69,9 @@ async function boot(root: HTMLElement): Promise<void> {
       loadExports(),
       waitForFonts(),
     ]);
-    const source = createLiveSource(createPrerunSource(exports, RUN_ID), { url: import.meta.env.VITE_API_URL as string | undefined });
-    void source.warm();
+    const live = createLiveSource(createPrerunSource(exports, RUN_ID), { url: import.meta.env.VITE_API_URL as string | undefined });
+    void live.warm();
+    const source = withChipRuns(live, exports);
     const store = createGameStore({ source });
     const audio = createAudio();
     const cage = cageBoard(exports.wiesner, RUN_ID);

@@ -30,6 +30,7 @@ function machineRows(p: Provenance, used: readonly number[] | null = p.qubits): 
     const qubits = used.join(', ');
     rows.push(['Qubits', model ? `${qubits} (${model.qubitSelection})` : qubits]);
   }
+  if (p.source === 'ibm-chip') rows.push(['Qubit choice', p.qubitSelection]);
   return rows;
 }
 
