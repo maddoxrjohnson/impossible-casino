@@ -535,6 +535,143 @@
      "passRate": 0.0966796875
     }
    ]
+  },
+  {
+   "id": "ibm-chip",
+   "provenance": {
+    "source": "ibm-chip",
+    "backend": "ibm_kingston",
+    "noiseModel": null,
+    "qubits": [
+     61,
+     42,
+     5,
+     48,
+     15,
+     21,
+     93,
+     62
+    ],
+    "qubitSelection": "best-case pick: the qubits with the lowest readout plus single-qubit gate error in the day's calibration, ranked best first; length n uses the first n",
+    "shots": 1024,
+    "qiskitVersion": "2.6.2",
+    "aerVersion": "0.18.2",
+    "runtimeVersion": "0.51.0",
+    "date": "2026-11-07",
+    "jobId": "dbnp35gou4as73b4tusg"
+   },
+   "ticketsPerPoint": 128,
+   "shotsPerTicket": 8,
+   "points": [
+    {
+     "length": 1,
+     "seed": 3000010000,
+     "shots": 1024,
+     "qubits": [
+      61
+     ],
+     "passes": 801,
+     "passRate": 0.7822265625
+    },
+    {
+     "length": 2,
+     "seed": 3000020000,
+     "shots": 1024,
+     "qubits": [
+      61,
+      42
+     ],
+     "passes": 601,
+     "passRate": 0.5869140625
+    },
+    {
+     "length": 3,
+     "seed": 3000030000,
+     "shots": 1024,
+     "qubits": [
+      61,
+      42,
+      5
+     ],
+     "passes": 402,
+     "passRate": 0.392578125
+    },
+    {
+     "length": 4,
+     "seed": 3000040000,
+     "shots": 1024,
+     "qubits": [
+      61,
+      42,
+      5,
+      48
+     ],
+     "passes": 285,
+     "passRate": 0.2783203125
+    },
+    {
+     "length": 5,
+     "seed": 3000050000,
+     "shots": 1024,
+     "qubits": [
+      61,
+      42,
+      5,
+      48,
+      15
+     ],
+     "passes": 223,
+     "passRate": 0.2177734375
+    },
+    {
+     "length": 6,
+     "seed": 3000060000,
+     "shots": 1024,
+     "qubits": [
+      61,
+      42,
+      5,
+      48,
+      15,
+      21
+     ],
+     "passes": 163,
+     "passRate": 0.1591796875
+    },
+    {
+     "length": 7,
+     "seed": 3000070000,
+     "shots": 1024,
+     "qubits": [
+      61,
+      42,
+      5,
+      48,
+      15,
+      21,
+      93
+     ],
+     "passes": 103,
+     "passRate": 0.1005859375
+    },
+    {
+     "length": 8,
+     "seed": 3000080000,
+     "shots": 1024,
+     "qubits": [
+      61,
+      42,
+      5,
+      48,
+      15,
+      21,
+      93,
+      62
+     ],
+     "passes": 98,
+     "passRate": 0.095703125
+    }
+   ]
   }
  ]
 }

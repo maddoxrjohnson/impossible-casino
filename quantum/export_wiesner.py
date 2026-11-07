@@ -49,7 +49,7 @@ from quantum.wiesner import (
 EXPORT_PATH = DATA_DIR / f"wiesner.v{SCHEMA_VERSION}.json"
 SHOTS = 8192
 SIMULATOR_TICKETS_PER_SHOT = 1
-CHIP_JOBS: tuple[str, ...] = ()
+CHIP_JOBS: tuple[str, ...] = ("dbnp35gou4as73b4tusg",)
 ATTACK = "measure each qubit in a guessed basis, then resend it as a re-made chip"
 PASS_RULE = (
     "one re-made chip goes to the cashier and every qubit must agree; "
