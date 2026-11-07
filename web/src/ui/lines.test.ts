@@ -142,6 +142,21 @@ describe('the cage lines', () => {
   });
 });
 
+describe('the roulette lines', () => {
+  const lines = createLines(limits);
+
+  it('opens the room with the game, not a closed door', () => {
+    expect(lines.roulette).not.toMatch(/another night/i);
+    expect(lines.roulette).toMatch(/Tie/);
+    expect(lines.roulette).toMatch(/Sweep/);
+  });
+
+  it('makes no claim about a chip run or a number the export does not give', () => {
+    for (const line of [lines.roulette, lines.spinWon, lines.spinLost, lines.rouletteClear]) expect(line).not.toMatch(/ibm|on a chip/i);
+    for (const line of [lines.spinWon, lines.spinLost, lines.rouletteClear]) expect(line).not.toMatch(/\d/);
+  });
+});
+
 describe('dialStep', () => {
   it('is the spacing of an even grid', () => {
     expect(dialStep([0, 0.25, 0.5, 0.75, 1])).toBe(0.25);

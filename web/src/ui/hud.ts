@@ -5,6 +5,7 @@ import type { RoomId } from '../game/rules';
 import type { GameState } from '../game/store';
 import { createCagePanel } from './cage-panel';
 import type { Receipt } from './receipt';
+import { createRoulettePanel, type RoulettePanelOptions } from './roulette-panel';
 import type { StakeChoice } from './table';
 
 export type HudKey = 'bank' | 'delta' | 'rate' | 'hands' | 'limit' | 'even' | 'odds' | 'pays' | 'tt' | 'x' | 'y' | 'a' | 'b' | 'res' | 'amt';
@@ -29,10 +30,12 @@ export interface HudOptions {
   onStake: (value: number) => void;
   onSound: (on: boolean) => void;
   /** The marker for the room in view, or null when there is nothing to show. */
-  onReceipt: (inCage: boolean) => Receipt | null;
+  onReceipt: (room: SideName | null) => Receipt | null;
   /** The Cage's board, read from the export. */
   cage: CageBoard;
   onForge: (length: number) => void;
+  /** The Wheel's board and moves. `onLeave` runs whenever the player walks out of the room. */
+  roulette: Pick<RoulettePanelOptions, 'board' | 'text' | 'onOpen' | 'onPlay' | 'onSpin'> & { onLeave: () => void };
 }
 
 export type Hud = ReturnType<typeof createHud>;
@@ -42,7 +45,7 @@ const svg = (tag: string, attrs: Record<string, string | number>, parent?: Eleme
 const LIFT_A = (i: number) => -76 + i * 38;   // stage angle in degrees either side of straight up
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
 
-export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, onAction, onDial, onStake, onSound, onReceipt, cage, onForge }: HudOptions) {
+export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, onAction, onDial, onStake, onSound, onReceipt, cage, onForge, roulette }: HudOptions) {
   root.classList.add('deco');
   root.dataset.colour = '0';
 
@@ -54,7 +57,8 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   const mid = el('div', 'dc-mid');
   const title = el('div', 'dc-title', `<h1>The Impossible <br>Casino</h1><p>Built inside a dilution refrigerator</p>`);
   const cagePanel = createCagePanel({ board: cage, stakes, onForge, onRestart: () => { onAction('restart'); }, onStake });
-  mid.append(title, cagePanel.box);
+  const roulettePanel = createRoulettePanel({ ...roulette, stakes, onRestart: () => { onAction('restart'); }, onStake });
+  mid.append(title, cagePanel.box, roulettePanel.box);
   const ticket = el('div', 'dc-ticket', `<b data-v="tt">Hand</b>
     <div class="row"><span>Your question</span><span data-v="x"></span></div>
     <div class="row"><span>Theirs</span><span data-v="y"></span></div>
@@ -162,7 +166,7 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   const onStakeChange = (e: Event) => { if (e.target instanceof HTMLInputElement) onStake(+e.target.value); };
   const isOpen = () => receipt.classList.contains('is-on');
   const onReceiptOpen = () => {
-    const data = onReceipt(room === 'cage');
+    const data = onReceipt(room);
     if (!data) return;
     markerSub.textContent = data.sub; circuitTitle.textContent = data.circuitTitle; pre.textContent = data.qasm; circuitNote.textContent = data.circuitNote; stamp.textContent = data.stamp;
     details.replaceChildren(...data.rows.flatMap(([k, value]) => { const a = el('dt'), b = el('dd'); a.textContent = k; b.textContent = value; return [a, b]; }));
@@ -276,22 +280,28 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
     ticket(on: boolean) { ticket.classList.toggle('is-on', on); },
     colour(on: boolean) { root.classList.toggle('is-colour', on); },
     side(name: SideName | null) {
-      const focused = cagePanel.box.contains(document.activeElement);
-      room = name; root.classList.toggle('is-side', !!name); root.classList.toggle('is-cage', name === 'cage'); cagePanel.show(name === 'cage');
-      if (focused && name !== 'cage') liftBtn.focus({ preventScroll: true });
+      const was = room;
+      const focused = cagePanel.box.contains(document.activeElement) || roulettePanel.box.contains(document.activeElement);
+      room = name; root.classList.toggle('is-side', !!name); root.classList.toggle('is-cage', name === 'cage'); root.classList.toggle('is-roulette', name === 'roulette');
+      cagePanel.show(name === 'cage'); roulettePanel.show(name === 'roulette');
+      // Another room's panel takes focus as it shows. Back at the table, it goes to the lift.
+      if (focused && !name) liftBtn.focus({ preventScroll: true });
       paintLift();
+      // A draft is not kept, and its stake is only taken at the spin, so walking out costs nothing.
+      if (was === 'roulette' && name !== 'roulette') roulette.onLeave();
     },
     /** Hands the panel the game. Called on every store change, in or out of the room. */
     cage(s: GameState) { cagePanel.sync(s); },
+    roulette(s: GameState) { roulettePanel.sync(s); },
     hot(on: boolean) { root.querySelector('canvas')?.classList.toggle('is-hot', on); hint.classList.toggle('is-on', on); },
     hint(text: string, x: number, y: number) { hint.textContent = text; hint.style.left = `${x}px`; hint.style.top = `${y}px`; },
     dispose() {
-      clearTimeout(swapTimer); cagePanel.dispose();
+      clearTimeout(swapTimer); cagePanel.dispose(); roulettePanel.dispose();
       main.removeEventListener('click', clickMain); alt.removeEventListener('click', clickAlt); input.removeEventListener('input', onInput); stakeRow.removeEventListener('change', onStakeChange);
       receiptBtn.removeEventListener('click', onReceiptOpen); close.removeEventListener('click', onReceiptClose); receipt.removeEventListener('pointerdown', onReceiptDown); receipt.removeEventListener('click', onBackdrop);
       liftBtn.removeEventListener('click', onLiftOpen); floors.removeEventListener('click', onFloor); stay.removeEventListener('click', onStay); elevator.removeEventListener('pointerdown', onLiftDown); elevator.removeEventListener('click', onLiftBackdrop); soundBtn.removeEventListener('click', onSnd);
       document.removeEventListener('keydown', onKey);
-      hud.remove(); receipt.remove(); elevator.remove(); root.classList.remove('deco', 'is-colour', 'is-side', 'is-cage');
+      hud.remove(); receipt.remove(); elevator.remove(); root.classList.remove('deco', 'is-colour', 'is-side', 'is-cage', 'is-roulette');
       delete root.dataset.colour;
     },
   };

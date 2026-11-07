@@ -171,6 +171,8 @@ interface RouletteNodeBase {
   readonly wheel: number;
   /** The best chance on one pocket the player can still force against the house. */
   readonly value: number;
+  /** Tie pairs entangled at this stage, from the Qiskit statevector, in deck order. */
+  readonly tiedPairs: readonly (readonly [number, number])[];
 }
 
 export type RouletteNode =
@@ -696,10 +698,46 @@ function parseRouletteCounts(value: unknown, shots: number, path: string): reado
   return parsed;
 }
 
+/** The deck's Tie pairs, from its cz ops, sorted and unique. */
+function tiePairsOf(deck: readonly RouletteCard[]): readonly (readonly [number, number])[] {
+  const pairs = new Map<string, readonly [number, number]>();
+  for (const card of deck) {
+    for (const op of card.ops) {
+      const [a, b] = op.qubits;
+      if (op.gate === 'cz' && op.qubits.length === 2 && a !== undefined && b !== undefined) {
+        pairs.set(`${a}-${b}`, [a, b]);
+      }
+    }
+  }
+  return [...pairs.values()].sort((x, y) => x[0] - y[0] || x[1] - y[1]);
+}
+
+function parseTiedPairs(
+  value: unknown,
+  tiePairs: readonly (readonly [number, number])[],
+  path: string,
+): readonly (readonly [number, number])[] {
+  const order = tiePairs.map(([a, b]) => `${a}-${b}`);
+  let last = -1;
+  return list(value, path).map((entry, i) => {
+    const at = `${path}[${i}]`;
+    const pair = list(entry, at);
+    if (pair.length !== 2) fail(at, 'expected two qubits');
+    const a = integer(pair[0], `${at}[0]`, 0);
+    const b = integer(pair[1], `${at}[1]`, 0);
+    const index = order.indexOf(`${a}-${b}`);
+    if (index < 0) fail(at, 'not a Tie pair in the deck');
+    if (index <= last) fail(path, 'expected sorted, unique pairs');
+    last = index;
+    return [a, b] as const;
+  });
+}
+
 function parseRouletteNode(
   value: unknown,
   turns: readonly Exclude<RouletteTurn, 'spin'>[],
   deckSize: number,
+  tiePairs: readonly (readonly [number, number])[],
   wheelCount: number,
   path: string,
 ): RouletteNode {
@@ -710,7 +748,12 @@ function parseRouletteNode(
   if (raw.turn !== turn) fail(`${path}.turn`, `expected ${turn}`);
   const wheel = integer(raw.wheel, `${path}.wheel`, 0);
   if (wheel >= wheelCount) fail(`${path}.wheel`, 'no such wheel');
-  const base = { draft, wheel, value: rate(raw.value, `${path}.value`) };
+  const base = {
+    draft,
+    wheel,
+    value: rate(raw.value, `${path}.value`),
+    tiedPairs: parseTiedPairs(raw.tiedPairs, tiePairs, `${path}.tiedPairs`),
+  };
   if (turn === 'spin') {
     return { ...base, turn, limitPockets: pocketList(raw.limitPockets, `${path}.limitPockets`) };
   }
@@ -808,8 +851,9 @@ export function parseRouletteExport(value: unknown): RouletteExport {
     if (wheel.length !== ROULETTE_POCKETS) fail(path, `expected ${ROULETTE_POCKETS} chances`);
     return wheel.map((p, j) => rate(p, `${path}[${j}]`));
   });
+  const tiePairs = tiePairsOf(deck);
   const nodes = filled(raw.nodes, 'roulette.nodes').map((n, i) =>
-    parseRouletteNode(n, turns, deck.length, wheels.length, `roulette.nodes[${i}]`),
+    parseRouletteNode(n, turns, deck.length, tiePairs, wheels.length, `roulette.nodes[${i}]`),
   );
   const nodeKeys = nodes.map((n) => draftKey(n.draft));
   checkUnique(nodeKeys, 'roulette.nodes');
@@ -1008,7 +1052,7 @@ export async function loadExports(
   return { chsh: parseChshExport(chsh), wiesner: parseWiesnerExport(wiesner) };
 }
 
-/** Loaded on its own, so the Tables and the Cage never wait on it. */
+/** The Wheel's export, kept apart from the Tables' and the Cage's. */
 export async function loadRoulette(
   fetchFn: (url: string) => Promise<FetchResponse> = fetch,
   base: string = import.meta.env.BASE_URL,

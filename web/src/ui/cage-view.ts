@@ -45,14 +45,14 @@ export const RESTART_ARM_MS = 700;
 
 /**
  * A forge settles at once, so Forge can turn into Start over under a press already on
- * its way. This holds that Start over back for a moment, until the result can be read.
+ * its way. This holds whatever replaces the `press` act back for a moment, until the result can be read.
  */
-export function createRestartGuard(now: () => number) {
-  let shown: CageButton['act'] | null = null, armsAt = 0;
+export function createRestartGuard(now: () => number, press = 'forge') {
+  let shown: string | null = null, armsAt = 0;
   return {
-    see(act: CageButton['act']): void {
-      if (shown === 'forge' && act === 'restart') armsAt = now() + RESTART_ARM_MS;
-      else if (act === 'forge') armsAt = 0;
+    see(act: string): void {
+      if (shown === press && act !== press) armsAt = now() + RESTART_ARM_MS;
+      else if (act === press) armsAt = 0;
       shown = act;
     },
     holding: (): boolean => now() < armsAt,

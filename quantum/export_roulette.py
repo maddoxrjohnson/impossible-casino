@@ -4,11 +4,13 @@ Run from the repo root: .venv/bin/python -m quantum.export_roulette
 
 The game only reaches the stages in roulette.reachable, because the house only
 plays its listed cards, so only those ship. Each stage's wheel is an exact
-Qiskit statevector, for the draft display and the house's play. Each complete
-draft also has sampled spins from two runs: an ideal Aer simulator, and Aer with
-a noise model built from IBM's stored fake_kingston calibration, pinned to that
-snapshot's quietest qubits for the circuit. Both are simulations, and the
-provenance says so. No chip has run this room.
+Qiskit statevector, for the draft display and the house's play. Its tiedPairs
+are the Tie pairs whose first qubit is mixed in that statevector, so entangled
+with its partner. Each complete draft also has sampled spins from two runs: an
+ideal Aer simulator, and Aer with a noise model built from IBM's stored
+fake_kingston calibration, pinned to that snapshot's quietest qubits for the
+circuit. Both are simulations, and the provenance says so. No chip has run this
+room.
 
 The noisy simulator keeps only the errors on the chosen qubits, which gives the
 same counts as the full model at a fraction of the cost.
@@ -43,6 +45,7 @@ from quantum.roulette import (
     POCKETS,
     QUBITS,
     SPIN_TURN,
+    TIE_PAIRS,
     TURNS,
     Draft,
     Solution,
@@ -56,6 +59,7 @@ from quantum.roulette import (
     player_random,
     reachable,
     solve,
+    tied_pairs,
     turn_of,
 )
 
@@ -90,9 +94,6 @@ CLEAR_BASIS = (
 )
 WHEELS_METHOD = "Qiskit Statevector probabilities of the draft so far, rounded to 12 decimal places"
 
-TIE_PAIRS: tuple[tuple[int, int], ...] = tuple(
-    sorted({pair for card in DECK if card.gate == "cz" for pair in card.targets})
-)
 FREE_QUBITS: tuple[int, ...] = tuple(
     q for q in range(QUBITS) if all(q not in pair for pair in TIE_PAIRS)
 )
@@ -394,6 +395,7 @@ def nodes_and_wheels(solution: Solution) -> tuple[list[dict[str, Any]], list[lis
             "turn": turn,
             "wheel": index[wheel],
             "value": solution.value[draft],
+            "tiedPairs": [list(pair) for pair in tied_pairs(draft)],
         }
         if turn == "house":
             node["houseCards"] = list(solution.house_cards[draft])

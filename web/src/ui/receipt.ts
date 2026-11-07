@@ -1,8 +1,11 @@
 // What a casino marker says about a run. Every value is read from the result and its provenance. No DOM.
 import type { CageBoard, ForgeAttempt } from '../game/cage';
 import { provenanceLabel, ticketSplit, type ChshResult, type Provenance } from '../game/results';
+import type { RouletteBoard, RouletteSpin } from '../game/roulette';
 import type { GameState, LastHand } from '../game/store';
+import type { SideName } from './hud';
 import { money, pct, signedAmount, type Limits } from './lines';
+import { oneIn } from './roulette-view';
 
 export type ReceiptRow = readonly [label: string, value: string];
 
@@ -101,13 +104,42 @@ export function wiesnerReceipt(forge: ForgeAttempt, board: CageBoard): Receipt {
   };
 }
 
-/** The marker for the room the player is in: the last forge in the Cage, the last run anywhere else. */
+export function rouletteReceipt(spin: RouletteSpin, board: RouletteBoard, stake: number): Receipt {
+  const { pocket, landed, won, delta, shots, landedShots, draft } = spin;
+  const p = board.provenance;
+  const qasm = board.circuit(draft);
+  if (!qasm) throw new Error(`No logical circuit for draft ${draft.join(',')}`);
+  const names = draft.map((card) => board.deck[card]?.name ?? `Card ${card}`);
+  return {
+    sub: 'Held at the Wheel: the shots your spin came from, and where they ran.',
+    circuitTitle: `Your draft: ${names.join(', ')}`,
+    qasm,
+    circuitNote: CIRCUIT_NOTE,
+    rows: [
+      ['Your spin', `Bet pocket ${pocket} at ${money(stake)}, landed on ${landed}: ${won ? 'won' : 'lost'} ${signedAmount(delta)}`],
+      ['Source', provenanceLabel(p)],
+      ['Backend', p.backend],
+      ...machineRows(p),
+      ['Shots', money(shots)],
+      ['Landed', `Pocket ${landed}: ${money(landedShots)} of ${money(shots)} shots`],
+      ['House limit', `${oneIn(board.houseLimit)} on one pocket against a perfect house, from the exact wheel`],
+      ['Job', p.jobId ?? 'None. Simulators take no job.'],
+      ['Software', software(p)],
+      ['Run date', p.date],
+    ],
+    stamp: stamp(p),
+  };
+}
+
+/** The marker for the room the player is in: the last forge in the Cage, the last spin at the Wheel, the last run anywhere else. */
 export function markerFor(
-  { result, last, forge }: Pick<GameState, 'result' | 'last' | 'forge'>,
-  inCage: boolean,
+  { result, last, forge, roulette }: Pick<GameState, 'result' | 'last' | 'forge' | 'roulette'>,
+  room: SideName | null,
   limits: Limits,
   board: CageBoard,
+  wheel: RouletteBoard,
 ): Receipt | null {
-  if (inCage) return forge ? wiesnerReceipt(forge, board) : null;
+  if (room === 'cage') return forge ? wiesnerReceipt(forge, board) : null;
+  if (room === 'roulette') return roulette?.spin ? rouletteReceipt(roulette.spin, wheel, roulette.stake) : null;
   return result ? chshReceipt(result, last, limits) : null;
 }

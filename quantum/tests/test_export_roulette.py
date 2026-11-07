@@ -11,6 +11,7 @@ import qiskit
 import qiskit_aer
 import qiskit_ibm_runtime
 from qiskit import QuantumCircuit, qasm2
+from qiskit.quantum_info import Statevector, entropy, partial_trace
 from qiskit_aer import AerSimulator
 from qiskit_ibm_runtime.fake_provider import FakeKingston
 
@@ -53,6 +54,7 @@ from quantum.roulette import (
     limit_pockets,
     reachable,
     solve,
+    tied_pairs,
     turn_of,
 )
 
@@ -204,13 +206,14 @@ def test_each_node_carries_its_turn_wheel_and_value(export, solution):
     for node in export["nodes"]:
         draft = tuple(node["draft"])
         turn = turn_of(draft)
-        keys = {"draft", "turn", "wheel", "value"}
+        keys = {"draft", "turn", "wheel", "value", "tiedPairs"}
         keys |= {"houseCards"} if turn == "house" else set()
         keys |= {"limitPockets"} if turn == "spin" else set()
         assert set(node) == keys
         assert node["turn"] == turn
         assert wheels[node["wheel"]] == list(solution.wheels[draft])
         assert node["value"] == solution.value[draft]
+        assert node["tiedPairs"] == [list(pair) for pair in tied_pairs(draft)]
         if turn == "house":
             assert node["houseCards"] == list(solution.house_cards[draft])
         if turn == "spin":
@@ -222,6 +225,26 @@ def test_each_node_carries_its_turn_wheel_and_value(export, solution):
 def test_stored_wheels_replay_from_a_fresh_statevector(committed, draft):
     node = next(n for n in committed["nodes"] if n["draft"] == list(draft))
     assert committed["wheels"][node["wheel"]] == list(exact_wheel(draft))
+
+
+def test_every_nodes_tied_pairs_match_its_statevector(committed):
+    for node in committed["nodes"]:
+        state = Statevector.from_instruction(draft_circuit(node["draft"], measure=False))
+        expected = [
+            list(pair)
+            for pair in TIE_PAIRS
+            if entropy(partial_trace(state, [q for q in range(5) if q != pair[0]])) > 1e-6
+        ]
+        assert node["tiedPairs"] == expected, node["draft"]
+
+
+@pytest.mark.parametrize(
+    "draft, pairs",
+    [([2, 0, 1, 4], [[1, 2]]), ([3, 0, 1, 5], [[1, 2]]), ([4, 0, 1, 2], [[3, 4]]), ([2, 3, 4, 0], [[3, 4]])],
+)
+def test_a_tie_after_the_sweep_is_not_exported_as_tied(committed, draft, pairs):
+    node = next(n for n in committed["nodes"] if n["draft"] == draft)
+    assert node["tiedPairs"] == pairs
 
 
 def test_wheels_are_probability_vectors(export):

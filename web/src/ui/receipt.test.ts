@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import chshJson from '../../public/data/chsh.v1.json';
 import wiesnerJson from '../../public/data/wiesner.v1.json';
+import rouletteJson from '../../public/data/roulette.v1.json';
 import {
   createPrerunSource,
   parseChshExport,
+  parseRouletteExport,
   parseWiesnerExport,
   type ChipProvenance,
   type ChshResult,
@@ -11,7 +13,8 @@ import {
 } from '../game/results';
 import { cageBoard, settleForge } from '../game/cage';
 import { withChipRuns } from '../game/chip';
-import { chshReceipt, markerFor, wiesnerReceipt } from './receipt';
+import { rouletteBoard, spinRound, type RouletteRound } from '../game/roulette';
+import { chshReceipt, markerFor, rouletteReceipt, wiesnerReceipt } from './receipt';
 
 /** Only the simulators, so these tests hold before and after a real chip run lands in the file. */
 const bareWiesner = { ...wiesnerJson, runs: wiesnerJson.runs.filter((run) => run.provenance.source !== 'ibm-chip') };
@@ -283,19 +286,79 @@ describe('wiesnerReceipt on a chip run', () => {
 
 describe('markerFor', () => {
   const board = cageBoard(exports.wiesner, 'ibm-noise-model');
+  const wheel = rouletteBoard(parseRouletteExport(rouletteJson));
 
-  it('shows the last forge in the cage and the last run everywhere else', async () => {
+  it('shows the last forge in the cage, the last spin at the wheel and the last run everywhere else', async () => {
     const result = await noisy.chsh(0.5);
     const forge = settleForge(await noisy.wiesner(3), 100, board.payoutStake, () => 0);
-    const state = { result, last: hand, forge };
-    expect(markerFor(state, true, limits, board)?.circuitTitle).toContain('3 qubits');
-    expect(markerFor(state, false, limits, board)?.circuitTitle).toContain('last hand');
+    const roulette = spinRound(wheel, spinTurn(wheel, LIMIT_LINE), 0, () => 0);
+    const state = { result, last: hand, forge, roulette };
+    expect(markerFor(state, 'cage', limits, board, wheel)?.circuitTitle).toContain('3 qubits');
+    expect(markerFor(state, null, limits, board, wheel)?.circuitTitle).toContain('last hand');
+    expect(markerFor(state, 'roulette', limits, board, wheel)?.circuitTitle).toContain('Your draft');
   });
 
   it('has nothing to show when that room has no result', async () => {
     const result = await noisy.chsh(0.5);
     const forge = settleForge(await noisy.wiesner(3), 100, board.payoutStake, () => 0);
-    expect(markerFor({ result, last: hand, forge: null }, true, limits, board)).toBeNull();
-    expect(markerFor({ result: null, last: null, forge }, false, limits, board)).toBeNull();
+    expect(markerFor({ result, last: hand, forge: null, roulette: null }, 'cage', limits, board, wheel)).toBeNull();
+    expect(markerFor({ result: null, last: null, forge, roulette: null }, null, limits, board, wheel)).toBeNull();
+    expect(markerFor({ result, last: hand, forge, roulette: spinTurn(wheel, LIMIT_LINE) }, 'roulette', limits, board, wheel)).toBeNull();
+  });
+});
+
+/** The line the export solves to the house limit. */
+const LIMIT_LINE = [2, 3, 4, 0];
+
+/** A round on its spin turn, read straight from the board's node. */
+function spinTurn(on: ReturnType<typeof rouletteBoard>, draft: readonly number[], stake = 100): RouletteRound {
+  const node = on.node(draft);
+  const wheel = on.wheel(draft);
+  if (node?.turn !== 'spin' || !wheel) throw new Error('not a spin turn');
+  return { stake, draft, turn: 'spin', wheel, best: node.value, spin: null };
+}
+
+describe('rouletteReceipt', () => {
+  const roulette = parseRouletteExport(rouletteJson);
+  const board = rouletteBoard(roulette);
+  const point = board.point(LIMIT_LINE);
+  const node = board.node(LIMIT_LINE);
+  const limitPocket = node?.turn === 'spin' ? (node.limitPockets[0] as number) : -1;
+  const at = (pocket: number) => (point?.counts.slice(0, pocket).reduce((sum, c) => sum + c, 0) ?? 0) / (point?.shots ?? 1);
+  const settled = (bet: number, lands: number, stake = 100) => {
+    const spin = spinRound(board, spinTurn(board, LIMIT_LINE, stake), bet, () => at(lands))?.spin;
+    if (!spin) throw new Error('refused spin');
+    return spin;
+  };
+
+  it('prints the logical circuit for the draft', () => {
+    const receipt = rouletteReceipt(settled(limitPocket, limitPocket), board, 100);
+    expect(receipt.qasm).toBe(board.circuit(LIMIT_LINE));
+    expect(receipt.circuitTitle).toBe('Your draft: Tie q1-q2, Tie q1-q2, Tie q3-q4, Sweep');
+  });
+
+  it('says the spin, its stake and its delta', () => {
+    const won = rouletteReceipt(settled(limitPocket, limitPocket, 200), board, 200);
+    expect(value(won, 'Your spin')).toBe(`Bet pocket ${limitPocket} at 200, landed on ${limitPocket}: won +560`);
+    const other = point?.counts.findIndex((c, i) => c > 0 && i !== limitPocket) ?? -1;
+    const lost = rouletteReceipt(settled(limitPocket, other), board, 100);
+    expect(value(lost, 'Your spin')).toBe(`Bet pocket ${limitPocket} at 100, landed on ${other}: lost −100`);
+  });
+
+  it('reads the run, its machine and the landed pocket’s shots from the export', () => {
+    const spin = settled(limitPocket, limitPocket);
+    const receipt = rouletteReceipt(spin, board, 100);
+    const p = board.provenance;
+    expect(value(receipt, 'Source')).toBe('Pre-run Qiskit simulator, fake_kingston noise model');
+    expect(value(receipt, 'Backend')).toBe(p.backend);
+    expect(value(receipt, 'Noise model')).toMatch(/^fake_kingston, calibrated /);
+    expect(value(receipt, 'Qubits')).toMatch(/^50, 20, 21, 105, 117 \(/);
+    expect(value(receipt, 'Shots')).toBe('8,192');
+    expect(value(receipt, 'Landed')).toBe(`Pocket ${limitPocket}: ${(point?.counts[limitPocket] ?? 0).toLocaleString('en-US')} of 8,192 shots`);
+    expect(value(receipt, 'House limit')).toContain('1 in 4');
+    expect(value(receipt, 'Job')).toMatch(/^None/);
+    expect(value(receipt, 'Software')).toBe('Qiskit 2.6.2, Aer 0.18.2');
+    expect(value(receipt, 'Run date')).toBe(p.date);
+    expect(receipt.stamp).toMatch(/never touched a chip/);
   });
 });

@@ -2,8 +2,9 @@
 import { BREAK_EVEN, winPayout } from '../game/rules';
 import type { ResultSource } from '../game/results';
 import type { ForgeAttempt } from '../game/cage';
+import type { RouletteSpin } from '../game/roulette';
 import type { GameState, Phase } from '../game/store';
-import type { Hud } from './hud';
+import type { Hud, SideName } from './hud';
 import { type LineKey, money, pct, signedAmount } from './lines';
 import { chipDials, dialFractions, dialNote, dialValueText, settledLine, sourceLine, stakeChoices, tableButtons, type TableMoment } from './table';
 
@@ -13,13 +14,15 @@ export interface HudSyncOptions {
   source: Pick<ResultSource, 'dials' | 'limits' | 'previewProvenance'>;
   lines: Record<LineKey, string>;
   /** Read on every sync, so the caller can lock the table or leave it for a side room. */
-  moment: () => TableMoment & { readonly inCage?: boolean };
+  /** `room` is the side room in view, if any. */
+  moment: () => TableMoment & { readonly room?: SideName | null };
 }
 
 export function createHudSync(hud: HudSurface, { source, lines, moment }: HudSyncOptions) {
   const LIMIT = pct(source.limits.classical), EVEN = pct(BREAK_EVEN);
   let lastPhase: Phase | null = null, lastBroke = false, lastBand: LineKey | '' = '', running = false, buttonKey = '', ticketFilled = false;
   let lastForge: ForgeAttempt | null = null, lastForging = false, cageCleared = false;
+  let lastSpin: RouletteSpin | null = null, wheelCleared = false;
   /** A forge can settle after the player has left the room, so its line is not tied to being there. */
   const forgeLine = (s: GameState): boolean => {
     const justCleared = !cageCleared && s.cleared.includes('cage');
@@ -30,6 +33,16 @@ export function createHudSync(hud: HudSurface, { source, lines, moment }: HudSyn
     else if (failed) hud.say(lines.forgeFailed);
     lastForge = s.forge; lastForging = s.forging;
     return settled || failed;
+  };
+  /** A spin settles at once, so its line follows the forge's. */
+  const spinLine = (s: GameState): boolean => {
+    const justCleared = !wheelCleared && s.cleared.includes('roulette');
+    wheelCleared = s.cleared.includes('roulette');
+    const spin = s.roulette?.spin ?? null;
+    const settled = spin !== null && spin !== lastSpin;
+    if (settled) hud.say(lines[s.broke ? 'broke' : justCleared ? 'rouletteClear' : spin.won ? 'spinWon' : 'spinLost']);
+    lastSpin = spin;
+    return settled;
   };
   return {
     sync: (s: GameState): void => {
@@ -54,8 +67,10 @@ export function createHudSync(hud: HudSurface, { source, lines, moment }: HudSyn
         hud.put('amt', signedAmount(l.delta));
         hud.put('delta', `last hand ${signedAmount(l.delta)}`);
       }
-      const p = s.phase, b = s.autoplaying, { locked: lock, inRoom, inCage = false } = moment();
-      if (inCage && s.forge) hud.put('delta', `last forge ${signedAmount(s.forge.delta)}`);
+      const p = s.phase, b = s.autoplaying, { locked: lock, inRoom, room = null } = moment();
+      const spin = s.roulette?.spin ?? null;
+      if (room === 'cage' && s.forge) hud.put('delta', `last forge ${signedAmount(s.forge.delta)}`);
+      else if (room === 'roulette' && spin) hud.put('delta', `last spin ${signedAmount(spin.delta)}`);
       else if (!s.last) hud.put('delta', '\u00a0');
       // A reloaded game has no last hand, and a run clears it, so the stub stays down until it has one to show.
       ticketFilled = p !== 'intro' && (ticketFilled || !!s.last);
@@ -64,20 +79,20 @@ export function createHudSync(hud: HudSurface, { source, lines, moment }: HudSyn
       if (p !== lastPhase || (lastBroke && !s.broke)) {
         hud.title(p === 'intro');
         if (p === 'intro' || p === 'classical' || p === 'wall') hud.colour(false);
-        hud.say(lines[inCage ? 'cage' : p]); lastBand = ''; running = false;
+        hud.say(lines[room ?? p]); lastBand = ''; running = false;
       }
       hud.dial((p === 'entangled' || p === 'beyond') && !lock && !inRoom && !s.broke);
       hud.dialLocked(b);
       hud.stakes(stakeChoices(s, lock || s.forging), s.stake);
       hud.source(inRoom ? null : sourceLine(s, preview));
-      const key = `${p}|${b}|${lock}|${inRoom}|${s.broke}|${!!s.result}|${inCage}|${!!s.forge}|${s.forging}`;
+      const key = `${p}|${b}|${lock}|${inRoom}|${s.broke}|${!!s.result}|${room}|${!!s.forge}|${s.forging}|${!!spin}`;
       if (buttonKey !== key) {
         buttonKey = key;
         const { main, alt } = tableButtons(s, { locked: lock, inRoom });
         hud.buttons(main, alt);
-        hud.stubs(p !== 'classical' && !b && !lock, inCage ? !!s.forge : !!s.result);
+        hud.stubs(p !== 'classical' && !b && !lock, room === 'cage' ? !!s.forge : room === 'roulette' ? !!spin : !!s.result);
       }
-      const spoke = forgeLine(s);
+      const forged = forgeLine(s), spun = spinLine(s), spoke = forged || spun;
       if (!b && !lock && !inRoom) {
         const owed = settledLine(s, running, source.limits, lastBand);
         // A phase line gets its moment first; only being broke overrides it at once.

@@ -4,12 +4,13 @@ import random
 
 import pytest
 from qiskit import QuantumCircuit
-from qiskit.quantum_info import Statevector
+from qiskit.quantum_info import Statevector, entropy, partial_trace
 
 from quantum.roulette import (
     DECK,
     POCKETS,
     QUBITS,
+    TIE_PAIRS,
     TURNS,
     WHEEL_DECIMALS,
     best_chance,
@@ -24,6 +25,7 @@ from quantum.roulette import (
     player_random,
     reachable,
     solve,
+    tied_pairs,
     turn_of,
 )
 
@@ -170,6 +172,52 @@ def test_a_spin_on_one_tied_qubit_leaves_the_pair_always_agreeing():
     for pocket, chance in enumerate(probabilities):
         agree = ((pocket >> 1) & 1) == ((pocket >> 2) & 1)
         assert (chance > 1e-12) == agree
+
+
+# Tied pairs
+
+
+def test_the_tie_pairs_are_the_tie_cards_pairs():
+    assert TIE_PAIRS == ((1, 2), (3, 4))
+
+
+def test_the_fair_wheel_has_no_tied_pair():
+    assert tied_pairs(()) == ()
+
+
+def test_a_tie_ties_its_pair():
+    assert tied_pairs((2,)) == ((1, 2),)
+
+
+def test_the_twin_tie_unties_the_pair():
+    assert tied_pairs((2, 3)) == ()
+
+
+def test_a_sweep_after_a_tie_keeps_the_pair_tied():
+    assert tied_pairs((2, SWEEP)) == ((1, 2),)
+
+
+def test_a_tie_on_a_pair_the_sweep_settled_ties_nothing():
+    """After a Sweep q3 and q4 sit at 0, where CZ does nothing."""
+    assert tied_pairs((SWEEP, 4)) == ()
+    assert tied_pairs((2, SWEEP, SPIN, 4)) == ((1, 2),)
+    assert tied_pairs((4, SWEEP, SPIN, 2)) == ((3, 4),)
+
+
+def test_tied_pairs_match_each_stages_statevector():
+    """A pair is tied when either of its qubits alone is mixed."""
+    for prefix in legal_prefixes():
+        state = Statevector.from_instruction(draft_circuit(prefix, measure=False))
+        expected = []
+        for pair in TIE_PAIRS:
+            mixed = [
+                entropy(partial_trace(state, [q for q in range(QUBITS) if q != qubit])) > 1e-6
+                for qubit in pair
+            ]
+            assert mixed[0] == mixed[1]
+            if mixed[0]:
+                expected.append(pair)
+        assert tied_pairs(prefix) == tuple(expected), prefix
 
 
 # The house's play

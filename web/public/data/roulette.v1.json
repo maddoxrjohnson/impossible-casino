@@ -383,6 +383,7 @@
    "turn": "house",
    "wheel": 0,
    "value": 0.25,
+   "tiedPairs": [],
    "houseCards": [
     2,
     3,
@@ -396,7 +397,13 @@
    ],
    "turn": "player",
    "wheel": 0,
-   "value": 0.25
+   "value": 0.25,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ]
   },
   {
    "draft": [
@@ -406,6 +413,12 @@
    "turn": "house",
    "wheel": 1,
    "value": 0.125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "houseCards": [
     1
    ]
@@ -418,7 +431,13 @@
    ],
    "turn": "player",
    "wheel": 2,
-   "value": 0.125
+   "value": 0.125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ]
   },
   {
    "draft": [
@@ -430,6 +449,7 @@
    "turn": "spin",
    "wheel": 2,
    "value": 0.125,
+   "tiedPairs": [],
    "limitPockets": []
   },
   {
@@ -442,6 +462,12 @@
    "turn": "spin",
    "wheel": 2,
    "value": 0.125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -454,6 +480,12 @@
    "turn": "spin",
    "wheel": 2,
    "value": 0.125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -464,6 +496,12 @@
    "turn": "house",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "houseCards": [
     4,
     5
@@ -477,7 +515,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -489,6 +537,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -501,6 +559,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -513,6 +577,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -523,7 +593,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -535,6 +615,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -547,6 +637,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -559,6 +655,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -569,6 +671,7 @@
    "turn": "house",
    "wheel": 0,
    "value": 0.25,
+   "tiedPairs": [],
    "houseCards": [
     4,
     5
@@ -582,7 +685,13 @@
    ],
    "turn": "player",
    "wheel": 0,
-   "value": 0.25
+   "value": 0.25,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -594,6 +703,12 @@
    "turn": "spin",
    "wheel": 4,
    "value": 0.25,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": [
     0,
     8,
@@ -611,6 +726,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -623,6 +744,7 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [],
    "limitPockets": []
   },
   {
@@ -633,7 +755,13 @@
    ],
    "turn": "player",
    "wheel": 0,
-   "value": 0.25
+   "value": 0.25,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -645,6 +773,12 @@
    "turn": "spin",
    "wheel": 4,
    "value": 0.25,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": [
     0,
     8,
@@ -662,6 +796,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -674,6 +814,7 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [],
    "limitPockets": []
   },
   {
@@ -684,6 +825,16 @@
    "turn": "house",
    "wheel": 0,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "houseCards": [
     0,
     1
@@ -697,7 +848,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -709,6 +870,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -721,6 +892,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -733,6 +910,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -743,7 +926,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -755,6 +948,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -767,6 +970,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -779,6 +988,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -789,6 +1004,16 @@
    "turn": "house",
    "wheel": 0,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "houseCards": [
     0,
     1
@@ -802,7 +1027,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -814,6 +1049,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -826,6 +1071,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -838,6 +1089,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -848,7 +1105,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -860,6 +1127,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -872,6 +1149,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -884,6 +1167,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -892,7 +1181,13 @@
    ],
    "turn": "player",
    "wheel": 0,
-   "value": 0.25
+   "value": 0.25,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ]
   },
   {
    "draft": [
@@ -902,6 +1197,12 @@
    "turn": "house",
    "wheel": 1,
    "value": 0.125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "houseCards": [
     1
    ]
@@ -914,7 +1215,13 @@
    ],
    "turn": "player",
    "wheel": 2,
-   "value": 0.125
+   "value": 0.125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ]
   },
   {
    "draft": [
@@ -926,6 +1233,7 @@
    "turn": "spin",
    "wheel": 2,
    "value": 0.125,
+   "tiedPairs": [],
    "limitPockets": []
   },
   {
@@ -938,6 +1246,12 @@
    "turn": "spin",
    "wheel": 2,
    "value": 0.125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -950,6 +1264,12 @@
    "turn": "spin",
    "wheel": 2,
    "value": 0.125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -960,6 +1280,12 @@
    "turn": "house",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "houseCards": [
     4,
     5
@@ -973,7 +1299,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -985,6 +1321,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -997,6 +1343,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1009,6 +1361,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1019,7 +1377,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1031,6 +1399,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1043,6 +1421,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1055,6 +1439,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1065,6 +1455,7 @@
    "turn": "house",
    "wheel": 0,
    "value": 0.25,
+   "tiedPairs": [],
    "houseCards": [
     4,
     5
@@ -1078,7 +1469,13 @@
    ],
    "turn": "player",
    "wheel": 0,
-   "value": 0.25
+   "value": 0.25,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1090,6 +1487,12 @@
    "turn": "spin",
    "wheel": 4,
    "value": 0.25,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": [
     0,
     8,
@@ -1107,6 +1510,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1119,6 +1528,7 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [],
    "limitPockets": []
   },
   {
@@ -1129,7 +1539,13 @@
    ],
    "turn": "player",
    "wheel": 0,
-   "value": 0.25
+   "value": 0.25,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1141,6 +1557,12 @@
    "turn": "spin",
    "wheel": 4,
    "value": 0.25,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": [
     0,
     8,
@@ -1158,6 +1580,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1170,6 +1598,7 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [],
    "limitPockets": []
   },
   {
@@ -1180,6 +1609,16 @@
    "turn": "house",
    "wheel": 0,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "houseCards": [
     0,
     1
@@ -1193,7 +1632,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1205,6 +1654,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1217,6 +1676,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1229,6 +1694,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1239,7 +1710,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1251,6 +1732,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1263,6 +1754,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1275,6 +1772,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1285,6 +1788,16 @@
    "turn": "house",
    "wheel": 0,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "houseCards": [
     0,
     1
@@ -1298,7 +1811,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1310,6 +1833,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1322,6 +1855,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1334,6 +1873,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1344,7 +1889,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1356,6 +1911,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1368,6 +1933,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1380,6 +1951,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1388,7 +1965,13 @@
    ],
    "turn": "player",
    "wheel": 0,
-   "value": 0.25
+   "value": 0.25,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1398,6 +1981,12 @@
    "turn": "house",
    "wheel": 4,
    "value": 0.125,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "houseCards": [
     1
    ]
@@ -1410,7 +1999,13 @@
    ],
    "turn": "player",
    "wheel": 5,
-   "value": 0.125
+   "value": 0.125,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1422,6 +2017,12 @@
    "turn": "spin",
    "wheel": 5,
    "value": 0.125,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1434,6 +2035,12 @@
    "turn": "spin",
    "wheel": 5,
    "value": 0.125,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1446,6 +2053,7 @@
    "turn": "spin",
    "wheel": 5,
    "value": 0.125,
+   "tiedPairs": [],
    "limitPockets": []
   },
   {
@@ -1456,6 +2064,12 @@
    "turn": "house",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "houseCards": [
     2,
     3
@@ -1469,7 +2083,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1481,6 +2105,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1493,6 +2127,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1505,6 +2145,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1515,7 +2161,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1527,6 +2183,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1539,6 +2205,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1551,6 +2223,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1561,6 +2239,16 @@
    "turn": "house",
    "wheel": 0,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "houseCards": [
     0,
     1
@@ -1574,7 +2262,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1586,6 +2284,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1598,6 +2306,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1610,6 +2324,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1620,7 +2340,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1632,6 +2362,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1644,6 +2384,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1656,6 +2402,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1666,6 +2418,16 @@
    "turn": "house",
    "wheel": 0,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "houseCards": [
     0,
     1
@@ -1679,7 +2441,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1691,6 +2463,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1703,6 +2485,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1715,6 +2503,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1725,7 +2519,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1737,6 +2541,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1749,6 +2563,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1761,6 +2581,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1771,6 +2597,7 @@
    "turn": "house",
    "wheel": 0,
    "value": 0.25,
+   "tiedPairs": [],
    "houseCards": [
     2,
     3
@@ -1784,7 +2611,13 @@
    ],
    "turn": "player",
    "wheel": 0,
-   "value": 0.25
+   "value": 0.25,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ]
   },
   {
    "draft": [
@@ -1796,6 +2629,12 @@
    "turn": "spin",
    "wheel": 1,
    "value": 0.25,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": [
     0,
     2,
@@ -1813,6 +2652,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1825,6 +2670,7 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [],
    "limitPockets": []
   },
   {
@@ -1835,7 +2681,13 @@
    ],
    "turn": "player",
    "wheel": 0,
-   "value": 0.25
+   "value": 0.25,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ]
   },
   {
    "draft": [
@@ -1847,6 +2699,12 @@
    "turn": "spin",
    "wheel": 1,
    "value": 0.25,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": [
     0,
     2,
@@ -1864,6 +2722,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1876,6 +2740,7 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [],
    "limitPockets": []
   },
   {
@@ -1884,7 +2749,13 @@
    ],
    "turn": "player",
    "wheel": 0,
-   "value": 0.25
+   "value": 0.25,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1894,6 +2765,12 @@
    "turn": "house",
    "wheel": 4,
    "value": 0.125,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "houseCards": [
     1
    ]
@@ -1906,7 +2783,13 @@
    ],
    "turn": "player",
    "wheel": 5,
-   "value": 0.125
+   "value": 0.125,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1918,6 +2801,12 @@
    "turn": "spin",
    "wheel": 5,
    "value": 0.125,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1930,6 +2819,12 @@
    "turn": "spin",
    "wheel": 5,
    "value": 0.125,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1942,6 +2837,7 @@
    "turn": "spin",
    "wheel": 5,
    "value": 0.125,
+   "tiedPairs": [],
    "limitPockets": []
   },
   {
@@ -1952,6 +2848,12 @@
    "turn": "house",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "houseCards": [
     2,
     3
@@ -1965,7 +2867,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -1977,6 +2889,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -1989,6 +2911,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2001,6 +2929,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2011,7 +2945,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -2023,6 +2967,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2035,6 +2989,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2047,6 +3007,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2057,6 +3023,16 @@
    "turn": "house",
    "wheel": 0,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "houseCards": [
     0,
     1
@@ -2070,7 +3046,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -2082,6 +3068,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2094,6 +3090,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2106,6 +3108,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2116,7 +3124,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -2128,6 +3146,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2140,6 +3168,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2152,6 +3186,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2162,6 +3202,16 @@
    "turn": "house",
    "wheel": 0,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "houseCards": [
     0,
     1
@@ -2175,7 +3225,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -2187,6 +3247,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2199,6 +3269,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2211,6 +3287,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2221,7 +3303,17 @@
    ],
    "turn": "player",
    "wheel": 3,
-   "value": 0.0625
+   "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ]
   },
   {
    "draft": [
@@ -2233,6 +3325,16 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ],
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2245,6 +3347,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     3,
+     4
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2257,6 +3365,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2267,6 +3381,7 @@
    "turn": "house",
    "wheel": 0,
    "value": 0.25,
+   "tiedPairs": [],
    "houseCards": [
     2,
     3
@@ -2280,7 +3395,13 @@
    ],
    "turn": "player",
    "wheel": 0,
-   "value": 0.25
+   "value": 0.25,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ]
   },
   {
    "draft": [
@@ -2292,6 +3413,12 @@
    "turn": "spin",
    "wheel": 1,
    "value": 0.25,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": [
     0,
     2,
@@ -2309,6 +3436,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2321,6 +3454,7 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [],
    "limitPockets": []
   },
   {
@@ -2331,7 +3465,13 @@
    ],
    "turn": "player",
    "wheel": 0,
-   "value": 0.25
+   "value": 0.25,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ]
   },
   {
    "draft": [
@@ -2343,6 +3483,12 @@
    "turn": "spin",
    "wheel": 1,
    "value": 0.25,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": [
     0,
     2,
@@ -2360,6 +3506,12 @@
    "turn": "spin",
    "wheel": 3,
    "value": 0.0625,
+   "tiedPairs": [
+    [
+     1,
+     2
+    ]
+   ],
    "limitPockets": []
   },
   {
@@ -2372,6 +3524,7 @@
    "turn": "spin",
    "wheel": 0,
    "value": 0.03125,
+   "tiedPairs": [],
    "limitPockets": []
   }
  ],

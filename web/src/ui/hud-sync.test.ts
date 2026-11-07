@@ -1,11 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import chshJson from '../../public/data/chsh.v1.json';
 import wiesnerJson from '../../public/data/wiesner.v1.json';
-import { createPrerunSource, parseChshExport, parseWiesnerExport } from '../game/results';
+import rouletteJson from '../../public/data/roulette.v1.json';
+import { createPrerunSource, parseChshExport, parseRouletteExport, parseWiesnerExport } from '../game/results';
+import { rouletteBoard } from '../game/roulette';
 import { HAND_MS, type Rng } from '../game/rules';
 import { SAVE_KEY } from '../game/save';
 import { createGameStore, type GameStore, type Phase } from '../game/store';
-import type { HudButton } from './hud';
+import type { HudButton, SideName } from './hud';
 import { createHudSync, type HudSurface } from './hud-sync';
 import { createLines } from './lines';
 
@@ -278,7 +280,7 @@ describe('createHudSync in the cage', () => {
   function cage({ save, rng = pass, wiesner = (length: number) => source.wiesner(length) }: { save?: object; rng?: Rng; wiesner?: typeof source.wiesner } = {}) {
     const store = createGameStore({ source: { ...source, wiesner }, rng, storage: memoryStorage(save ?? { version: 1, bankroll: 9000, phase: 'entangled', dial: 0.5, stake: 100, cleared: [] }) });
     const { hud, seen } = fakeHud();
-    const moment = { locked: false, inRoom: true, inCage: true };
+    const moment = { locked: false, inRoom: true, room: 'cage' as SideName | null };
     store.subscribe(createHudSync(hud, { source, lines: LINES, moment: () => moment }).sync);
     return { store, seen, moment };
   }
@@ -287,7 +289,7 @@ describe('createHudSync in the cage', () => {
     let settle: (result: Awaited<ReturnType<typeof source.wiesner>>) => void = () => undefined;
     const held = () => new Promise<Awaited<ReturnType<typeof source.wiesner>>>((resolve) => { settle = resolve; });
     const { store, seen, moment } = cage({ wiesner: held });
-    moment.inRoom = false; moment.inCage = false;
+    moment.inRoom = false; moment.room = null;
     store.setStake(200);
     expect(seen.main.disabled).toBeFalsy();
     expect(seen.stakesDisabled).toEqual([false, false, false, false]);
@@ -304,7 +306,7 @@ describe('createHudSync in the cage', () => {
 
   it('hands the table back when a forge fails', async () => {
     const { store, seen, moment } = cage({ wiesner: () => Promise.reject(new Error('down')) });
-    moment.inRoom = false; moment.inCage = false;
+    moment.inRoom = false; moment.room = null;
     await store.forge(1, PAYS);
     expect(seen.main.disabled).toBeFalsy();
   });
@@ -356,7 +358,7 @@ describe('createHudSync in the cage', () => {
 
   it('says nothing about a forge dropped by a restart', async () => {
     const { store, seen, moment } = cage({ save: { version: 1, bankroll: 9000, phase: 'beyond', dial: 0.5, stake: 100, cleared: ['tables'] } });
-    moment.inRoom = false; moment.inCage = false;
+    moment.inRoom = false; moment.room = null;
     void store.forge(1, PAYS);
     store.restart();
     await vi.waitFor(() => { expect(said(seen)).toBe(LINES.intro); });
@@ -365,7 +367,7 @@ describe('createHudSync in the cage', () => {
   it('reports a result that lands after the player left', async () => {
     const { store, seen, moment } = cage();
     const forged = store.forge(1, PAYS);
-    moment.inRoom = false; moment.inCage = false;
+    moment.inRoom = false; moment.room = null;
     await forged;
     expect(said(seen)).toBe(LINES.forged);
   });
@@ -374,7 +376,7 @@ describe('createHudSync in the cage', () => {
     const { store, seen, moment } = cage();
     await store.forge(1, PAYS);
     expect(seen.plaque.get('delta')).toBe('last forge +25');
-    moment.inRoom = false; moment.inCage = false;
+    moment.inRoom = false; moment.room = null;
     store.setStake(200);
     expect(seen.plaque.get('delta')).toBe('\u00a0');
   });
@@ -384,26 +386,105 @@ describe('createHudSync in the cage', () => {
     expect(seen.receipt).toBe(false);
     await store.forge(1, PAYS);
     expect(seen.receipt).toBe(true);
-    moment.inRoom = false; moment.inCage = false;
+    moment.inRoom = false; moment.room = null;
     store.setStake(200);
     expect(seen.receipt).toBe(false);
   });
 
   it('keeps the table run behind the stub in the cage only when a forge exists', async () => {
     const { store, seen, moment } = cage();
-    moment.inRoom = false; moment.inCage = false;
+    moment.inRoom = false; moment.room = null;
     await store.run(1);
     await vi.waitFor(() => { expect(store.state.autoplaying).toBe(false); });
     expect(seen.receipt).toBe(true);
-    moment.inRoom = true; moment.inCage = true;
+    moment.inRoom = true; moment.room = 'cage';
     store.setStake(200);
     expect(seen.receipt).toBe(false);
   });
 
   it('keeps the receipt off outside the Cage after a forge, while the table has no run', async () => {
     const { store, seen, moment } = cage();
-    moment.inCage = false;
+    moment.room = null;
     await store.forge(1, PAYS);
     expect(seen.receipt).toBe(false);
+  });
+});
+
+describe('createHudSync at the wheel', () => {
+  const board = rouletteBoard(parseRouletteExport(rouletteJson));
+  /** The line the export solves to the house limit. */
+  const LIMIT_LINE = [2, 3, 4, 0];
+  const node = board.node(LIMIT_LINE);
+  const limitPocket = node?.turn === 'spin' ? (node.limitPockets[0] as number) : -1;
+  const point = board.point(LIMIT_LINE);
+  const other = point?.counts.findIndex((c, i) => c > 0 && i !== limitPocket) ?? -1;
+  const at = (pocket: number) => (point?.counts.slice(0, pocket).reduce((sum, c) => sum + c, 0) ?? 0) / (point?.shots ?? 1);
+
+  /** The rng answers the house with the limit line, then lands the spin on `lands`. */
+  function wheel({ lands = limitPocket, save }: { lands?: number; save?: object } = {}) {
+    let draw = 0;
+    const store = createGameStore({ source, rng: () => draw, storage: memoryStorage(save ?? { version: 1, bankroll: 9000, phase: 'entangled', dial: 0.5, stake: 100, cleared: [] }) });
+    const { hud, seen } = fakeHud();
+    const moment = { locked: false, inRoom: true, room: 'roulette' as SideName | null };
+    store.subscribe(createHudSync(hud, { source, lines: LINES, moment: () => moment }).sync);
+    const house = (at: readonly number[], card: number) => {
+      const n = board.node(at);
+      if (n?.turn === 'house') draw = (n.houseCards.indexOf(card) + 0.5) / n.houseCards.length;
+    };
+    const play = () => {
+      house([], 2);
+      store.rouletteOpen(board);
+      house([2, 3], 4);
+      store.roulettePlay(board, 3);
+      store.roulettePlay(board, 0);
+      draw = at(lands);
+      store.rouletteSpin(board, limitPocket);
+    };
+    return { store, seen, moment, play };
+  }
+
+  it('says the room is cleared the first time, then won', () => {
+    const { seen, play } = wheel();
+    play();
+    expect(said(seen)).toBe(LINES.rouletteClear);
+    play();
+    expect(said(seen)).toBe(LINES.spinWon);
+  });
+
+  it('says lost', () => {
+    const { seen, play } = wheel({ lands: other });
+    play();
+    expect(said(seen)).toBe(LINES.spinLost);
+  });
+
+  it('says broke over the spin line when the spin took the last chips', () => {
+    const { seen, play } = wheel({ lands: other, save: { version: 1, bankroll: 100, phase: 'entangled', dial: 0.5, stake: 100, cleared: [] } });
+    play();
+    expect(said(seen)).toBe(LINES.broke);
+  });
+
+  it('shows the last spin on the plaque at the wheel, and turns the receipt on for it', () => {
+    const { store, seen, moment, play } = wheel({ lands: other });
+    expect(seen.receipt).toBe(false);
+    play();
+    expect(seen.plaque.get('delta')).toBe('last spin −100');
+    expect(seen.receipt).toBe(true);
+    moment.inRoom = false; moment.room = null;
+    store.rouletteLeave();
+    expect(seen.plaque.get('delta')).toBe('\u00a0');
+    expect(seen.receipt).toBe(false);
+  });
+
+  it('keeps the receipt off while a draft is open', () => {
+    const { store, seen } = wheel();
+    store.rouletteOpen(board);
+    expect(seen.receipt).toBe(false);
+  });
+
+  it('says the room line on a restart that keeps the phase', () => {
+    const { store, seen, play } = wheel({ lands: other, save: { version: 1, bankroll: 100, phase: 'intro', dial: 0.5, stake: 100, cleared: [] } });
+    play();
+    store.restart();
+    expect(said(seen)).toBe(LINES.roulette);
   });
 });

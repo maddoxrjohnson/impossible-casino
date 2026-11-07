@@ -5,7 +5,8 @@ import { cageBoard, type ForgeAttempt } from './game/cage';
 import { withChipRuns } from './game/chip';
 import { createLiveSource } from './game/live';
 import { createChipPress, pressStorage, withPressedRun } from './game/press';
-import { createPrerunSource, loadExports } from './game/results';
+import { createPrerunSource, loadExports, loadRoulette } from './game/results';
+import { rouletteBoard, type RouletteSpin } from './game/roulette';
 import { STAKES } from './game/rules';
 import { createGameStore } from './game/store';
 import { showFallback } from './ui/fallback';
@@ -65,10 +66,11 @@ async function boot(root: HTMLElement): Promise<void> {
   let close = (): void => undefined;
   try {
     // Loaded on demand so the first paint is the loading state, not a wait for Three.js.
-    const [{ createStage }, { createDecoView, STAGE_LABELS }, exports] = await Promise.all([
+    const [{ createStage }, { createDecoView, STAGE_LABELS }, exports, rouletteExport] = await Promise.all([
       import('./render/stage'),
       import('./world/deco/view'),
       loadExports(),
+      loadRoulette(),
       waitForFonts(),
     ]);
     const apiUrl = import.meta.env.VITE_API_URL as string | undefined;
@@ -80,6 +82,7 @@ async function boot(root: HTMLElement): Promise<void> {
     const store = createGameStore({ source });
     const audio = createAudio();
     const cage = cageBoard(exports.wiesner, RUN_ID);
+    const wheel = rouletteBoard(rouletteExport);
     const actions: Record<HudAction, () => void> = {
       deal: () => {
         store.deal();
@@ -115,14 +118,31 @@ async function boot(root: HTMLElement): Promise<void> {
         // As with the dial, a refused stake does not emit.
         hud.stakes(stakeChoices(store.state, store.state.forging), store.state.stake);
         hud.cage(store.state);
+        hud.roulette(store.state);
       },
       onSound: (on) => {
         audio.set(on);
       },
-      onReceipt: (inCage) => markerFor(store.state, inCage, source.limits, cage),
+      onReceipt: (room) => markerFor(store.state, room, source.limits, cage, wheel),
       cage,
       onForge: (length) => {
         void store.forge(length, cage.payoutStake);
+      },
+      roulette: {
+        board: wheel,
+        text: rouletteExport,
+        onOpen: () => {
+          store.rouletteOpen(wheel);
+        },
+        onPlay: (card) => {
+          store.roulettePlay(wheel, card);
+        },
+        onSpin: (pocket) => {
+          store.rouletteSpin(wheel, pocket);
+        },
+        onLeave: () => {
+          store.rouletteLeave();
+        },
       },
     });
     // Only the owner's ?owner visit shows the button. A job left from one still shows its status.
@@ -137,10 +157,15 @@ async function boot(root: HTMLElement): Promise<void> {
     });
     press.resume();
     let heard: ForgeAttempt | null = null;
+    let heardSpin: RouletteSpin | null = null;
     store.subscribe((state) => {
       hud.cage(state);
+      hud.roulette(state);
       if (state.forge && state.forge !== heard) audio.tick(state.forge.passed);
       heard = state.forge;
+      const spin = state.roulette?.spin ?? null;
+      if (spin && spin !== heardSpin) audio.tick(spin.won);
+      heardSpin = spin;
     });
 
     let closed = false;

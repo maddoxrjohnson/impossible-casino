@@ -16,10 +16,10 @@ describe('the room list', () => {
     ]);
   });
 
-  it('lists the Roulette Wheel but has not opened it yet', () => {
+  it('has every room open', () => {
     expect(roomInfo('tables').open).toBe(true);
     expect(roomInfo('cage').open).toBe(true);
-    expect(roomInfo('roulette').open).toBe(false);
+    expect(roomInfo('roulette').open).toBe(true);
   });
 
   it('puts the elevator stops top to bottom of the fridge, warmest first', () => {
@@ -42,19 +42,19 @@ describe('the suggested next stop', () => {
     expect(nextStop(['cage'])).toBe('tables');
   });
 
-  it('skips a room that is not open yet, and has nothing left once the open rooms are cleared', () => {
-    expect(nextStop(['tables', 'cage'])).toBeNull();
-    expect(nextStop(['cage', 'tables'])).toBeNull();
+  it('goes on to the Roulette Wheel, and has nothing left once every room is cleared', () => {
+    expect(nextStop(['tables', 'cage'])).toBe('roulette');
+    expect(nextStop(['cage', 'tables', 'roulette'])).toBeNull();
   });
 
-  it('offers a room once it opens', () => {
-    const open = ROOM_LIST.map((room) => ({ ...room, open: true }));
-    expect(nextStop(['tables', 'cage'], open)).toBe('roulette');
-    expect(nextStop(['tables', 'cage', 'roulette'], open)).toBeNull();
+  it('skips a room that is not open', () => {
+    const shut = ROOM_LIST.map((room) => (room.id === 'roulette' ? { ...room, open: false } : room));
+    expect(nextStop(['tables', 'cage'], shut)).toBeNull();
   });
 
   it('can be limited to the rooms a surface can reach', () => {
-    expect(nextStop(['tables'], ROOM_LIST, (room) => room !== 'cage')).toBeNull();
+    expect(nextStop(['tables'], ROOM_LIST, (room) => room !== 'cage')).toBe('roulette');
+    expect(nextStop(['tables'], ROOM_LIST, (room) => room === 'tables')).toBeNull();
   });
 });
 

@@ -81,7 +81,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
   // ---- HUD logic ----
   const story = { locked: false };
   let side: SideName | null = null;
-  const { sync: hudSync, clearBand } = createHudSync(hud, { source, lines: LINES, moment: () => ({ locked: story.locked, inRoom: !!side, inCage: side === 'cage' }) });
+  const { sync: hudSync, clearBand } = createHudSync(hud, { source, lines: LINES, moment: () => ({ locked: story.locked, inRoom: !!side, room: side }) });
 
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.NoToneMapping; // the final pass develops the film
@@ -373,7 +373,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
   const onDown = (e: PointerEvent) => { downAt = [e.clientX, e.clientY]; };
   const onUp = (e: PointerEvent) => {
     if (!downAt || Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]) > 8) return;
-    if (e.target instanceof Element && e.target.closest('button, input, .dc-receipt, .dc-cage')) return;
+    if (e.target instanceof Element && e.target.closest('button, input, .dc-receipt, .dc-cage, .dc-roulette')) return;
     if (side) { closeSide(); return; }
     const n = clickable() ? hit(e) : null;
     if (n) openSide(n);

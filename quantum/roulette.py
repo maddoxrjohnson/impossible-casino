@@ -50,7 +50,7 @@ from dataclasses import dataclass
 
 import numpy as np
 from qiskit import ClassicalRegister, QuantumCircuit, QuantumRegister
-from qiskit.quantum_info import DensityMatrix, Kraus, Statevector
+from qiskit.quantum_info import DensityMatrix, Kraus, Statevector, partial_trace
 
 QUBITS = 5
 POCKETS = 2**QUBITS
@@ -84,6 +84,11 @@ DECK: tuple[Card, ...] = (
     Card("tie-12-b", "Tie q1-q2", "cz", ((1, 2),)),
     Card("tie-34-a", "Tie q3-q4", "cz", ((3, 4),)),
     Card("tie-34-b", "Tie q3-q4", "cz", ((3, 4),)),
+)
+
+
+TIE_PAIRS: tuple[tuple[int, int], ...] = tuple(
+    sorted({pair for card in DECK if card.gate == "cz" for pair in card.targets})
 )
 
 
@@ -137,6 +142,20 @@ def exact_wheel(draft: Sequence[int]) -> tuple[float, ...]:
     """Each pocket's chance after the draft so far, from a Qiskit statevector."""
     probabilities = Statevector.from_instruction(draft_circuit(draft, measure=False)).probabilities()
     return tuple(round(float(p), WHEEL_DECIMALS) for p in probabilities)
+
+
+def tied_pairs(draft: Sequence[int]) -> tuple[tuple[int, int], ...]:
+    """The Tie pairs entangled after the draft so far, from a Qiskit statevector.
+
+    A pair is tied when its first qubit, traced out alone, is a mixed state.
+    """
+    state = Statevector.from_instruction(draft_circuit(draft, measure=False))
+    tied = []
+    for pair in TIE_PAIRS:
+        reduced = partial_trace(state, [q for q in range(QUBITS) if q != pair[0]])
+        if reduced.purity().real < 1 - TOLERANCE:
+            tied.append(pair)
+    return tuple(tied)
 
 
 def best_chance(wheel: Sequence[float]) -> float:

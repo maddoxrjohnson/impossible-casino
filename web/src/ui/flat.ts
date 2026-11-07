@@ -4,7 +4,7 @@ import { BREAK_EVEN, type RoomId } from '../game/rules';
 import type { ResultSource } from '../game/results';
 import type { GameStore } from '../game/store';
 import { showFallback } from './fallback';
-import type { Hud } from './hud';
+import type { Hud, SideName } from './hud';
 import { createHudSync } from './hud-sync';
 import { createLines, pct } from './lines';
 import { flatFloor, flatHand, flatRate, type FlatHand } from './table';
@@ -19,7 +19,7 @@ export interface FlatTableOptions {
 
 const BLANK = '–';
 /** The rooms with a view that needs no building. A new room joins the elevator here once it has one. */
-const FLAT_ROOMS: readonly RoomId[] = ['tables', 'cage'];
+const FLAT_ROOMS: readonly RoomId[] = ['tables', 'cage', 'roulette'];
 
 function seat(name: string) {
   const box = document.createElement('div');
@@ -55,18 +55,18 @@ export function createFlatTable(root: HTMLElement, { store, source, hud, audio, 
   const fill = felt.querySelector('.dc-bar-fill') as HTMLElement;
 
   // Story beats belong to the 3D view. Here the next control is always ready.
-  const moment = { locked: false, inRoom: false, inCage: false };
+  const moment = { locked: false, inRoom: false, room: null as SideName | null };
   const lines = createLines(limits);
   const { sync, clearBand } = createHudSync(hud, { source, lines, moment: () => moment });
 
-  // The Cage is the one room that needs no building, so it opens over the same HUD. A room with no flat view is ignored.
+  // The side rooms are panels, so they open over the same HUD. A room with no flat view is ignored.
   hud.setSide((name) => {
-    if (name !== 'back' && name !== 'cage') return;
-    const enter = name === 'cage';
-    if (enter === moment.inCage) return;
-    moment.inRoom = moment.inCage = enter;
-    hud.side(enter ? 'cage' : null);
-    hud.say(enter ? lines.cage : lines[store.state.phase]);
+    const next = name === 'back' ? null : name;
+    if ((next && !FLAT_ROOMS.includes(next)) || next === moment.room) return;
+    moment.room = next;
+    moment.inRoom = !!next;
+    hud.side(next);
+    hud.say(next ? lines[next] : lines[store.state.phase]);
     clearBand();
     sync(store.state);
   });

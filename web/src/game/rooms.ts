@@ -16,7 +16,7 @@ export interface RoomInfo {
 export const ROOM_LIST: readonly RoomInfo[] = [
   { id: 'tables', name: 'The Impossible Tables', stage: '15 mK', kelvin: 0.015, open: true },
   { id: 'cage', name: "The Cashier's Cage", stage: '4 K', kelvin: 4, open: true },
-  { id: 'roulette', name: 'The Roulette Wheel', stage: '800 mK', kelvin: 0.8, open: false },
+  { id: 'roulette', name: 'The Roulette Wheel', stage: '800 mK', kelvin: 0.8, open: true },
 ];
 
 /** How much colour the whole casino shows, by the number of rooms cleared. None until the first. */

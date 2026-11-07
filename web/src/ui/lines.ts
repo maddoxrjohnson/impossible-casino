@@ -8,7 +8,7 @@ export interface Limits {
 }
 
 export type Band = 'low' | 'over' | 'even' | 'best';
-export type LineKey = Phase | Band | 'short' | 'cold' | 'past' | 'covered' | 'misdeal' | 'broke' | 'cage' | 'forged' | 'caught' | 'cageClear' | 'forgeFailed' | 'roulette';
+export type LineKey = Phase | Band | 'short' | 'cold' | 'past' | 'covered' | 'misdeal' | 'broke' | 'cage' | 'forged' | 'caught' | 'cageClear' | 'forgeFailed' | 'roulette' | 'spinWon' | 'spinLost' | 'rouletteClear';
 
 /** Where the best band starts, as a share of the span from break-even to the quantum limit. */
 const BEST_SHARE = 0.75;
@@ -58,7 +58,10 @@ export function createLines(limits: Limits): Record<LineKey, string> {
     caught: 'Caught. You had to guess how to read the honest one, and the teller\'s check found what the guessing left behind. He keeps the stake.',
     cageClear: 'Few chips that long get past him, and yours did. The Cage is cleared. He will still take your bets.',
     forgeFailed: 'The wire went quiet and the teller never saw it. Nothing left your stack. Try again.',
-    roulette: 'The Roulette Wheel, 800 mK. It has not stopped since 1926. Another night.',
+    roulette: 'The Roulette Wheel, 800 mK. The house spins it fair, then you and the house lay four cards on it in turn, and you bet on one pocket last. Your cards gather the wheel onto fewer pockets and the house spreads it, but a Tie looks like nothing until a Sweep cannot settle it.',
+    spinWon: 'It landed where you said. The house pays straight up, and it still expects the odds to come home.',
+    spinLost: 'It landed somewhere else. A gathered wheel only shortens the odds, and the house keeps the stake.',
+    rouletteClear: 'The best line, then the pocket at the limit. The Wheel is cleared. The house will still spin for you.',
   };
 }
 

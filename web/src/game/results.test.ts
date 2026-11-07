@@ -640,7 +640,12 @@ describe('loadExports', () => {
 interface LooseRoulette extends Record<string, unknown> {
   deck: Record<string, unknown>[];
   wheels: number[][];
-  nodes: (Record<string, unknown> & { draft: number[]; houseCards?: number[]; limitPockets?: number[] })[];
+  nodes: (Record<string, unknown> & {
+    draft: number[];
+    houseCards?: number[];
+    limitPockets?: number[];
+    tiedPairs: number[][];
+  })[];
   logicalCircuits: { draft: number[]; qasm: string }[];
   runs: (Omit<LooseRun, 'points'> & { points: { draft: number[]; shots: number; counts: number[] }[] })[];
   payouts: { table: Record<string, unknown>[] } & Record<string, unknown>;
@@ -684,6 +689,16 @@ describe('parseRouletteExport', () => {
     expect(spins.every((n) => n.turn === 'spin' && n.draft.length === 4)).toBe(true);
   });
 
+  it('reads the tied pairs Qiskit found at each node', () => {
+    const at = (draft: number[]) => roulette.nodes.find((n) => n.draft.join(',') === draft.join(','));
+    expect(at([])?.tiedPairs).toEqual([]);
+    expect(at([2])?.tiedPairs).toEqual([[1, 2]]);
+    expect(at([2, 3])?.tiedPairs).toEqual([]);
+    expect(at([2, 3, 4, 0])?.tiedPairs).toEqual([[3, 4]]);
+    // A Tie on a pair the Sweep settled leaves it untied.
+    expect(at([2, 0, 1, 4])?.tiedPairs).toEqual([[1, 2]]);
+  });
+
   it.each<[string, (d: LooseRoulette) => void, RegExp]>([
     ['bad version', (d) => (d.schemaVersion = 2), /schemaVersion/],
     ['wrong experiment', (d) => (d.experiment = 'chsh'), /experiment/],
@@ -699,6 +714,11 @@ describe('parseRouletteExport', () => {
     ['a house card with no node after it', (d) => d.nodes.splice(d.nodes.indexOf(nodeAt(d, [2])), 1), /no node/],
     ['a spin node with no limit pockets', (d) => Reflect.deleteProperty(nodeAt(d, [2, 3, 4, 0]), 'limitPockets'), /limitPockets/],
     ['a limit pocket off the wheel', (d) => (nodeAt(d, [2, 3, 4, 0]).limitPockets = [32]), /limitPockets/],
+    ['a node with no tied pairs', (d) => Reflect.deleteProperty(nodeAt(d, [2]), 'tiedPairs'), /tiedPairs/],
+    ['a tied pair off the deck', (d) => (nodeAt(d, [2]).tiedPairs = [[0, 1]]), /tiedPairs/],
+    ['a tied pair of one qubit', (d) => (nodeAt(d, [2]).tiedPairs = [[1]]), /tiedPairs/],
+    ['tied pairs out of order', (d) => (nodeAt(d, [2]).tiedPairs = [[3, 4], [1, 2]]), /tiedPairs/],
+    ['a tied pair twice', (d) => (nodeAt(d, [2]).tiedPairs = [[1, 2], [1, 2]]), /tiedPairs/],
     ['a play run that does not exist', (d) => (d.playRun = 'chip'), /playRun/],
     ['counts not summing', (d) => (d.runs[1]!.points[0]!.counts[0]! += 1), /shots/],
     ['a negative count', (d) => (d.runs[1]!.points[0]!.counts[0] = -1), /counts/],
