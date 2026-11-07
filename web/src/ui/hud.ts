@@ -1,5 +1,7 @@
 // The DOM over the film: brass plaques, a lift dial, intertitles and ticket stubs. A hotel floor indicator over a noir title card.
-export type HudKey = 'bank' | 'delta' | 'rate' | 'hands' | 'limit' | 'even' | 'odds' | 'tt' | 'x' | 'y' | 'a' | 'b' | 'res' | 'amt';
+import type { StakeChoice } from './table';
+
+export type HudKey = 'bank' | 'delta' | 'rate' | 'hands' | 'limit' | 'even' | 'odds' | 'pays' | 'tt' | 'x' | 'y' | 'a' | 'b' | 'res' | 'amt';
 export type HudAction = 'deal' | 'entangle' | 'run' | 'restart';
 export type SideName = 'cage' | 'wheel';
 
@@ -14,8 +16,10 @@ export interface HudOptions {
   stages: readonly string[];
   /** The slider's range and step, matching the exported dial grid. */
   dial: { min: number; max: number; step: number };
+  stakes: readonly number[];
   onAction: (action: HudAction) => void;
   onDial: (value: number) => void;
+  onStake: (value: number) => void;
   onSound: (on: boolean) => void;
 }
 
@@ -26,7 +30,7 @@ const svg = (tag: string, attrs: Record<string, string | number>, parent?: Eleme
 const LIFT_A = (i: number) => -76 + i * 38;   // stage angle in degrees either side of straight up
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
 
-export function createHud(root: HTMLElement, { stages, dial: dialRange, onAction, onDial, onSound }: HudOptions) {
+export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, onAction, onDial, onStake, onSound }: HudOptions) {
   root.classList.add('deco');
 
   const hud = el('div', 'dc-hud');
@@ -46,7 +50,8 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, onAction
   const base = el('div', 'dc-base');
   const card = el('div', 'dc-card'); const line = el('p'); line.setAttribute('aria-live', 'polite'); card.appendChild(line);
   const dial = el('div', 'dc-dial', `<label for="dc-dial-input"><span>Your dial</span><output data-v="odds"></output></label>
-    <input id="dc-dial-input" type="range" aria-label="Measurement angle dial">`);
+    <input id="dc-dial-input" type="range" aria-label="Measurement angle dial">
+    <div class="dc-stakes" role="radiogroup" aria-label="Stake per hand"><span>Stake</span>${stakes.map((value) => `<label class="dc-stake"><input type="radio" name="dc-stake" value="${value}"><span>${value.toLocaleString('en-US')}</span></label>`).join('')}<output data-v="pays"></output></div>`);
   const row = el('div', 'dc-row');
   const main = el('button', 'dc-btn'); main.type = 'button';
   const alt = el('button', 'dc-btn'); alt.type = 'button'; alt.hidden = true;
@@ -83,7 +88,9 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, onAction
   const v = new Map<string, HTMLElement>(); root.querySelectorAll<HTMLElement>('[data-v]').forEach((n) => { if (n.dataset.v) v.set(n.dataset.v, n); });
   const cache = new Map<string, string | number>();
   const put = (k: HudKey, s: string) => { if (cache.get(k) !== s) { cache.set(k, s); v.get(k)!.textContent = s; } };
-  const input = dial.querySelector('input')!;
+  const input = dial.querySelector<HTMLInputElement>('#dc-dial-input')!;
+  const stakeRow = dial.querySelector<HTMLElement>('.dc-stakes')!;
+  const stakeInputs = [...stakeRow.querySelectorAll('input')];
   input.min = String(dialRange.min); input.max = String(dialRange.max); input.step = String(dialRange.step);
 
   let swapTimer = 0;
@@ -93,21 +100,25 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, onAction
     swapTimer = window.setTimeout(() => { line.textContent = text; line.classList.remove('is-swap'); }, line.textContent ? 170 : 0);
   }
   let mainAct: HudAction | undefined, altAct: HudAction | undefined, onSide: (name: SideName | 'back') => void = () => undefined;
+  // aria-disabled, not disabled: a disabled button drops keyboard focus to the page, and Enter would stop working when the button comes back.
   function buttons(m: HudButton, a?: HudButton) {
-    main.textContent = m.label; main.disabled = !!m.disabled; mainAct = m.act;
+    main.textContent = m.label; main.setAttribute('aria-disabled', String(!!m.disabled)); mainAct = m.disabled ? undefined : m.act;
     main.classList.toggle('is-brass', !!m.brass);
-    alt.hidden = !a; if (a) { alt.textContent = a.label; altAct = a.act; }
+    const altHadFocus = document.activeElement === alt;
+    alt.hidden = !a; if (a) { alt.textContent = a.label; alt.setAttribute('aria-disabled', String(!!a.disabled)); altAct = a.disabled ? undefined : a.act; } else if (altHadFocus) main.focus();
   }
   const clickMain = () => { if (mainAct) onAction(mainAct); };
   const clickAlt = () => { if (altAct) onAction(altAct); };
   const onInput = () => { onDial(+input.value); };
+  const onStakeChange = (e: Event) => { if (e.target instanceof HTMLInputElement) onStake(+e.target.value); };
   const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onSide('back'); };
   const onClock = () => { onSide('cage'); }, onWin = () => { onSide('wheel'); };
   let soundOn = false;
   const onSnd = () => { soundOn = !soundOn; soundBtn.textContent = soundOn ? 'Sound on' : 'Sound off'; soundBtn.setAttribute('aria-pressed', String(soundOn)); onSound(soundOn); };
-  main.addEventListener('click', clickMain); alt.addEventListener('click', clickAlt); input.addEventListener('input', onInput);
+  main.addEventListener('click', clickMain); alt.addEventListener('click', clickAlt); input.addEventListener('input', onInput); stakeRow.addEventListener('change', onStakeChange);
   clockBtn.addEventListener('click', onClock); winBtn.addEventListener('click', onWin); soundBtn.addEventListener('click', onSnd);
-  root.addEventListener('keydown', onKey);
+  // On the document, so Escape still works after a click on the canvas leaves focus on the page.
+  document.addEventListener('keydown', onKey);
 
   return {
     put, say, buttons, input, hud,
@@ -122,6 +133,8 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, onAction
     stubs(on: boolean) { clockBtn.disabled = !on; winBtn.disabled = !on; },
     title(on: boolean) { title.classList.toggle('is-gone', !on); },
     dial(on: boolean) { dial.classList.toggle('is-on', on); },
+    dialLocked(on: boolean) { input.disabled = on; },
+    stakes(choices: readonly StakeChoice[], stake: number) { stakeInputs.forEach((box, i) => { box.checked = +box.value === stake; box.disabled = !!choices[i]?.disabled; }); },
     ticket(on: boolean) { ticket.classList.toggle('is-on', on); },
     colour(on: boolean) { root.classList.toggle('is-colour', on); },
     side(name: SideName | null) { root.classList.toggle('is-side', !!name); clockBtn.textContent = name === 'cage' ? 'Back to the table' : 'The cage'; winBtn.textContent = name === 'wheel' ? 'Back to the table' : 'The wheel'; },
@@ -129,9 +142,9 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, onAction
     hint(text: string, x: number, y: number) { hint.textContent = text; hint.style.left = `${x}px`; hint.style.top = `${y}px`; },
     dispose() {
       clearTimeout(swapTimer);
-      main.removeEventListener('click', clickMain); alt.removeEventListener('click', clickAlt); input.removeEventListener('input', onInput);
+      main.removeEventListener('click', clickMain); alt.removeEventListener('click', clickAlt); input.removeEventListener('input', onInput); stakeRow.removeEventListener('change', onStakeChange);
       clockBtn.removeEventListener('click', onClock); winBtn.removeEventListener('click', onWin); soundBtn.removeEventListener('click', onSnd);
-      root.removeEventListener('keydown', onKey);
+      document.removeEventListener('keydown', onKey);
       hud.remove(); root.classList.remove('deco', 'is-colour', 'is-side');
     },
   };

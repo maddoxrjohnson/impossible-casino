@@ -82,9 +82,14 @@ describe('createLines', () => {
   });
 
   it('states the store rule for clearing the table', () => {
-    expect(lines.short).toContain(`${BEYOND_MIN_HANDS} hands`);
     expect(lines.short).toContain('80%');
-    expect(lines.short).not.toContain('best angle');
+    expect(lines.cold).toContain(`${BEYOND_MIN_HANDS} hands`);
+    expect(lines.cold).toContain('80%');
+  });
+
+  it('sends the player to the dial only when the dial is at fault', () => {
+    expect(lines.short).toContain('Turn the dial');
+    expect(lines.cold).not.toContain('dial');
   });
 
   it('never claims a rate under the line is strictly below it', () => {
@@ -95,6 +100,10 @@ describe('createLines', () => {
   it('claims wins at the payoff, not agreement, which a fixed plan can reach every hand', () => {
     expect(lines.beyond).toContain('won more often than any plan allows');
     expect(lines.beyond).not.toContain('agreed');
+  });
+
+  it('claims nothing about the rate after a run past the wall, which can be a bad one', () => {
+    expect(lines.past).not.toMatch(/won|%/);
   });
 
   it('gives break-even from the rules', () => {

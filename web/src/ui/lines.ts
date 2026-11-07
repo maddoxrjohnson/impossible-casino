@@ -8,7 +8,7 @@ export interface Limits {
 }
 
 export type Band = 'low' | 'over' | 'even' | 'best';
-export type LineKey = Phase | Band | 'short' | 'cage' | 'wheel';
+export type LineKey = Phase | Band | 'short' | 'cold' | 'past' | 'covered' | 'misdeal' | 'broke' | 'cage' | 'wheel';
 
 /** Where the best band starts, as a share of the span from break-even to the quantum limit. */
 const BEST_SHARE = 0.75;
@@ -41,13 +41,18 @@ export function createLines(limits: Limits): Record<LineKey, string> {
     intro: 'You and a partner sit in separate rooms. Each of you draws a question, 0 or 1, and answers without talking. Answer alike and you win, unless you both drew a 1. Then you must differ.',
     classical: 'You both always say 0. It is the best plan two people can make in advance, and it fails only when both questions come up 1.',
     wall: `Three hands in four. That glass is where every plan made in advance stops, and you need ${even} to break even. I keep a pair of particles for people in your position.`,
-    entangled: 'That colour was always in the building. Now turn your dial until the pair does what no plan can.',
+    entangled: 'That colour was always in the building. The glass held, barely. Turn your dial until the pair does what no plan can, then pick a stake and run it.',
     beyond: 'Your two answers just won more often than any plan allows, and nothing passed between them. The house has no rule for this. It only has more floors.',
     low: 'Not past the line. A good plan could do that much.',
     over: `Past the line, which no plan can do. Until you clear ${even} the house still takes your money, so keep turning.`,
     even: 'Past break-even. A little further and the table runs out of angle.',
-    best: `Nearly all the angle there is. ${pct(limits.quantum, 2)} is as far as the physics goes. Press Run.`,
-    short: `Not yet. The table wants ${BEYOND_MIN_HANDS} hands running above ${even}, on an angle that runs above ${even}. Tune the dial and run it again.`,
+    best: `Nearly all the angle there is. ${pct(limits.quantum, 2)} is as far as the physics goes. Pick a stake and press Run.`,
+    short: `That angle runs under ${even}, and the table only counts an angle that clears it. Turn the dial and run it again.`,
+    cold: `Right angle, cold deck. The table wants ${BEYOND_MIN_HANDS} hands running above ${even}, and this run fell short. Run it again.`,
+    past: 'The house has no rule for any of this. It only has more floors.',
+    covered: 'You could not cover that stake, so the run stopped there. I have cut it to what you hold.',
+    misdeal: 'The wire went quiet and no hands were dealt. Nothing left your stack. Run it again.',
+    broke: 'That is the last of your chips. The house collects in the end, even down here. Start over.',
     cage: "The Cashier's Cage, 4 K. Nobody has ever cashed out warm. It opens when the table has something to pay.",
     wheel: 'The Roulette Wheel, 800 mK. It has not stopped since 1926. Another night.',
   };

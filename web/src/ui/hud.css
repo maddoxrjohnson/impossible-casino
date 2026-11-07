@@ -57,17 +57,28 @@
 .dc-card p { margin: 0; font: italic 400 clamp(16px, 1.45vw, 19px)/1.34 "Bodoni Moda", Didot, Georgia, serif; color: #f1eee6; text-wrap: balance; transition: opacity .2s ease, filter .2s ease; }
 .dc-card p.is-swap { opacity: 0; filter: blur(3px); }
 
-.dc-dial { width: min(600px, 100%); justify-self: center; pointer-events: auto; display: none; gap: 4px; opacity: 0; transform: translateY(6px); transition: opacity .3s ease, transform .3s var(--out); visibility: hidden; }
+.dc-dial { width: min(600px, 100%); justify-self: center; pointer-events: auto; display: none; grid-template-columns: minmax(0,1fr); gap: 4px; opacity: 0; transform: translateY(6px); transition: opacity .3s ease, transform .3s var(--out); visibility: hidden; }
 .dc-dial.is-on { display: grid; opacity: 1; transform: none; visibility: visible; }
-.dc-dial label { padding: 4px 10px; background: rgba(3,3,3,.78); display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font: 400 15px/1.2 "Federo", Georgia, serif; color: #f1eee6; text-shadow: 0 1px 6px #000; }
+.dc-dial > label { padding: 4px 10px; background: rgba(3,3,3,.78); display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font: 400 15px/1.2 "Federo", Georgia, serif; color: #f1eee6; text-shadow: 0 1px 6px #000; }
 .dc-dial output { font: 400 22px/1 "Limelight", Georgia, serif; }
-.dc-dial input { -webkit-appearance: none; appearance: none; width: 100%; height: 40px; margin: 0; background: transparent; cursor: grab; touch-action: none; }
-.dc-dial input:active { cursor: grabbing; }
+.dc-dial input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 40px; margin: 0; background: transparent; cursor: grab; touch-action: none; }
+.dc-dial input[type="range"]:active { cursor: grabbing; }
+.dc-dial input[type="range"]:disabled { cursor: default; }
 .dc-dial input::-webkit-slider-runnable-track { height: 8px; background: var(--brass); box-shadow: 0 1px 0 #000, 0 0 12px rgba(0,0,0,.8); }
 .dc-dial input::-moz-range-track { height: 8px; background: var(--brass); box-shadow: 0 1px 0 #000; }
 .dc-dial input::-webkit-slider-thumb { -webkit-appearance: none; width: 34px; height: 34px; margin-top: -13px; border-radius: 50%; border: 0;
   background: radial-gradient(circle, #16100c 0 40%, #d4ae5d 41% 46%, #16100c 47% 62%, transparent 63%), conic-gradient(var(--ox) 0 10%, #e9e0c9 0 25%, var(--ox) 0 35%, #e9e0c9 0 50%, var(--ox) 0 60%, #e9e0c9 0 75%, var(--ox) 0 85%, #e9e0c9 0); box-shadow: 0 3px 9px rgba(0,0,0,.8); }
 .dc-dial input::-moz-range-thumb { width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--ox); box-shadow: inset 0 0 0 5px #e9e0c9; }
+.dc-stakes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(3,3,3,.78); font: 400 15px/1.2 "Federo", Georgia, serif; color: #f1eee6; text-shadow: 0 1px 6px #000; }
+.dc-stakes output { margin-left: auto; font: italic 400 15px/1.2 "Bodoni Moda", Georgia, serif; white-space: nowrap; }
+.dc-stake { position: relative; display: block; }
+.dc-stake input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.dc-stake span { display: flex; align-items: center; min-height: 34px; padding: 0 11px; box-sizing: border-box; font: 400 16px/1 "Limelight", Georgia, serif; color: var(--silver); text-shadow: none; box-shadow: inset 0 0 0 1px rgba(207,204,196,.5); transition: color .16s ease, box-shadow .16s ease; }
+.dc-stake input:hover + span { color: #fff; box-shadow: inset 0 0 0 1px #fff; }
+.dc-stake input:checked + span { color: var(--ink); background: var(--brass); box-shadow: none; }
+.dc-stake input:disabled { cursor: default; }
+.dc-stake input:disabled + span { opacity: .5; box-shadow: inset 0 0 0 1px rgba(207,204,196,.5); }
+.dc-stake input:focus-visible + span { outline: 2px solid #fff; outline-offset: 2px; }
 
 .dc-row { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; pointer-events: auto; }
 .dc-btn { appearance: none; border: 0; cursor: pointer; color: var(--ink); background: var(--paper); font: 400 20px/1 "Limelight", "Bodoni Moda", Georgia, serif; padding: 14px 34px 13px; min-height: 48px; position: relative;
@@ -76,8 +87,9 @@
   transition: transform .14s var(--out), background-color .16s ease; }
 .dc-btn::after { content: ""; position: absolute; top: 5px; bottom: 5px; left: 16px; right: 16px; border-left: 1px dashed rgba(23,18,11,.45); border-right: 1px dashed rgba(23,18,11,.45); pointer-events: none; }
 .dc-btn:active { transform: scale(.97); }
-.dc-btn[disabled] { background: #807b6e; cursor: default; }
 .dc-btn.is-brass { background: var(--brass); }
+.dc-btn[aria-disabled="true"] { background: #807b6e; cursor: default; }
+.dc-btn[aria-disabled="true"]:active { transform: none; }
 .dc-focus { display: contents; }
 .dc-hud button:focus-visible, .dc-hud input:focus-visible, .dc-receipt button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .dc-btn:focus-visible { -webkit-mask: none; mask: none; }
@@ -128,10 +140,11 @@
   .dc-title { position: static; width: auto; text-align: center; } .dc-title h1 { font-size: min(34px, 7.4vw); } .dc-title h1 br { display: none; }
   .dc-btn { font-size: 18px; padding: 13px 26px 12px; }
   .dc-stub { font-size: 14px; padding: 8px 10px; }
+  .dc-stakes { gap: 5px; padding: 4px 8px; } .dc-stake span { padding: 0 8px; font-size: 15px; } .dc-stakes output { font-size: 14px; }
   .dc-title { margin-bottom: 8px; }
   .is-side .dc-lift { top: 84px; }
 }
 @media (max-height: 560px) {
-  .dc-title { display: none; } .dc-ticket { display: none; } .dc-lift { display: none; } .dc-card { padding: 7px 14px; } .dc-dial input { height: 32px; }
+  .dc-title { display: none; } .dc-ticket { display: none; } .dc-lift { display: none; } .dc-card { padding: 7px 14px; } .dc-dial input[type="range"] { height: 32px; } .dc-stake span { min-height: 28px; }
 }
 @media (prefers-reduced-motion: reduce) { .deco * { transition-duration: .01s !important; } }

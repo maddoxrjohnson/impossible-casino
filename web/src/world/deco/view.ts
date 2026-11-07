@@ -1,19 +1,22 @@
 // The Deco Chandelier. A 1920s architect was commissioned to put a casino inside the cryostat.
 // The building opens in black, white and gold. The colour was always in it; you had not been allowed to see it.
 import * as THREE from 'three';
-import { BREAK_EVEN, CLASSICAL_STAKE } from '../../game/rules';
+import { BREAK_EVEN, CLASSICAL_STAKE, winPayout } from '../../game/rules';
 import type { GameState, GameStore, LastHand, Phase } from '../../game/store';
 import type { ResultSource } from '../../game/results';
 import type { GameAudio } from '../../audio/audio';
 import type { StageSize, StageView } from '../../render/stage';
-import type { Hud, HudButton, SideName } from '../../ui/hud';
-import { bandFor, createLines, money, pastClassical, pct, signedAmount } from '../../ui/lines';
+import type { Hud, SideName } from '../../ui/hud';
+import { createLines, type LineKey, money, pastClassical, pct, signedAmount } from '../../ui/lines';
+import { settledLine, stakeChoices, tableButtons } from '../../ui/table';
 import { buildWorld, FROST, TIERS, TOP_Y, SEAL_S, FLOOR_Y, TABLE_Y, PAIR_A, PAIR_B, WIN_DIR } from './scene';
 import { questionCell } from './textures';
 import { createPost } from './post';
 
 /** Where the gimbals close up. Animation only; rates come from the export. */
 const GIMBAL_TRUE_DIAL = .5;
+/** Entangling only cracks the seal. Clearing the table breaks it. */
+const ENTANGLE_CRACK = .55;
 const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 const clamp01 = (x: number) => clamp(x, 0, 1);
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
@@ -76,13 +79,15 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
 
   // ---- HUD logic ----
   const story = { locked: false };
-  let lastPhase: Phase | null = null, lastBand = '', running = false, side: SideName | null = null, buttonKey = '', ticketFilled = false;
+  let lastPhase: Phase | null = null, lastBroke = false, lastBand: LineKey | '' = '', running = false, side: SideName | null = null, buttonKey = '', ticketFilled = false;
   function hudSync(s: GameState) {
     hud.put('bank', money(s.bankroll));
     hud.put('rate', s.rounds ? pct(s.winRate, 1) : 'No hands');
     hud.put('hands', s.rounds ? `over ${s.rounds} hand${s.rounds === 1 ? '' : 's'}` : 'dealt yet');
     hud.put('limit', LIMIT); hud.put('even', `break even ${EVEN}`);
-    hud.put('odds', `${pct(s.target, 1)} at this angle`);
+    const odds = `${pct(s.target, 1)} at this angle`;
+    hud.put('odds', odds); hud.input.setAttribute('aria-valuetext', odds);
+    hud.put('pays', `a win pays ${money(winPayout(s.stake))}`);
     if (+hud.input.value !== s.dial) hud.input.value = String(s.dial);
     if (s.last) {
       const l = s.last;
@@ -96,30 +101,30 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     // A reloaded game has no last hand, and a run clears it, so the stub stays down until it has one to show.
     ticketFilled = p !== 'intro' && (ticketFilled || !!s.last);
     hud.ticket(ticketFilled);
-    if (p !== lastPhase) {
+    // Restarting from broke can land in the same phase, and the dealer still has to move on.
+    if (p !== lastPhase || (lastBroke && !s.broke)) {
       hud.title(p === 'intro');
       if (p === 'intro' || p === 'classical' || p === 'wall') hud.colour(false);
       hud.say(LINES[p]); lastBand = ''; running = false;
     }
-    hud.dial((p === 'entangled' || p === 'beyond') && !lock && !side);
-    const key = `${p}|${b}|${lock}`;
+    hud.dial((p === 'entangled' || p === 'beyond') && !lock && !side && !s.broke);
+    hud.dialLocked(b);
+    hud.stakes(stakeChoices(s, lock), s.stake);
+    const key = `${p}|${b}|${lock}|${!!side}|${s.broke}`;
     if (buttonKey !== key) {
       buttonKey = key;
-      const run: HudButton = { label: b ? 'Running' : 'Run', act: 'run', disabled: b || lock };
-      if (p === 'intro') hud.buttons({ label: 'Deal', act: 'deal' });
-      if (p === 'classical') hud.buttons({ label: 'Dealing', disabled: true });
-      if (p === 'wall') hud.buttons({ label: 'Entangle the pair', act: 'entangle', brass: true });
-      if (p === 'entangled') hud.buttons(run);
-      if (p === 'beyond') hud.buttons(run, { label: 'Restart', act: 'restart' });
+      const { main, alt } = tableButtons(s, { locked: lock, inRoom: !!side });
+      hud.buttons(main, alt);
       hud.stubs(p !== 'classical' && !b && !lock);
     }
-    if (p === 'entangled' && !b && !lock && !side) {
-      const band = running ? 'short' : bandFor(s.target, source.limits);
-      if (band !== lastBand && lastPhase === 'entangled') { lastBand = band; hud.say(LINES[band]); }
+    if (!b && !lock && !side) {
+      const owed = settledLine(s, running, source.limits, lastBand);
+      // A phase line gets its moment first; only being broke overrides it at once.
+      if (owed && owed !== lastBand && (s.broke || lastPhase === p)) { lastBand = owed; hud.say(LINES[owed]); }
       running = false;
     }
-    if (p === 'entangled' && b) running = true;
-    lastPhase = p;
+    if (b && s.mode === 'quantum') running = true;
+    lastPhase = p; lastBroke = s.broke;
   }
 
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -237,7 +242,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
   hud.setSide((n) => { if (n === 'back' || n === side) closeSide(); else openSide(n); });
 
   // --- world state
-  let sealGone = false, cross75 = false, beat = 0, armKick = 0, time = 0, hazeT = 0, hazeSpeed = 1, rainSpeed = 1, chipN = -1, floodOn = false;
+  let thawed = false, rulesGone = false, cross75 = false, beat = 0, armKick = 0, time = 0, hazeT = 0, hazeSpeed = 1, rainSpeed = 1, chipN = -1, floodOn = false;
   const armQueue: number[] = [];
   const dummy = new THREE.Object3D();
   function layoutChips(n: number) {
@@ -277,18 +282,17 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
       U.uSweep.value = -.1; tw(U.uSweep, 'value', SEAL_S, 1, EASE.in);
       tw(fx, 'lamp', 1.5, 1, EASE.linear); tw(fx, 'env', .7, 1, EASE.linear); tw(U.uPluck, 'value', 1, .7, EASE.linear);
     });
-    // It presses on the plate. Cracks run outward through the cames.
+    // It presses on the plate. Cracks run outward through the cames, and stop short of the rim.
     after(1.5, () => {
-      tw(U.uCrack, 'value', 1, .52, EASE.in);
+      tw(U.uCrack, 'value', ENTANGLE_CRACK, .52, EASE.in);
       if (!reducedMotion) { tw(fx, 'shake', .03, .5, EASE.in); tw(fx, 'ca', .004, .5, EASE.in); }
     });
-    // It goes, and the glass comes down.
+    // It gets through the cracks. The glass holds, and the limit stays up there until the table is beaten.
     after(2.05, () => {
-      tw(U.uOpen, 'value', 1.2, .95); tw(U.uSweep, 'value', 1.3, .85, EASE.linear);
-      U.uImpactCol.value.setRGB(4, 3, 1.4); U.uImpact.value = 0;
-      world.shards.visible = !reducedMotion; U.uShard.value = 0;
-      fx.flash = 1; fx.shake = reducedMotion ? 0 : .22; fx.ca = reducedMotion ? 0 : .009; fx.exposure = 2.4;
-      tw(fx, 'exposure', 1.02, 1.5); tw(fx, 'shake', 0, 1.4); tw(fx, 'ca', 0, 1.4);
+      tw(U.uSweep, 'value', 1.3, .85, EASE.linear);
+      U.uImpactCol.value.setRGB(4, 3, 1.4); U.uImpact.value = 1.1; U.uImpactR.value = 0;
+      fx.flash = .7; fx.shake = reducedMotion ? 0 : .1; fx.ca = reducedMotion ? 0 : .006; fx.exposure = 1.8;
+      tw(fx, 'exposure', 1.02, 1.3); tw(fx, 'shake', 0, 1); tw(fx, 'ca', 0, 1);
       tw(U.uFrost, 'value', 0, 1.5);
       tw(fx, 'env', 1.08, 1.2); tw(fx, 'lamp', 1.1, 1.2); tw(fx, 'chipBase', 1, 1.2); tw(U.uPluck, 'value', 0, 3);
     });
@@ -296,14 +300,42 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     // The pair lights over the jewel, and the colour comes out of it.
     after(3, () => { showPair(true); tw(U.uPair, 'value', 1, .8); tw(U.uThread, 'value', 1, .9); });
     after(3.3, () => startFlood(6.4));
-    after(3.2, () => { world.seal.visible = false; world.sealRing.visible = false; sealGone = true; });
-    after(6.2, () => { world.shards.visible = false; story.locked = false; hudSync(store.state); });
+    after(3.2, () => { thawed = true; });
+    after(6.2, () => { story.locked = false; hudSync(store.state); });
+  }
+  // The rules break: the balconies begin to turn, vapour falls upward, cards leave the deck and current climbs the bore.
+  function rulesBreak() {
+    rulesGone = true;
+    tw(fx, 'spin', 1, 3.2, EASE.inOut); tw(fx, 'rise', 1, 3, EASE.inOut); tw(fx, 'lift', 1, 4, EASE.inOut); tw(fx, 'env', 1.16, 2.4); tw(fx, 'lamp', 1.2, 2.4);
+    tw(U.uPeel, 'value', 1.32, 7, EASE.inOut, 1);
+    world.beam.visible = true; tw(U.uBeam, 'value', 1, 2.2, EASE.out, .4);
+    glide([{ r: 8.4, a: 1.5, y: 5, ty: 2.6, fov: 58 }, POSE.beyond], 4.6);
+  }
+  // The payoff. The last hands of the run play out while the camera tips back to the glass.
+  function shatterSequence() {
+    story.locked = true; path = null;
+    glide([{ r: 1.9, a: 1.7, y: 2.1, ty: 4.6, fov: 64 }, POSE.wall], 1.6);
+    after(1.5, () => {
+      tw(U.uCrack, 'value', 1, .52, EASE.in);
+      if (!reducedMotion) { tw(fx, 'shake', .03, .5, EASE.in); tw(fx, 'ca', .004, .5, EASE.in); }
+    });
+    // It goes, and the glass comes down.
+    after(2.05, () => {
+      tw(U.uOpen, 'value', 1.2, .95);
+      U.uImpactCol.value.setRGB(4, 3, 1.4); U.uImpact.value = 0;
+      world.shards.visible = !reducedMotion; U.uShard.value = 0;
+      fx.flash = 1; fx.shake = reducedMotion ? 0 : .22; fx.ca = reducedMotion ? 0 : .009; fx.exposure = 2.4;
+      tw(fx, 'exposure', 1.02, 1.5); tw(fx, 'shake', 0, 1.4); tw(fx, 'ca', 0, 1.4);
+    });
+    after(2.75, rulesBreak);
+    after(3.2, () => { world.seal.visible = false; world.sealRing.visible = false; });
+    after(6.4, () => { world.shards.visible = false; story.locked = false; hudSync(store.state); });
   }
 
   function arrive(p: Phase, prev: Phase | null) {
-    side = null; hud.side(null); world.doors.forEach((d) => { setGate(d, false); });
+    side = null; hud.side(null);
     if (p === 'intro') {
-      clearStory(); story.locked = false; sealGone = false; cross75 = false;
+      clearStory(); story.locked = false; thawed = false; rulesGone = false; cross75 = false;
       world.seal.visible = true; world.sealRing.visible = true; world.shards.visible = false;
       if (floodOn) { floodOn = false; tw(U.uR, 'value', 0, 1.5, EASE.out); }
       showPair(false);
@@ -312,6 +344,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
       U.uSweep.value = -1; U.uSweepY.value = 80; world.beam.visible = false; showQuestions(null, null);
       if (prev) glide([{ r: 16, a: 2.4, y: 16, ty: 12, fov: 48 }, POSE.intro], 4.6);
     }
+    world.doors.forEach((d) => { setGate(d, false); });   // after clearStory, which would cancel the swing
     // Deal crosses the dark, drops down the outside of the stack past every balcony, and steps in under the skylight.
     if (p === 'classical') glide([{ r: 42, a: 2.7, y: 20, ty: 12, fov: 50 }, { r: 19, a: 2.3, y: 16, ty: 9, fov: 50 }, { r: 11, a: 2, y: 8, ty: 4, fov: 54 }, { r: 6.4, a: 1.8, y: 3.7, ty: 1.8, fov: 58 }, POSE.classical], 5.2, EASE.inOut);
     // The camera tips back until the ceiling of the game is all there is.
@@ -319,21 +352,16 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     if (p === 'entangled') {
       if (prev === 'wall') entangleSequence();
       else { // a reloaded game: land straight in the state the sequence leaves behind
-        clearStory(); story.locked = false; breakAll(); glide([{ r: 8, a: 1.5, y: 4, ty: 2, fov: 54 }, POSE.entangled], 3);
+        clearStory(); story.locked = false; landEntangled(); glide([{ r: 8, a: 1.5, y: 4, ty: 2, fov: 54 }, POSE.entangled], 3);
       }
     }
     if (p === 'beyond') {
-      if (prev !== 'entangled') { clearStory(); story.locked = false; breakAll(); } else tw(fx, 'exposure', 1.02, 2);
-      // The rules break: the balconies begin to turn, vapour falls upward, cards leave the deck and current climbs the bore.
-      tw(fx, 'spin', 1, 3.2, EASE.inOut); tw(fx, 'rise', 1, 3, EASE.inOut); tw(fx, 'lift', 1, 4, EASE.inOut); tw(fx, 'env', 1.16, 2.4); tw(fx, 'lamp', 1.2, 2.4);
-      tw(U.uPeel, 'value', 1.32, 7, EASE.inOut, 1);
-      world.beam.visible = true; tw(U.uBeam, 'value', 1, 2.2, EASE.out, .4);
-      glide([{ r: 8.4, a: 1.5, y: 5, ty: 2.6, fov: 58 }, POSE.beyond], 4.6);
+      if (prev === 'entangled') shatterSequence();
+      else { clearStory(); story.locked = false; landEntangled(); U.uOpen.value = 1.2; U.uCrack.value = 1; world.seal.visible = false; world.sealRing.visible = false; rulesBreak(); }
     }
   }
-  function breakAll() {
-    U.uOpen.value = 1.2; U.uCrack.value = 1; U.uSweep.value = 1.3; U.uSweepY.value = -8; U.uFrost.value = 0;
-    world.seal.visible = false; world.sealRing.visible = false; sealGone = true;
+  function landEntangled() {
+    U.uCrack.value = ENTANGLE_CRACK; U.uSweep.value = 1.3; U.uSweepY.value = -8; U.uFrost.value = 0; thawed = true;
     showPair(true); U.uPair.value = 1; U.uThread.value = 1; fx.env = 1.08; fx.lamp = 1.1; fx.chipBase = 1;
     startFlood(4.5);
   }
@@ -346,7 +374,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     const n = Math.floor(s.bankroll / CLASSICAL_STAKE);
     if (n !== chipN) { chipN = n; layoutChips(n); }
     if (s.last) showQuestions(s.last.x, s.last.y);
-    if (s.mode === 'quantum' && pastClassical(s.target, CLASSICAL_LIMIT) && sealGone && !cross75) { cross75 = true; fx.flash = Math.max(fx.flash, .7); }
+    if (s.mode === 'quantum' && pastClassical(s.target, CLASSICAL_LIMIT) && thawed && !cross75) { cross75 = true; fx.flash = Math.max(fx.flash, .7); }
     if (s.mode === 'quantum' && !pastClassical(s.target, CLASSICAL_LIMIT)) cross75 = false;
   });
   phaseArmed = true;
@@ -441,10 +469,10 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     if (U.uShard.value >= 0 && world.shards.visible) U.uShard.value += dt;
     if (U.uSweep.value > -.5) U.uSweepY.value = TOP_Y * (1 - U.uSweep.value);
 
-    // The freeze: on Entangle the rain stops and so does the haze, until the glass goes.
-    const frozen = story.locked && !sealGone && !reducedMotion;
-    rainSpeed = damp(rainSpeed, frozen ? 0 : ph === 'beyond' ? -.75 : floodOn ? .32 : 1, frozen ? 14 : 1.2, dt); U.uRainT.value += dt * rainSpeed * .2;
-    hazeSpeed = damp(hazeSpeed, frozen ? 0 : ph === 'beyond' ? 2.6 : 1, frozen ? 12 : 1, dt); hazeT += dt * hazeSpeed;
+    // The freeze: on Entangle the rain stops and so does the haze, until the current gets through.
+    const frozen = story.locked && !thawed && !reducedMotion;
+    rainSpeed = damp(rainSpeed, frozen ? 0 : rulesGone ? -.75 : floodOn ? .32 : 1, frozen ? 14 : 1.2, dt); U.uRainT.value += dt * rainSpeed * .2;
+    hazeSpeed = damp(hazeSpeed, frozen ? 0 : rulesGone ? 2.6 : 1, frozen ? 12 : 1, dt); hazeT += dt * hazeSpeed;
 
     world.spin(dt, fx.spin);
     if (ph !== 'beyond' && fx.spin < .01) world.settleSpin(Math.exp(-dt * 2));

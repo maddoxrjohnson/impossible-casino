@@ -2,13 +2,15 @@ import './styles.css';
 import './ui/hud.css';
 import { createAudio } from './audio/audio';
 import { createPrerunSource, loadExports } from './game/results';
+import { STAKES } from './game/rules';
 import { createGameStore } from './game/store';
 import { showFallback } from './ui/fallback';
 import { createHud, type HudAction } from './ui/hud';
 import { dialStep } from './ui/lines';
+import { stakeChoices } from './ui/table';
 
-/** The exported run the table plays. */
-const RUN_ID = 'ideal';
+/** The exported run the table plays. Noisy on purpose: it is the closest stand-in for a real chip. */
+const RUN_ID = 'ibm-noise-model';
 
 const FONTS = ['64px "Limelight"', '40px "Federo"', 'italic 20px "Bodoni Moda"'];
 const FONT_WAIT_MS = 1400;
@@ -66,6 +68,7 @@ async function boot(root: HTMLElement): Promise<void> {
         max: source.dials[source.dials.length - 1] ?? 1,
         step: dialStep(source.dials),
       },
+      stakes: STAKES,
       onAction: (action) => {
         actions[action]();
       },
@@ -73,6 +76,11 @@ async function boot(root: HTMLElement): Promise<void> {
         store.setDial(value);
         // The store can refuse or snap this value, and then it does not emit.
         hud.input.value = String(store.state.dial);
+      },
+      onStake: (value) => {
+        store.setStake(value);
+        // As with the dial, a refused stake does not emit.
+        hud.stakes(stakeChoices(store.state, false), store.state.stake);
       },
       onSound: (on) => {
         audio.set(on);
