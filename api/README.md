@@ -33,8 +33,8 @@ All are environment variables, read once at startup. A bad value stops the servi
 | `LIVE_CHIP_MODE` | `off` | `owner`, `public` or `off`. `owner` needs `CHIP_PASSPHRASE`. |
 | `CHIP_PASSPHRASE` | none | Checked by the chip gate in `owner` mode. |
 | `CORS_ORIGINS` | production site | Comma-separated full origins. Replaces the default. Previews and localhost ports are matched separately. |
-| `RUN_LIMIT_PER_MINUTE` | 20 | Runs per client per instance. A real player tops out near 18. |
-| `RUN_CAP_PER_HOUR` | 12000 | Runs per instance across all clients, for a room of players. Past it, 429 until the hour ends. |
+| `RUN_LIMIT_PER_MINUTE` | 20 | Runs per client address per instance. A real player tops out near 18, or more if they also forge. Everyone behind one address shares it, so past the limit a room on one network gets pre-run results, labelled as such, until the minute resets. |
+| `RUN_CAP_PER_HOUR` | 12000 | Requests that reach a run, per instance, across all clients. Past it, 429 until the hour ends. It binds CHSH runs but not Wiesner runs, which are too slow to reach it, so it does not bound compute cost. |
 | `CHIP_LIMIT_PER_MINUTE` | 5 | Chip gate calls per client per instance. |
 | `MAX_CLIENTS` | 10000 | Clients each rate limiter remembers. |
 | `MAX_BODY_BYTES` | 1024 | Larger bodies get 413. |
@@ -53,15 +53,20 @@ PROJECT=$(gcloud config get-value project)
 NUMBER=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
 
 gcloud services enable compute.googleapis.com run.googleapis.com \
-  cloudbuild.googleapis.com artifactregistry.googleapis.com
+  cloudbuild.googleapis.com artifactregistry.googleapis.com iam.googleapis.com
 
 gcloud projects add-iam-policy-binding "$PROJECT" \
   --member="serviceAccount:$NUMBER-compute@developer.gserviceaccount.com" \
   --role=roles/cloudbuild.builds.builder
 
+gcloud iam service-accounts create casino-api-runtime \
+  --display-name="Impossible Casino API runtime"
+
 gcloud artifacts repositories create impossible-casino \
   --repository-format=docker --location=us-east1
 ```
+
+The compute account runs builds. The service runs as `casino-api-runtime`, which has no roles, so a compromised container cannot submit builds or push images.
 
 Each deploy:
 
@@ -76,6 +81,7 @@ gcloud builds submit . \
 
 gcloud run deploy impossible-casino-api \
   --image="$IMAGE" \
+  --service-account="casino-api-runtime@$PROJECT.iam.gserviceaccount.com" \
   --region=us-east1 \
   --min-instances=0 \
   --max-instances=2 \
@@ -99,18 +105,29 @@ curl -i "$URL/health"
 
 Expect `HTTP/2 200`, `content-type: application/json` and exactly `{"status":"ok"}`. An HTML page or a 404 came from Google's front end, not the app.
 
+Then time the slowest run, twice, so the first does not measure a cold start:
+
+```sh
+for i in 1 2; do
+  curl -s -o /dev/null -w '%{http_code} %{time_total}s\n' -X POST "$URL/v1/wiesner" \
+    -H 'content-type: application/json' -d '{"length":8}'
+done
+```
+
+The client gives up at 1.5 s. If the second run is near that, length 8 forges will mostly fall back to pre-run.
+
 ### Point the site at it
 
-Vite inlines `VITE_API_URL` at build time, so setting the variable changes nothing until the site is rebuilt, and the site stays pre-run with no error. From `web/`, check on a preview first:
+Vite inlines `VITE_API_URL` at build time, so setting the variable changes nothing until the site is rebuilt, and the site stays pre-run with no error. Run these from `web/` in a checkout linked to the Vercel project, which has `web/.vercel`. `vercel env add` asks for the value: give it the `$URL` from the step above, and answer its branch prompt with all preview branches.
 
 ```sh
 vercel env add VITE_API_URL preview
 vercel pull --yes --environment=preview
-vercel build --target=preview
-vercel deploy --prebuilt --target=preview
+vercel build --target=preview --yes
+vercel deploy --prebuilt --yes --target=preview
 ```
 
-A live run on that preview reads "Live Qiskit simulator" on the source label. Repeat with `production` once it does.
+A live run on that preview reads "Live Qiskit simulator" on the source label. Doing the same for `production` replaces the live site, so treat it as a separate release step.
 
 ### Before chip runs
 
@@ -118,16 +135,15 @@ With `LIVE_CHIP_MODE=off` the service needs no secret. Before setting `LIVE_CHIP
 
 ```sh
 PROJECT=$(gcloud config get-value project)
-NUMBER=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
 
 gcloud services enable secretmanager.googleapis.com
 
-read -rs PASSPHRASE
+printf 'Chip passphrase: '; read -rs PASSPHRASE; echo
 printf '%s' "$PASSPHRASE" | gcloud secrets create chip-passphrase --data-file=-
 unset PASSPHRASE
 
 gcloud secrets add-iam-policy-binding chip-passphrase \
-  --member="serviceAccount:$NUMBER-compute@developer.gserviceaccount.com" \
+  --member="serviceAccount:casino-api-runtime@$PROJECT.iam.gserviceaccount.com" \
   --role=roles/secretmanager.secretAccessor
 ```
 
@@ -135,13 +151,14 @@ Then add `--set-env-vars=LIVE_CHIP_MODE=owner --set-secrets=CHIP_PASSPHRASE=chip
 
 ## Cost
 
-Nothing here caps spending. The budget alert only sends an email. Max instances, the rate limits and the hourly cap limit how fast money can be spent, and they do not stop it.
+Nothing here caps spending. The budget alert only sends an email. Max instances bounds compute. Nothing in the app bounds request charges, because refused requests and pings are still billed requests, and `/health` has no limit. The real defence is the alert plus the kill command below.
 
 The figures below are estimates to confirm against the current Google Cloud price list.
 
 - Normal traffic should sit inside Cloud Run's and Cloud Build's free tiers.
 - The image in Artifact Registry should cost cents a month.
-- Two instances kept busy all day should cost about $5 a day, which would use a $20 budget in about four days.
+- Two instances kept busy all day should cost about $5 a day in compute, which would use a $20 budget in about four days.
+- A sustained request flood adds request charges on top. At about $0.40 per million and 1,000 requests a second, that is about $35 a day, which would use $20 in about half a day.
 
 ## Kill it
 

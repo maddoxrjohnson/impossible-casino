@@ -22,7 +22,7 @@ CHSH_SHOTS = export_chsh.SHOTS
 # Every Wiesner shot is its own binding, about 1.2 ms each at length 8 on one core.
 WIESNER_SHOTS = 512
 # Aer holds the GIL for a whole job, so one long job would freeze the event loop.
-# Batches of this size keep stalls near 50 ms, for about 20% more run time.
+# Batches of this size keep stalls near 50 ms, for about 9 ms more per batch: +26% at length 8, +71% at length 1.
 WIESNER_BATCH = 32
 CHSH_NOISE_SCOPE = "gate and readout errors on the chosen qubits only"
 SEED_BOUND = 2**31

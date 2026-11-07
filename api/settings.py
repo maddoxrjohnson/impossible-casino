@@ -44,7 +44,7 @@ class Settings:
     # Only Cloud Run's own proxy makes X-Forwarded-For worth reading.
     trust_forwarded_for: bool = False
     run_limit_per_minute: int = 20
-    # Per instance, across all clients: about 200 runs a minute for a room of players.
+    # Per instance, across all clients. Binds CHSH runs; Wiesner runs are too slow to reach it.
     run_cap_per_hour: int = 12_000
     chip_limit_per_minute: int = 5
     max_clients: int = 10_000
