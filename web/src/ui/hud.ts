@@ -159,6 +159,8 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
       if (cache.get('here') !== here) { cache.set('here', here); stageT.forEach((t, i) => t.classList.toggle('is-here', i === here)); }
     },
     stubs(on: boolean, hasReceipt: boolean) { clockBtn.disabled = !on; winBtn.disabled = !on; receiptBtn.disabled = !(on && hasReceipt); },
+    /** Without a building to walk through, the side-room buttons go. */
+    rooms(on: boolean) { clockBtn.hidden = !on; winBtn.hidden = !on; },
     source(text: string | null) { const s = text ?? ''; if (cache.get('source') !== s) { cache.set('source', s); sourceTag.textContent = s; sourceTag.hidden = !s; } },
     title(on: boolean) { title.classList.toggle('is-gone', !on); },
     dial(on: boolean) { dial.classList.toggle('is-on', on); },

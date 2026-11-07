@@ -5,6 +5,7 @@ import { createPrerunSource, loadExports } from './game/results';
 import { STAKES } from './game/rules';
 import { createGameStore } from './game/store';
 import { showFallback } from './ui/fallback';
+import { createFlatTable } from './ui/flat';
 import { createHud, type HudAction } from './ui/hud';
 import { dialStep } from './ui/lines';
 import { chshReceipt } from './ui/receipt';
@@ -14,6 +15,8 @@ import { stakeChoices } from './ui/table';
 const RUN_ID = 'ibm-noise-model';
 
 const FONTS = ['64px "Limelight"', '40px "Federo"', 'italic 20px "Bodoni Moda"'];
+const FONT_SHEET =
+  'https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,600;1,6..96,400;1,6..96,500&family=Courier+Prime:wght@400;700&family=Federo&family=Limelight&display=swap';
 const FONT_WAIT_MS = 1400;
 
 function fail(root: HTMLElement, error: unknown): void {
@@ -21,11 +24,29 @@ function fail(root: HTMLElement, error: unknown): void {
   showFallback(root, 'failed');
 }
 
+/**
+ * Added from here so a hung font host cannot hold the first paint. Settles on
+ * success or failure. The link stays in the page, so a sheet that arrives late
+ * still restyles DOM text.
+ */
+function loadFontSheet(): Promise<void> {
+  return new Promise((resolve) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = FONT_SHEET;
+    link.onload = link.onerror = () => {
+      resolve();
+    };
+    document.head.append(link);
+  });
+}
+
 /** Fonts get printed into canvas textures, so wait briefly for them, but never hold the curtain. */
 async function waitForFonts(): Promise<void> {
   try {
     await Promise.race([
-      Promise.all(FONTS.map((font) => document.fonts.load(font))),
+      // Before the sheet is in, document.fonts.load resolves empty.
+      loadFontSheet().then(() => Promise.all(FONTS.map((font) => document.fonts.load(font)))),
       new Promise((resolve) => {
         setTimeout(resolve, FONT_WAIT_MS);
       }),
@@ -93,9 +114,11 @@ async function boot(root: HTMLElement): Promise<void> {
     });
 
     let closed = false;
+    let closeFlat = (): void => undefined;
     close = () => {
       if (closed) return;
       closed = true;
+      closeFlat();
       hud.dispose();
       audio.dispose();
       store.dispose();
@@ -115,16 +138,15 @@ async function boot(root: HTMLElement): Promise<void> {
         }),
       {
         adaptiveDpr: !navigator.webdriver,
+        perf: new URLSearchParams(location.search).has('perf'),
         onFailure: (error) => {
           fail(root, error);
         },
       },
     );
-    if (stage) {
-      document.getElementById('status')?.remove();
-    } else {
-      close();
-      showFallback(root, 'no-webgl');
+    document.getElementById('status')?.remove();
+    if (!stage) {
+      closeFlat = createFlatTable(root, { store, source, hud, audio, stages: STAGE_LABELS });
     }
   } catch (error) {
     close();

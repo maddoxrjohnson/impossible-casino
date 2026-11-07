@@ -1,14 +1,14 @@
 // The Deco Chandelier. A 1920s architect was commissioned to put a casino inside the cryostat.
 // The building opens in black, white and gold. The colour was always in it; you had not been allowed to see it.
 import * as THREE from 'three';
-import { BREAK_EVEN, CLASSICAL_STAKE, winPayout } from '../../game/rules';
-import type { GameState, GameStore, LastHand, Phase } from '../../game/store';
+import { BREAK_EVEN, CLASSICAL_STAKE } from '../../game/rules';
+import type { GameStore, LastHand, Phase } from '../../game/store';
 import type { ResultSource } from '../../game/results';
 import type { GameAudio } from '../../audio/audio';
 import type { StageSize, StageView } from '../../render/stage';
 import type { Hud, SideName } from '../../ui/hud';
-import { createLines, type LineKey, money, pastClassical, pct, signedAmount } from '../../ui/lines';
-import { settledLine, sourceLine, stakeChoices, tableButtons } from '../../ui/table';
+import { createHudSync } from '../../ui/hud-sync';
+import { createLines, pastClassical, pct } from '../../ui/lines';
 import { buildWorld, FROST, TIERS, TOP_Y, SEAL_S, FLOOR_Y, TABLE_Y, PAIR_A, PAIR_B, WIN_DIR } from './scene';
 import { questionCell } from './textures';
 import { createPost } from './post';
@@ -79,54 +79,8 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
 
   // ---- HUD logic ----
   const story = { locked: false };
-  let lastPhase: Phase | null = null, lastBroke = false, lastBand: LineKey | '' = '', running = false, side: SideName | null = null, buttonKey = '', ticketFilled = false;
-  function hudSync(s: GameState) {
-    hud.put('bank', money(s.bankroll));
-    hud.put('rate', s.rounds ? pct(s.winRate, 1) : 'No hands');
-    hud.put('hands', s.rounds ? `over ${s.rounds} hand${s.rounds === 1 ? '' : 's'}` : 'dealt yet');
-    hud.put('limit', LIMIT); hud.put('even', `break even ${EVEN}`);
-    const odds = `${pct(s.target, 1)} at this angle`;
-    hud.put('odds', odds); hud.input.setAttribute('aria-valuetext', odds);
-    hud.put('pays', `a win pays ${money(winPayout(s.stake))}`);
-    if (+hud.input.value !== s.dial) hud.input.value = String(s.dial);
-    if (s.last) {
-      const l = s.last;
-      hud.put('tt', s.rounds ? `Hand ${s.rounds}` : 'Last hand');
-      hud.put('x', String(l.x)); hud.put('y', String(l.y)); hud.put('a', String(l.a)); hud.put('b', String(l.b));
-      hud.put('res', l.win ? 'Won' : 'Lost');
-      hud.put('amt', signedAmount(l.delta));
-      hud.put('delta', `last hand ${signedAmount(l.delta)}`);
-    } else hud.put('delta', ' ');
-    const p = s.phase, b = s.autoplaying, lock = story.locked;
-    // A reloaded game has no last hand, and a run clears it, so the stub stays down until it has one to show.
-    ticketFilled = p !== 'intro' && (ticketFilled || !!s.last);
-    hud.ticket(ticketFilled);
-    // Restarting from broke can land in the same phase, and the dealer still has to move on.
-    if (p !== lastPhase || (lastBroke && !s.broke)) {
-      hud.title(p === 'intro');
-      if (p === 'intro' || p === 'classical' || p === 'wall') hud.colour(false);
-      hud.say(LINES[p]); lastBand = ''; running = false;
-    }
-    hud.dial((p === 'entangled' || p === 'beyond') && !lock && !side && !s.broke);
-    hud.dialLocked(b);
-    hud.stakes(stakeChoices(s, lock), s.stake);
-    hud.source(side ? null : sourceLine(s, source.previewProvenance));
-    const key = `${p}|${b}|${lock}|${!!side}|${s.broke}|${!!s.result}`;
-    if (buttonKey !== key) {
-      buttonKey = key;
-      const { main, alt } = tableButtons(s, { locked: lock, inRoom: !!side });
-      hud.buttons(main, alt);
-      hud.stubs(p !== 'classical' && !b && !lock, !!s.result);
-    }
-    if (!b && !lock && !side) {
-      const owed = settledLine(s, running, source.limits, lastBand);
-      // A phase line gets its moment first; only being broke overrides it at once.
-      if (owed && owed !== lastBand && (s.broke || lastPhase === p)) { lastBand = owed; hud.say(LINES[owed]); }
-      running = false;
-    }
-    if (b && s.mode === 'quantum') running = true;
-    lastPhase = p; lastBroke = s.broke;
-  }
+  let side: SideName | null = null;
+  const { sync: hudSync, clearBand } = createHudSync(hud, { source, lines: LINES, moment: () => ({ locked: story.locked, inRoom: !!side }) });
 
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.NoToneMapping; // the final pass develops the film
@@ -234,7 +188,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
   function closeSide() {
     if (!side) return;
     const d = doorByName[side], t = TIERS[d.tier], ph = store.state.phase;
-    setGate(d, false); side = null; hud.side(null); hud.say(LINES[ph]); lastBand = '';
+    setGate(d, false); side = null; hud.side(null); hud.say(LINES[ph]); clearBand();
     hudSync(store.state);
     const inner = home(ph).r < 6;
     glide([{ r: t.R + 7.5, a: pose.a + .2, y: inner ? 4 : t.y + 1, ty: 3, fov: 50 }, ...(inner ? [{ r: 10.5, a: home(ph).a, y: 3.6, ty: 3, fov: 52 }] : []), home(ph)], 2.8);

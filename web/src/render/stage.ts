@@ -1,5 +1,6 @@
 import { WebGLRenderer } from 'three';
 import { createDprController } from './dpr';
+import { createPerf } from './perf';
 
 export interface StageSize {
   /** CSS pixels. */
@@ -25,6 +26,8 @@ export interface StageView {
 export interface StageOptions {
   /** Set false to hold full resolution, for screenshots on a software GPU. */
   adaptiveDpr: boolean;
+  /** Shows the frame timing readout. */
+  perf: boolean;
   /** Called after the stage has shut itself down because a frame threw. */
   onFailure: (error: unknown) => void;
 }
@@ -34,8 +37,21 @@ export interface Stage {
   dispose(): void;
 }
 
+/**
+ * Asked on a spare canvas: three logs an error when it finds no context, and
+ * this is a state the game handles. The renderer's own canvas must stay
+ * untouched, because the first request fixes a canvas's context attributes.
+ */
+function hasWebgl2(): boolean {
+  const probe = document.createElement('canvas');
+  probe.width = 1;
+  probe.height = 1;
+  return probe.getContext('webgl2') !== null;
+}
+
 function createRenderer(): WebGLRenderer | null {
   try {
+    if (!hasWebgl2()) return null;
     // Depth, stencil and antialiasing live in the post chain's own targets, so
     // the default framebuffer stays bare.
     return new WebGLRenderer({
@@ -57,7 +73,7 @@ function createRenderer(): WebGLRenderer | null {
 export function createStage(
   root: HTMLElement,
   createView: (renderer: WebGLRenderer) => StageView,
-  { adaptiveDpr, onFailure }: StageOptions,
+  { adaptiveDpr, perf: showPerf, onFailure }: StageOptions,
 ): Stage | null {
   const renderer = createRenderer();
   if (!renderer) return null;
@@ -73,6 +89,7 @@ export function createStage(
 
   const canvas = renderer.domElement;
   const dpr = createDprController(window.devicePixelRatio);
+  const perf = showPerf ? createPerf(renderer, dpr, adaptiveDpr) : null;
 
   let width = 0;
   let height = 0;
@@ -102,6 +119,19 @@ export function createStage(
     }
   });
 
+  // A resolution query only reports leaving its value, so it is re-armed for
+  // each new one. Moving to another monitor and browser zoom both land here.
+  let density: MediaQueryList | null = null;
+  const watchDensity = (): void => {
+    density?.removeEventListener('change', onDensityChange);
+    density = matchMedia(`(resolution: ${String(window.devicePixelRatio)}dppx)`);
+    density.addEventListener('change', onDensityChange);
+  };
+  const onDensityChange = (): void => {
+    watchDensity();
+    if (dpr.setDeviceRatio(window.devicePixelRatio)) sizeStale = true;
+  };
+
   let raf = 0;
   let running = false;
   let last = 0;
@@ -119,7 +149,13 @@ export function createStage(
         sizeStale = false;
         applySize();
       }
-      view.frame(seconds);
+      if (perf) {
+        const start = performance.now();
+        view.frame(seconds);
+        perf.frame(seconds * 1000, performance.now() - start);
+      } else {
+        view.frame(seconds);
+      }
     } catch (error) {
       shutDown(error);
     }
@@ -161,6 +197,8 @@ export function createStage(
     disposed = true;
     syncLoop();
     observer.disconnect();
+    density?.removeEventListener('change', onDensityChange);
+    perf?.dispose();
     document.removeEventListener('visibilitychange', syncLoop);
     canvas.removeEventListener('webglcontextlost', onContextLost);
     canvas.removeEventListener('webglcontextrestored', onContextRestored);
@@ -188,6 +226,7 @@ export function createStage(
   }
   root.prepend(canvas);
   observer.observe(root);
+  watchDensity();
   document.addEventListener('visibilitychange', syncLoop);
   canvas.addEventListener('webglcontextlost', onContextLost);
   canvas.addEventListener('webglcontextrestored', onContextRestored);

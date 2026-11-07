@@ -3,7 +3,7 @@ import { RUN_HANDS, STAKES } from '../game/rules';
 import { createPrerunSource, parseChshExport, parseWiesnerExport, provenanceLabel, type ChipProvenance, type ChshResult } from '../game/results';
 import chshJson from '../../public/data/chsh.v1.json';
 import wiesnerJson from '../../public/data/wiesner.v1.json';
-import { settledLine, sourceLine, stakeChoices, tableButtons } from './table';
+import { flatFloor, flatHand, flatRate, settledLine, sourceLine, stakeChoices, tableButtons } from './table';
 
 const limits = { classical: 0.75, quantum: 0.8535533905932737 };
 const idle = { locked: false, inRoom: false };
@@ -149,5 +149,42 @@ describe('sourceLine', () => {
     expect(sourceLine({ ...ran, dial: 0.25, target: source.previewWinRate(0.25) }, preview)).toBe(previewLabel);
     // Turned away and back: same dial, but the rate on screen is the preview again.
     expect(sourceLine({ ...ran, target: 0.7 }, preview)).toBe(previewLabel);
+  });
+});
+
+describe('the flat table', () => {
+  const limits2 = { classical: 0.75, quantum: 0.8535533905932737 };
+  const hand = { x: 1, y: 0, a: 0, b: 1, win: false, delta: -100 } as const;
+
+  it('stands at the top of the stack before the deal, then at the table', () => {
+    expect(flatFloor('intro', 5)).toBe(0);
+    for (const phase of ['classical', 'wall', 'entangled', 'beyond'] as const) expect(flatFloor(phase, 5)).toBe(4);
+  });
+
+  it('reads the win rate against the limit, and only claims the limit past it at print precision', () => {
+    expect(flatRate({ rounds: 0, winRate: 0 }, limits2)).toEqual({ text: 'No hands', hands: 'dealt yet', fill: 0, past: false });
+    expect(flatRate({ rounds: 1, winRate: 1 }, limits2)).toMatchObject({ text: '100.0%', hands: 'over 1 hand', fill: 100, past: true });
+    expect(flatRate({ rounds: 36, winRate: 0.75 }, limits2)).toMatchObject({ text: '75.0%', past: false });
+    expect(flatRate({ rounds: 1000, winRate: 0.7504 }, limits2).past).toBe(false);
+    expect(flatRate({ rounds: 36, winRate: 29 / 36 }, limits2)).toMatchObject({ hands: 'over 36 hands', past: true });
+  });
+
+  it('shows the latest hand as the two seats saw it', () => {
+    expect(flatHand({ phase: 'classical', rounds: 12, last: hand }, null)).toEqual({ title: 'Hand 12', x: '1', y: '0', a: '0', b: '1', result: 'Lost −100', win: false });
+  });
+
+  it('shows nothing before a hand, and clears on a new game', () => {
+    expect(flatHand({ phase: 'intro', rounds: 0, last: null }, null)).toBeNull();
+    const held = flatHand({ phase: 'beyond', rounds: 36, last: { ...hand, win: true, delta: 25 } }, null);
+    expect(flatHand({ phase: 'intro', rounds: 0, last: null }, held)).toBeNull();
+  });
+
+  it('holds the last hand while a run clears it, and says it is no longer the current one', () => {
+    const held = flatHand({ phase: 'entangled', rounds: 36, last: { ...hand, win: true, delta: 25 } }, null);
+    expect(flatHand({ phase: 'entangled', rounds: 0, last: null }, held)).toEqual({ title: 'Last hand', x: '1', y: '0', a: '0', b: '1', result: 'Won +25', win: true });
+  });
+
+  it('labels a hand kept across Entangle as the last one', () => {
+    expect(flatHand({ phase: 'entangled', rounds: 0, last: hand }, null)?.title).toBe('Last hand');
   });
 });

@@ -192,7 +192,7 @@ export function createPost(renderer: THREE.WebGLRenderer, track: Track) {
   const final = mat(FINAL_FRAG, finalU);
 
   let scene: THREE.WebGLRenderTarget | null = null, hazeA: THREE.WebGLRenderTarget | null = null, hazeB: THREE.WebGLRenderTarget | null = null;
-  let downs: THREE.WebGLRenderTarget[] = [], ups: THREE.WebGLRenderTarget[] = [], frame = 0;
+  let downs: THREE.WebGLRenderTarget[] = [], ups: THREE.WebGLRenderTarget[] = [], frame = 0, hazeBlank = true;
   function size(w: number, h: number, samples: number) {
     [scene, hazeA, hazeB, ...downs, ...ups].forEach((t) => { t?.dispose(); });
     const depth = new THREE.DepthTexture(w, h, THREE.UnsignedIntType);
@@ -203,6 +203,7 @@ export function createPost(renderer: THREE.WebGLRenderer, track: Track) {
     let bw = w, bh = h;
     for (let i = 0; i < 5; i++) { bw = Math.max(2, bw >> 1); bh = Math.max(2, bh >> 1); downs.push(rt(bw, bh)); if (i < 4) ups.push(rt(bw, bh)); }
     finalU.uAspect.value = w / h;
+    hazeBlank = true;
   }
   function draw(m: THREE.ShaderMaterial, target: THREE.WebGLRenderTarget | null) { q.material = m; renderer.setRenderTarget(target); q.render(renderer); }
 
@@ -215,7 +216,11 @@ export function createPost(renderer: THREE.WebGLRenderer, track: Track) {
       const hz = hazeU;
       hz.tDepth.value = scene.depthTexture; hz.tPrev.value = hazeB.texture; hz.uInvVP.value.copy(invVP);
       hz.uCam.value.copy(camera.position); hz.uFrame.value = frame;
+      // New targets hold no history, and blending with it would dim the scene for several frames.
+      const blend = hz.uBlend.value;
+      if (hazeBlank) { hz.uBlend.value = 1; hazeBlank = false; }
       draw(haze, hazeA);
+      hz.uBlend.value = blend;
       [hazeA, hazeB] = [hazeB, hazeA];
 
       downU.tHaze.value = hazeB.texture;

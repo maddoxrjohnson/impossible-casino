@@ -1,9 +1,9 @@
 // What the table offers at each moment: buttons, stakes, and which line the dealer owes. No DOM, no drawing.
 import { BREAK_EVEN, RUN_HANDS, STAKES } from '../game/rules';
 import { provenanceLabel, type Provenance } from '../game/results';
-import type { GameState } from '../game/store';
+import type { GameState, Phase } from '../game/store';
 import type { HudButton } from './hud';
-import { bandFor, type Limits, type LineKey } from './lines';
+import { bandFor, pastClassical, pct, signedAmount, type Limits, type LineKey } from './lines';
 
 export interface TableMoment {
   /** A story beat owns the screen. */
@@ -83,4 +83,49 @@ export function settledLine(
   if (phase !== 'entangled') return null;
   if (ran) return target > BREAK_EVEN ? 'cold' : 'short';
   return bandFor(target, limits);
+}
+
+/** Where the flat table stands on the lift dial: outside the stack before the deal, then down at the table. */
+export function flatFloor(phase: Phase, stages: number): number {
+  return phase === 'intro' ? 0 : stages - 1;
+}
+
+/** The running win rate as the flat table draws it. `fill` is a percentage of the bar. */
+export function flatRate({ rounds, winRate }: Pick<GameState, 'rounds' | 'winRate'>, limits: Limits) {
+  if (!rounds) return { text: 'No hands', hands: 'dealt yet', fill: 0, past: false };
+  return {
+    text: pct(winRate, 1),
+    hands: `over ${rounds} hand${rounds === 1 ? '' : 's'}`,
+    fill: winRate * 100,
+    past: pastClassical(winRate, limits.classical),
+  };
+}
+
+export interface FlatHand {
+  readonly title: string;
+  readonly x: string;
+  readonly y: string;
+  readonly a: string;
+  readonly b: string;
+  readonly result: string;
+  readonly win: boolean;
+}
+
+/**
+ * The hand on the flat table. A run clears the store's last hand, so the one on
+ * the table stays until the next is dealt, marked as no longer the current hand.
+ */
+export function flatHand({ phase, rounds, last }: Pick<GameState, 'phase' | 'rounds' | 'last'>, held: FlatHand | null): FlatHand | null {
+  if (last) {
+    return {
+      title: rounds ? `Hand ${rounds}` : 'Last hand',
+      x: String(last.x),
+      y: String(last.y),
+      a: String(last.a),
+      b: String(last.b),
+      result: `${last.win ? 'Won' : 'Lost'} ${signedAmount(last.delta)}`,
+      win: last.win,
+    };
+  }
+  return phase === 'intro' || !held ? null : { ...held, title: 'Last hand' };
 }

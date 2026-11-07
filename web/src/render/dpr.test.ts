@@ -4,6 +4,7 @@ import {
   DPR_FLOOR,
   DPR_STEP,
   ISOLATED_STALLS,
+  MIN_STEP_GAIN,
   SAMPLE_FRAMES,
   SLOW_FRAME_SECONDS,
   STALL_SECONDS,
@@ -57,7 +58,7 @@ describe('createDprController', () => {
 
   it('never goes below the floor, and stops counting tiers there', () => {
     const c = createDprController(1);
-    for (let i = 0; i < 20; i += 1) feedWindow(c, SLOW);
+    for (let i = 0; i < 20; i += 1) feedWindow(c, 0.2 * 0.9 ** i);
     expect(c.dpr).toBe(DPR_FLOOR);
     expect(c.tier).toBe(2);
     expect(feedWindow(c, SLOW)).toBe(false);
@@ -106,5 +107,222 @@ describe('createDprController', () => {
     c.reset();
     expect(c.sample(SLOW)).toBe(false);
     expect(c.dpr).toBe(DPR_CAP);
+  });
+
+  describe('when lowering the ratio does not help', () => {
+    const CAPPED = 1 / 30;
+
+    it('restores the ratio and tier after two flat steps, then never steps again', () => {
+      const c = createDprController(2);
+      expect(feedWindow(c, CAPPED)).toBe(true);
+      expect(c.tier).toBe(1);
+      expect(feedWindow(c, CAPPED)).toBe(true);
+      expect(c.tier).toBe(2);
+      expect(c.latched).toBe(false);
+      expect(feedWindow(c, CAPPED)).toBe(true);
+      expect(c.dpr).toBe(DPR_CAP);
+      expect(c.tier).toBe(0);
+      expect(c.latched).toBe(true);
+      for (let i = 0; i < 20; i += 1) expect(feedWindow(c, CAPPED)).toBe(false);
+      expect(c.dpr).toBe(DPR_CAP);
+    });
+
+    it('keeps the steps that helped and undoes only the flat ones', () => {
+      const c = createDprController(2);
+      feedWindow(c, 0.05);
+      feedWindow(c, 0.04);
+      const kept = c.dpr;
+      feedWindow(c, 0.03);
+      feedWindow(c, 0.03);
+      expect(c.tier).toBe(4);
+      feedWindow(c, 0.03);
+      expect(c.dpr).toBe(kept);
+      expect(c.tier).toBe(2);
+      expect(c.latched).toBe(true);
+    });
+
+    it('treats a single flat step as vsync quantising, and carries on', () => {
+      const c = createDprController(2);
+      feedWindow(c, 0.05);
+      feedWindow(c, 0.05);
+      expect(c.tier).toBe(2);
+      feedWindow(c, 0.033);
+      expect(c.latched).toBe(false);
+      expect(c.tier).toBe(3);
+    });
+
+    it('needs the two flat steps in a row: a step that helps clears the count', () => {
+      const c = createDprController(2);
+      feedWindow(c, 0.05); // step 1
+      feedWindow(c, 0.05); // flat, step 2
+      feedWindow(c, 0.04); // helped, step 3
+      feedWindow(c, 0.04); // flat, step 4
+      expect(c.latched).toBe(false);
+      expect(c.tier).toBe(4);
+    });
+
+    it('credits two small gains that add up', () => {
+      const small = 0.05 * (1 - MIN_STEP_GAIN * 0.8);
+      const c = createDprController(2);
+      feedWindow(c, 0.05);
+      feedWindow(c, small);
+      feedWindow(c, small * (1 - MIN_STEP_GAIN * 0.8));
+      expect(c.latched).toBe(false);
+      expect(c.tier).toBe(3);
+    });
+
+    it('counts a gain just under the threshold as flat', () => {
+      const flat = 0.05 * (1 - MIN_STEP_GAIN * 0.5);
+      const c = createDprController(2);
+      feedWindow(c, 0.05);
+      feedWindow(c, flat);
+      feedWindow(c, flat);
+      expect(c.latched).toBe(true);
+      expect(c.dpr).toBe(DPR_CAP);
+    });
+
+    it('does not count a flat window that ends the stepping', () => {
+      const c = createDprController(2);
+      const justSlow = SLOW_FRAME_SECONDS * 1.005;
+      feedWindow(c, justSlow);
+      feedWindow(c, SLOW_FRAME_SECONDS); // flat, but back under the line
+      feedWindow(c, justSlow); // a later load spike starts fresh
+      feedWindow(c, justSlow);
+      expect(c.latched).toBe(false);
+      expect(c.tier).toBe(3);
+    });
+
+    it('restores and latches when a single flat step lands on the floor', () => {
+      const c = createDprController(0.9);
+      expect(feedWindow(c, CAPPED)).toBe(true);
+      expect(c.dpr).toBe(DPR_FLOOR);
+      expect(feedWindow(c, CAPPED)).toBe(true);
+      expect(c.dpr).toBe(0.9);
+      expect(c.tier).toBe(0);
+      expect(c.latched).toBe(true);
+    });
+
+    it('keeps a flat step onto the floor that ends the stepping', () => {
+      const c = createDprController(0.9);
+      feedWindow(c, 0.022);
+      expect(c.dpr).toBe(DPR_FLOOR);
+      expect(feedWindow(c, 0.0214)).toBe(false);
+      expect(c.dpr).toBe(DPR_FLOOR);
+      expect(c.latched).toBe(false);
+    });
+
+    it('restores from the floor when the second flat step landed on it', () => {
+      const c = createDprController(1);
+      feedWindow(c, CAPPED);
+      feedWindow(c, CAPPED);
+      expect(c.dpr).toBe(DPR_FLOOR);
+      expect(feedWindow(c, CAPPED)).toBe(true);
+      expect(c.dpr).toBe(1);
+      expect(c.tier).toBe(0);
+      expect(c.latched).toBe(true);
+    });
+
+    it('survives reset between steps, since the render loop can pause mid-test', () => {
+      const c = createDprController(2);
+      feedWindow(c, CAPPED);
+      c.reset();
+      feedWindow(c, CAPPED);
+      c.reset();
+      feedWindow(c, CAPPED);
+      expect(c.latched).toBe(true);
+      expect(c.dpr).toBe(DPR_CAP);
+    });
+
+    it('stays latched through reset', () => {
+      const c = createDprController(2);
+      for (let i = 0; i < 3; i += 1) feedWindow(c, CAPPED);
+      c.reset();
+      expect(feedWindow(c, CAPPED)).toBe(false);
+      expect(c.latched).toBe(true);
+    });
+
+    it('never latches on stall windows, whose capped average cannot show a gain', () => {
+      const c = createDprController(2);
+      for (let i = 0; i < ISOLATED_STALLS; i += 1) c.sample(STALL_SECONDS + 0.1);
+      for (let i = 0; i < 20; i += 1) feedWindow(c, STALL_SECONDS + 0.1);
+      expect(c.latched).toBe(false);
+      expect(c.dpr).toBe(DPR_FLOOR);
+    });
+  });
+
+  describe('setDeviceRatio', () => {
+    it('follows the screen when no steps have been taken', () => {
+      const c = createDprController(1);
+      expect(c.setDeviceRatio(1.5)).toBe(true);
+      expect(c.dpr).toBe(1.5);
+    });
+
+    it('stays under the cap, and reports no change when the cap hides the move', () => {
+      const c = createDprController(2);
+      expect(c.setDeviceRatio(3)).toBe(false);
+      expect(c.dpr).toBe(DPR_CAP);
+    });
+
+    it('reports no change for the same ratio after steps', () => {
+      const c = createDprController(1.75);
+      feedWindow(c, SLOW);
+      feedWindow(c, 0.01 + SLOW);
+      expect(c.setDeviceRatio(1.75)).toBe(false);
+    });
+
+    it('keeps the steps already taken', () => {
+      const c = createDprController(1);
+      feedWindow(c, SLOW);
+      expect(c.setDeviceRatio(1.5)).toBe(true);
+      expect(c.dpr).toBeCloseTo(1.5 - DPR_STEP, 10);
+      expect(c.tier).toBe(1);
+    });
+
+    it('respects the floor', () => {
+      const c = createDprController(2);
+      for (let i = 0; i < 4; i += 1) feedWindow(c, 0.1 - i * 0.02);
+      expect(c.tier).toBe(4);
+      expect(c.setDeviceRatio(1)).toBe(true);
+      expect(c.dpr).toBe(DPR_FLOOR);
+      expect(c.tier).toBe(4);
+    });
+
+    it('never renders above a screen that is already below the floor', () => {
+      const c = createDprController(2);
+      expect(c.setDeviceRatio(0.5)).toBe(true);
+      expect(c.dpr).toBe(0.5);
+    });
+
+    it('falls back to 1 for an unusable ratio', () => {
+      const c = createDprController(1.5);
+      expect(c.setDeviceRatio(0)).toBe(true);
+      expect(c.dpr).toBe(1);
+    });
+
+    it('clears the current window', () => {
+      const c = createDprController(1);
+      for (let i = 0; i < SAMPLE_FRAMES - 1; i += 1) c.sample(SLOW);
+      c.setDeviceRatio(1.5);
+      expect(c.sample(SLOW)).toBe(false);
+    });
+
+    it('drops a flat step, since its window was at another pixel count', () => {
+      const c = createDprController(2);
+      feedWindow(c, 1 / 30);
+      feedWindow(c, 1 / 30);
+      c.setDeviceRatio(1.5);
+      feedWindow(c, 1 / 30);
+      expect(c.latched).toBe(false);
+      expect(c.tier).toBe(3);
+    });
+
+    it('keeps the latch', () => {
+      const c = createDprController(2);
+      for (let i = 0; i < 3; i += 1) feedWindow(c, 1 / 30);
+      expect(c.setDeviceRatio(1.5)).toBe(true);
+      expect(c.dpr).toBe(1.5);
+      expect(c.latched).toBe(true);
+      expect(feedWindow(c, 1 / 30)).toBe(false);
+    });
   });
 });
