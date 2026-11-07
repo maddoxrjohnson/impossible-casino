@@ -71,7 +71,7 @@ export function wiesnerReceipt(forge: ForgeAttempt, board: CageBoard): Receipt {
   const { provenance: p, circuit, circuitNote, qubits, shots, passes, passRate } = result;
   const limit = board.rows.find((row) => row.length === length)?.limit;
   return {
-    sub: 'Held at the Cage: what your forgery was checked against, and where it ran.',
+    sub: 'Held at the Cage: the shots your draw came from, and where they ran.',
     circuitTitle: `Example ticket: ${length} qubit${length === 1 ? '' : 's'}`,
     qasm: circuit.qasm,
     circuitNote: `Logical circuit, as written: ${circuitNote}.`,

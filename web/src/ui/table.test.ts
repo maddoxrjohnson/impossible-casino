@@ -7,7 +7,7 @@ import { flatFloor, flatHand, flatRate, settledLine, sourceLine, stakeChoices, t
 
 const limits = { classical: 0.75, quantum: 0.8535533905932737 };
 const idle = { locked: false, inRoom: false };
-const base = { phase: 'entangled', autoplaying: false, broke: false } as const;
+const base = { phase: 'entangled', autoplaying: false, broke: false, forging: false } as const;
 
 describe('tableButtons', () => {
   it('offers the next step of the table in each phase', () => {
@@ -25,6 +25,16 @@ describe('tableButtons', () => {
   it('offers restart only once the table is cleared, unless the player is broke', () => {
     expect(tableButtons(base, idle).alt).toBeUndefined();
     expect(tableButtons({ ...base, phase: 'beyond' }, idle).alt).toMatchObject({ act: 'restart' });
+  });
+
+  it('holds every table action while a forge waits, keeping the buttons in place', () => {
+    for (const phase of ['intro', 'wall', 'entangled', 'beyond'] as const) {
+      const { main } = tableButtons({ ...base, phase, forging: true }, idle);
+      expect(main.disabled).toBe(true);
+      expect(main.act).toBeDefined();
+    }
+    expect(tableButtons({ ...base, forging: true }, idle).main.label).toBe('Run');
+    expect(tableButtons({ ...base, phase: 'beyond', forging: true }, idle).alt?.disabled).toBe(true);
   });
 
   it('stops Run during a run, a story beat, and a visit to a side room', () => {

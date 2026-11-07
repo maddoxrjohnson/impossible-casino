@@ -139,6 +139,17 @@ describe('wiesnerReceipt', () => {
     expect(receipt.circuitNote).toContain(forge.result.circuitNote);
   });
 
+  it('heads the marker with the shots behind the draw, and claims nothing about the ticket', async () => {
+    const { forge, receipt } = await receiptAt();
+    expect(receipt.sub).toMatch(/shots/i);
+    expect(receipt.sub).toMatch(/draw/i);
+    expect(receipt.sub).not.toMatch(/ticket|circuit|checked|forgery|your forge/i);
+    const live: SimulatorProvenance = { ...(forge.result.provenance as SimulatorProvenance), source: 'live-simulator' };
+    const liveSub = wiesnerReceipt({ ...forge, result: { ...forge.result, provenance: live } }, board).sub;
+    expect(liveSub).toBe(receipt.sub);
+    expect(receipt.sub).not.toMatch(/pre-run|earlier|live/i);
+  });
+
   it('reads shots and passes from the result, and the limit from the export', async () => {
     const { forge, receipt } = await receiptAt();
     expect(value(receipt, 'Shots')).toBe(forge.result.shots.toLocaleString('en-US'));

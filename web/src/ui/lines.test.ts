@@ -127,6 +127,11 @@ describe('the cage lines', () => {
     expect(lines.caught).toMatch(/guess/i);
   });
 
+  it('does not call a clear impossible, with the odds on the board beside it', () => {
+    expect(lines.cageClear).not.toMatch(/should not|cannot|impossible/i);
+    expect(lines.cageClear).toMatch(/few/i);
+  });
+
   it('makes no claim about single qubits, noise, or a chip run', () => {
     for (const line of said) {
       expect(line).not.toMatch(/noise|first qubit|last qubit|\bqubit \d/i);

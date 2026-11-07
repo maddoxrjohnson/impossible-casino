@@ -271,6 +271,32 @@ describe('createHudSync in the cage', () => {
     return { store, seen, moment };
   }
 
+  it('shows the table controls as held from the moment a forge starts until it settles', async () => {
+    let settle: (result: Awaited<ReturnType<typeof source.wiesner>>) => void = () => undefined;
+    const held = () => new Promise<Awaited<ReturnType<typeof source.wiesner>>>((resolve) => { settle = resolve; });
+    const { store, seen, moment } = cage({ wiesner: held });
+    moment.inRoom = false; moment.inCage = false;
+    store.setStake(200);
+    expect(seen.main.disabled).toBeFalsy();
+    expect(seen.stakesDisabled).toEqual([false, false, false, false]);
+
+    const forged = store.forge(1, PAYS);
+    expect(seen.main).toMatchObject({ label: 'Run', disabled: true });
+    expect(seen.stakesDisabled).toEqual([true, true, true, true]);
+
+    settle(await source.wiesner(1));
+    await forged;
+    expect(seen.main.disabled).toBeFalsy();
+    expect(seen.stakesDisabled).toEqual([false, false, false, false]);
+  });
+
+  it('hands the table back when a forge fails', async () => {
+    const { store, seen, moment } = cage({ wiesner: () => Promise.reject(new Error('down')) });
+    moment.inRoom = false; moment.inCage = false;
+    await store.forge(1, PAYS);
+    expect(seen.main.disabled).toBeFalsy();
+  });
+
   it('says pass and caught', async () => {
     const won = cage();
     await won.store.forge(1, PAYS);

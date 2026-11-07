@@ -39,6 +39,25 @@ export interface CageView {
   readonly sources: readonly string[];
 }
 
+/** Long enough to outlast a double press or a tap that lands twice, short enough not to feel stuck. */
+export const RESTART_ARM_MS = 700;
+
+/**
+ * A forge settles at once, so Forge can turn into Start over under a press already on
+ * its way. This holds that Start over back for a moment, until the result can be read.
+ */
+export function createRestartGuard(now: () => number) {
+  let shown: CageButton['act'] | null = null, armsAt = 0;
+  return {
+    see(act: CageButton['act']): void {
+      if (shown === 'forge' && act === 'restart') armsAt = now() + RESTART_ARM_MS;
+      else if (act === 'forge') armsAt = 0;
+      shown = act;
+    },
+    holding: (): boolean => now() < armsAt,
+  };
+}
+
 const qubits = (length: number): string => `${length} qubit${length === 1 ? '' : 's'}`;
 
 function button({ broke, forging, autoplaying }: CageState): CageButton {
@@ -46,13 +65,13 @@ function button({ broke, forging, autoplaying }: CageState): CageButton {
   return { label: forging ? 'At the wicket' : 'Forge', act: 'forge', disabled: forging || autoplaying, brass: false };
 }
 
-function result({ forge }: CageState): CageResult | null {
+function result({ forge, bankroll }: CageState): CageResult | null {
   if (!forge) return null;
   const { passed, delta, length, stake, result: run } = forge;
   const counts = `${money(run.passes)} passes in ${money(run.shots)} shots`;
   return {
     head: `${passed ? 'Passed' : 'Caught'} ${signedAmount(delta)}`,
-    detail: `${qubits(length)} at ${money(stake)}. One draw at ${pct(run.passRate, 1)}, from ${counts}.`,
+    detail: `${qubits(length)} at ${money(stake)}. One draw at ${pct(run.passRate, 1)}, from ${counts}. Bankroll now ${money(bankroll)}.`,
     won: passed,
   };
 }

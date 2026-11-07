@@ -1,7 +1,7 @@
 // The Cashier's Cage on the HUD: a teller's board over the camera's view of the door. The words and numbers come from cage-view.
 import type { CageBoard } from '../game/cage';
 import type { GameState } from '../game/store';
-import { cageView } from './cage-view';
+import { RESTART_ARM_MS, cageView, createRestartGuard } from './cage-view';
 
 export interface CagePanelOptions {
   board: CageBoard;
@@ -41,6 +41,8 @@ export function createCagePanel({ board, stakes, onForge, onRestart, onStake }: 
   let length = board.rows[0]?.length ?? 1;
   let held: GameState | null = null;
   let act: 'forge' | 'restart' | null = null;
+  let armTimer = 0;
+  const guard = createRestartGuard(() => performance.now());
 
   const paint = (s: GameState): void => {
     const view = cageView(s, board);
@@ -54,9 +56,13 @@ export function createCagePanel({ board, stakes, onForge, onRestart, onStake }: 
     stakeInputs.forEach((input, i) => { input.checked = +input.value === s.stake; input.disabled = !!view.stakes[i]?.disabled; });
     goal.textContent = view.goal;
     button.textContent = view.button.label;
-    button.setAttribute('aria-disabled', String(view.button.disabled));
+    guard.see(view.button.act);
+    const off = view.button.disabled || guard.holding();
+    button.setAttribute('aria-disabled', String(off));
+    clearTimeout(armTimer);
+    if (guard.holding()) armTimer = window.setTimeout(() => { if (held) paint(held); }, RESTART_ARM_MS);
     button.classList.toggle('is-brass', view.button.brass);
-    act = view.button.disabled ? null : view.button.act;
+    act = off ? null : view.button.act;
     result.classList.toggle('is-won', !!view.result?.won);
     head.textContent = view.result?.head ?? '';
     detail.textContent = view.result?.detail ?? '';
@@ -65,10 +71,17 @@ export function createCagePanel({ board, stakes, onForge, onRestart, onStake }: 
 
   const onLength = (e: Event): void => { if (e.target instanceof HTMLInputElement) length = +e.target.value; };
   const onStakeChange = (e: Event): void => { if (e.target instanceof HTMLInputElement) onStake(+e.target.value); };
-  const onButton = (): void => { if (act === 'forge') onForge(length); else if (act === 'restart') onRestart(); };
+  // A second click of a double-click is the same gesture, and must not stake again.
+  const onButton = (e: MouseEvent): void => {
+    if (e.detail > 1) return;
+    if (act === 'forge') onForge(length); else if (act === 'restart') onRestart();
+  };
+  // A held key is one press, so it cannot chain forges into a restart.
+  const onButtonKey = (e: KeyboardEvent): void => { if (e.repeat && (e.key === 'Enter' || e.key === ' ')) e.preventDefault(); };
   lengthGroup.addEventListener('change', onLength);
   stakeGroup.addEventListener('change', onStakeChange);
   button.addEventListener('click', onButton);
+  button.addEventListener('keydown', onButtonKey);
 
   return {
     box,
@@ -88,6 +101,8 @@ export function createCagePanel({ board, stakes, onForge, onRestart, onStake }: 
       lengthGroup.removeEventListener('change', onLength);
       stakeGroup.removeEventListener('change', onStakeChange);
       button.removeEventListener('click', onButton);
+      button.removeEventListener('keydown', onButtonKey);
+      clearTimeout(armTimer);
     },
   };
 }

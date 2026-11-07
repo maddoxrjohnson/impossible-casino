@@ -104,7 +104,7 @@ async function boot(root: HTMLElement): Promise<void> {
       onStake: (value) => {
         store.setStake(value);
         // As with the dial, a refused stake does not emit.
-        hud.stakes(stakeChoices(store.state, false), store.state.stake);
+        hud.stakes(stakeChoices(store.state, store.state.forging), store.state.stake);
         hud.cage(store.state);
       },
       onSound: (on) => {

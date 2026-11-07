@@ -10,7 +10,7 @@ import {
   type SimulatorProvenance,
 } from '../game/results';
 import { CAGE_CLEAR_LENGTH, START_BANKROLL } from '../game/rules';
-import { cageView, type CageState } from './cage-view';
+import { RESTART_ARM_MS, cageView, createRestartGuard, type CageState } from './cage-view';
 
 const wiesner = parseWiesnerExport(wiesnerJson);
 const board = cageBoard(wiesner, 'ibm-noise-model');
@@ -101,11 +101,69 @@ describe('cageView result', () => {
     expect(shown?.detail).toContain(result.shots.toLocaleString('en-US'));
   });
 
+  it('changes the status text on every forge, even a repeat of the same catch', async () => {
+    const forge = settleForge(await source.wiesner(4), 100, board.payoutStake, () => 0.999);
+    const text = (bankroll: number) => {
+      const shown = cageView(state({ forge, bankroll }), board).result;
+      return `${shown?.head ?? ''} ${shown?.detail ?? ''}`;
+    };
+    expect(text(9800)).toContain('9,800');
+    expect(text(9800)).not.toBe(text(9700));
+  });
+
   it('reads caught and amount', async () => {
     const forge = settleForge(await source.wiesner(4), 500, board.payoutStake, () => 0.999);
     const shown = cageView(state({ forge }), board).result;
     expect(shown?.head).toBe('Caught −500');
     expect(shown?.won).toBe(false);
+  });
+});
+
+describe('createRestartGuard', () => {
+  function guarded() {
+    let now = 1000;
+    const guard = createRestartGuard(() => now);
+    return { guard, tick: (ms: number) => { now += ms; } };
+  }
+
+  it('leaves a button alone until it flips', () => {
+    const { guard } = guarded();
+    guard.see('forge');
+    expect(guard.holding()).toBe(false);
+  });
+
+  it('holds Start over just after Forge turned into it', () => {
+    const { guard, tick } = guarded();
+    guard.see('forge');
+    guard.see('restart');
+    expect(guard.holding()).toBe(true);
+    tick(RESTART_ARM_MS - 1);
+    expect(guard.holding()).toBe(true);
+    tick(1);
+    expect(guard.holding()).toBe(false);
+  });
+
+  it('does not restart the wait on a repaint of the same button', () => {
+    const { guard, tick } = guarded();
+    guard.see('forge');
+    guard.see('restart');
+    tick(RESTART_ARM_MS);
+    guard.see('restart');
+    expect(guard.holding()).toBe(false);
+  });
+
+  it('does not hold a Start over the player walked in on', () => {
+    const { guard } = guarded();
+    guard.see('restart');
+    expect(guard.holding()).toBe(false);
+  });
+
+  it('holds only the restart, so the next game can forge at once', () => {
+    const { guard } = guarded();
+    guard.see('forge');
+    guard.see('restart');
+    guard.see('forge');
+    expect(guard.holding()).toBe(false);
   });
 });
 

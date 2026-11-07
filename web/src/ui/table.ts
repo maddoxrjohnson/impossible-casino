@@ -18,7 +18,7 @@ export interface StakeChoice {
 }
 
 export function tableButtons(
-  { phase, autoplaying, broke }: Pick<GameState, 'phase' | 'autoplaying' | 'broke'>,
+  { phase, autoplaying, broke, forging }: Pick<GameState, 'phase' | 'autoplaying' | 'broke' | 'forging'>,
   { locked, inRoom }: TableMoment,
 ): { main: HudButton; alt?: HudButton } {
   if (broke && !autoplaying) {
@@ -27,19 +27,19 @@ export function tableButtons(
   const run: HudButton = {
     label: autoplaying ? 'Running' : 'Run',
     act: 'run',
-    disabled: autoplaying || locked || inRoom,
+    disabled: autoplaying || locked || inRoom || forging,
   };
   switch (phase) {
     case 'intro':
-      return { main: { label: 'Deal', act: 'deal' } };
+      return { main: { label: 'Deal', act: 'deal', disabled: forging } };
     case 'classical':
       return { main: { label: 'Dealing', disabled: true } };
     case 'wall':
-      return { main: { label: 'Entangle the pair', act: 'entangle', brass: true } };
+      return { main: { label: 'Entangle the pair', act: 'entangle', brass: true, disabled: forging } };
     case 'entangled':
       return { main: run };
     case 'beyond':
-      return { main: run, alt: { label: 'Restart', act: 'restart', disabled: autoplaying || locked } };
+      return { main: run, alt: { label: 'Restart', act: 'restart', disabled: autoplaying || locked || forging } };
   }
 }
 
