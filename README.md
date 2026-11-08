@@ -2,7 +2,7 @@
 
 A 1920s casino built inside a quantum computer, where each room is a game whose odds are set by quantum rules. The headline is the Impossible Tables: no plan agreed in advance can win over time, an entangled pair can, and a real IBM chip did.
 
-- **Play:** LIVE_DEMO_LINK
+- **Play:** https://impossible-casino.vercel.app
 - **Demo video:** YOUTUBE_VIDEO_LINK
 
 Built for the VT Qiskit hackathon. Every quantum number in the game comes from Qiskit. Each result is labelled with where it came from: the live Qiskit simulator, a pre-run Qiskit simulator (ideal or IBM noise model), or a named IBM chip with its job ID. The claim is not speed. The headline claim, made only for the Tables, is beating a proven classical limit in a game. The Cage and the Roulette Wheel show other quantum limits that you can measure, and the house still wins at both.
