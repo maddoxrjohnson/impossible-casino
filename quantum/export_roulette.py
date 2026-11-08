@@ -1,6 +1,7 @@
 """Export the drafted wheels for the Roulette Wheel.
 
 Run from the repo root: .venv/bin/python -m quantum.export_roulette
+Add --chip-only to rewrite just the chip runs and leave the simulators as written.
 
 The game only reaches the stages in roulette.reachable, because the house only
 plays its listed cards, so only those ship. Each stage's wheel is an exact
@@ -9,8 +10,8 @@ are the Tie pairs whose first qubit is mixed in that statevector, so entangled
 with its partner. Each complete draft also has sampled spins from two runs: an
 ideal Aer simulator, and Aer with a noise model built from IBM's stored
 fake_kingston calibration, pinned to that snapshot's quietest qubits for the
-circuit. Both are simulations, and the provenance says so. No chip has run this
-room.
+circuit. Both are simulations, and the provenance says so. Chip runs come from
+the records in CHIP_JOBS, and none is listed yet.
 
 The noisy simulator keeps only the errors on the chosen qubits, which gives the
 same counts as the full model at a fraction of the cost.
@@ -27,9 +28,11 @@ write a file where any of these returns reaches 1.
 import argparse
 import gzip
 import itertools
+import json
 import math
 from collections.abc import Sequence
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 from qiskit import QuantumCircuit, qasm2, transpile
@@ -39,7 +42,14 @@ from qiskit_aer.noise import NoiseModel
 from qiskit_aer.noise.device import basic_device_gate_errors, basic_device_readout_errors
 from qiskit_ibm_runtime.fake_provider import FakeKingston
 
-from quantum.export import DATA_DIR, SCHEMA_VERSION, simulator_provenance, write_export
+from quantum.export import (
+    CHIP_SOURCE,
+    DATA_DIR,
+    SCHEMA_VERSION,
+    collected_runs,
+    simulator_provenance,
+    write_export,
+)
 from quantum.roulette import (
     DECK,
     POCKETS,
@@ -65,6 +75,7 @@ from quantum.roulette import (
 
 EXPORT_PATH = DATA_DIR / f"roulette.v{SCHEMA_VERSION}.json"
 SHOTS = 8192
+CHIP_JOBS: tuple[str, ...] = ()
 
 POCKET_ORDER = "pocket n is the integer whose bit k is qubit k, so counts[n] and wheel[n] are pocket n"
 OPENING = "before any card the house spins the wheel fair: H on every qubit"
@@ -298,6 +309,10 @@ def noisy_run(drafts: Sequence[Draft], shots: int, today: date) -> dict[str, Any
     }
 
 
+def chip_runs() -> list[dict[str, Any]]:
+    return collected_runs("roulette", CHIP_JOBS)
+
+
 # Shared blocks
 
 
@@ -492,7 +507,7 @@ def build_export(shots: int = SHOTS, today: date | None = None) -> dict[str, Any
     wheel_limits = limits(solution)
     pay = payouts(wheel_limits["houseLimit"]["value"])
     nodes, wheels = nodes_and_wheels(solution)
-    runs = [ideal_run(drafts, shots, today), noisy_run(drafts, shots, today)]
+    runs = [ideal_run(drafts, shots, today), noisy_run(drafts, shots, today), *chip_runs()]
     pays = pay["table"][0]["pays"]
     return {
         "schemaVersion": SCHEMA_VERSION,
@@ -518,8 +533,34 @@ def build_export(shots: int = SHOTS, today: date | None = None) -> dict[str, Any
     }
 
 
+def refresh_chip_runs(path: Path) -> None:
+    """Swap in the current chip runs and their edge entries, keeping the simulators' as written."""
+    export = json.loads(path.read_text())
+    simulators = [r for r in export["runs"] if r["provenance"]["source"] != CHIP_SOURCE]
+    kept = {r["id"] for r in simulators}
+    solution = solve()
+    pays = export["payouts"]["table"][0]["pays"]
+    stake = export["payouts"]["stake"]
+    chips = chip_runs()
+    refreshed = {
+        **export,
+        "runs": [*simulators, *chips],
+        "edge": [
+            *(entry for entry in export["edge"] if entry["run"] in kept),
+            *(run_edge(solution, run, pays, stake) for run in chips),
+        ],
+    }
+    check_edge(refreshed)
+    write_export(path, refreshed)
+
+
 def main(argv: Sequence[str] | None = None) -> None:
-    argparse.ArgumentParser(description=__doc__).parse_args(argv)
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--chip-only", action="store_true")
+    if parser.parse_args(argv).chip_only:
+        refresh_chip_runs(EXPORT_PATH)
+        print(f"wrote {EXPORT_PATH}")
+        return
     export = build_export()
     check_edge(export)
     write_export(EXPORT_PATH, export)

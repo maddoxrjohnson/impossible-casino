@@ -25,6 +25,7 @@ from quantum.export_roulette import (
     NOISY_BASE_SEED,
     SHOTS,
     SX_PER_QUBIT,
+    CHIP_JOBS,
     best_return,
     build_export,
     check_edge,
@@ -40,6 +41,8 @@ from quantum.export_roulette import (
     nodes_and_wheels,
     payouts,
     quietest_layout,
+    refresh_chip_runs,
+    run_edge,
     sample_point,
     spin_drafts,
     spin_return,
@@ -190,6 +193,8 @@ def test_provenance_records_the_requested_shots_and_date(small_export, device):
 
 def test_committed_runs_use_the_full_shot_count(committed):
     for run in committed["runs"]:
+        if run["provenance"]["source"] == "ibm-chip":
+            continue
         assert run["provenance"]["shots"] == SHOTS
 
 
@@ -433,7 +438,7 @@ def test_seeds_follow_the_spaced_scheme(export):
     for run_id, base in (("ideal", IDEAL_BASE_SEED), ("ibm-noise-model", NOISY_BASE_SEED)):
         seeds = [p["seed"] for p in run_named(export, run_id)["points"]]
         assert seeds == [draft_seed(base, i) for i in range(len(seeds))]
-    every = [p["seed"] for r in export["runs"] for p in r["points"]]
+    every = [p["seed"] for r in export["runs"] for p in r["points"] if p["seed"] is not None]
     assert len(set(every)) == len(every)
     assert max(every) < 2**31
 
@@ -592,3 +597,96 @@ def test_spin_drafts_are_the_reachable_finals(solution):
     finals = spin_drafts(solution)
     assert finals == [d for d in reachable(solution) if turn_of(d) == "spin"]
     assert all(best_chance(solution.wheels[d]) <= 0.25 for d in finals)
+
+
+# Chip runs
+
+
+def chip_run(source_run, shots=None):
+    """A stand-in chip run reusing a simulator run's counts, labelled the way a collected run is."""
+    return {
+        "id": "ibm-chip",
+        "provenance": {
+            **source_run["provenance"],
+            "source": "ibm-chip",
+            "backend": "ibm_kingston",
+            "noiseModel": None,
+            "jobId": "job123",
+        },
+        "points": [{**p, "seed": None} for p in source_run["points"]],
+    }
+
+
+@pytest.fixture
+def from_committed(monkeypatch, committed):
+    """build_export with the simulators replaced by the committed runs, so it is fast."""
+    ideal, noisy = committed["runs"]
+    monkeypatch.setattr(quantum.export_roulette, "ideal_run", lambda *_: ideal)
+    monkeypatch.setattr(quantum.export_roulette, "noisy_run", lambda *_: noisy)
+
+
+def test_no_chip_jobs_are_listed_yet():
+    assert CHIP_JOBS == ()
+    assert quantum.export_roulette.chip_runs() == []
+
+
+def test_with_no_chip_jobs_the_runs_and_edge_are_unchanged(from_committed, committed):
+    export = build_export(today=TODAY)
+    for block in ("runs", "edge"):
+        assert json.dumps(export[block], indent=1) == json.dumps(committed[block], indent=1)
+
+
+def test_build_export_folds_a_chip_run_in_and_checks_its_edge(monkeypatch, from_committed, committed, solution):
+    chip = chip_run(committed["runs"][1])
+    monkeypatch.setattr(quantum.export_roulette, "chip_runs", lambda: [chip])
+    export = build_export(today=TODAY)
+    assert [r["id"] for r in export["runs"]] == ["ideal", "ibm-noise-model", "ibm-chip"]
+    assert [e["run"] for e in export["edge"]] == ["ideal", "ibm-noise-model", "ibm-chip"]
+    pays, stake = export["payouts"]["table"][0]["pays"], export["payouts"]["stake"]
+    assert export["edge"][2] == run_edge(solution, chip, pays, stake)
+    assert export["playRun"] == "ibm-noise-model"
+    check_edge(export)
+
+
+def test_check_edge_refuses_a_chip_run_with_one_beaten_draft(monkeypatch, from_committed, committed):
+    chip = chip_run(committed["runs"][1])
+    point = chip["points"][0]
+    third = point["shots"] // 3
+    chip["points"][0] = {**point, "counts": [third] + [0] * 30 + [point["shots"] - third]}
+    monkeypatch.setattr(quantum.export_roulette, "chip_runs", lambda: [chip])
+    with pytest.raises(ValueError, match="edge fails on run ibm-chip"):
+        check_edge(build_export(today=TODAY))
+
+
+def test_chip_only_refresh_adds_the_chip_run_and_keeps_the_simulators(monkeypatch, tmp_path, committed, solution):
+    target = tmp_path / "roulette.json"
+    target.write_text(Path(EXPORT_PATH).read_text())
+    chip = chip_run(committed["runs"][1])
+    monkeypatch.setattr(quantum.export_roulette, "chip_runs", lambda: [chip])
+    monkeypatch.setattr(quantum.export_roulette, "EXPORT_PATH", target)
+    main(["--chip-only"])
+    refreshed = json.loads(target.read_text())
+    assert refreshed["runs"][:2] == committed["runs"]
+    assert refreshed["edge"][:2] == committed["edge"]
+    assert refreshed["runs"][2] == chip
+    pays, stake = committed["payouts"]["table"][0]["pays"], committed["payouts"]["stake"]
+    assert refreshed["edge"][2] == run_edge(solution, chip, pays, stake)
+    assert {k: v for k, v in refreshed.items() if k not in ("runs", "edge")} == {
+        k: v for k, v in committed.items() if k not in ("runs", "edge")
+    }
+
+    monkeypatch.setattr(quantum.export_roulette, "chip_runs", lambda: [])
+    refresh_chip_runs(target)
+    assert target.read_text() == Path(EXPORT_PATH).read_text()
+
+
+def test_chip_only_refresh_refuses_to_write_a_beaten_chip_run(monkeypatch, tmp_path, committed):
+    target = tmp_path / "roulette.json"
+    original = Path(EXPORT_PATH).read_text()
+    target.write_text(original)
+    chip = chip_run(committed["runs"][1])
+    chip["points"][0] = {**chip["points"][0], "counts": [0] * 31 + [chip["points"][0]["shots"]]}
+    monkeypatch.setattr(quantum.export_roulette, "chip_runs", lambda: [chip])
+    with pytest.raises(ValueError, match="ibm-chip"):
+        refresh_chip_runs(target)
+    assert target.read_text() == original
