@@ -39,7 +39,7 @@ export interface HudOptions {
   cage: CageBoard;
   onForge: (length: number) => void;
   /** The Wheel's board and moves. `onLeave` runs whenever the player walks out of the room. */
-  roulette: Pick<RoulettePanelOptions, 'board' | 'text' | 'onOpen' | 'onPlay' | 'onSpin'> & { onLeave: () => void };
+  roulette: Pick<RoulettePanelOptions, 'board' | 'text' | 'onOpen' | 'onPlay' | 'onSpin' | 'shown' | 'onLanded'> & { onLeave: () => void };
 }
 
 export type Hud = ReturnType<typeof createHud>;
@@ -195,7 +195,7 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   const onBackdrop = (e: MouseEvent) => { if (downOnBackdrop && e.target === receipt) onReceiptClose(); };
   const isExpertOpen = () => expert.classList.contains('is-on');
   let expertOn = false;
-  /** Built on every open, from the game as it is now, so it cannot go stale. */
+  /** Built on every open, from the game as the HUD shows it then. An open sheet is not redrawn, so a spin that lands under it stays off until it is opened again. */
   const onExpertOpen = () => {
     if (!expertOn || isExpertOpen() || isOpen()) return;
     const data = onExpert(room);

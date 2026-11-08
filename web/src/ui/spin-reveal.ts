@@ -44,6 +44,9 @@ export function shownState(s: GameState, hold: SpinHold | null): GameState {
   return { ...s, ...rest, roulette: { ...s.roulette, spin } };
 }
 
+/** How long past the roll a hold waits for the ball to report landing, in case the panel is not painting it. */
+export const LAND_SLACK_MS = 1500;
+
 export interface SpinRevealOptions {
   now?: () => number;
   /** How long the coming roll runs: 0 under reduced motion, read at each spin. */
@@ -58,24 +61,36 @@ const timeout = (fn: () => void, ms: number): (() => void) => {
 };
 
 /**
- * Every reader passes the store's state through `shown` and draws what comes back. When a hold runs out on its own,
- * subscribers are told so they can draw again; a hold ended by the state itself is already being drawn.
+ * Every reader passes the store's state through `shown` and draws what comes back. A hold ends when the panel's ball
+ * reports landing, or after the roll and `LAND_SLACK_MS` if it never does, and subscribers are then told so they can
+ * draw again. A hold ended by the state itself, such as leaving the room, is already being drawn.
  */
 export function createSpinReveal({ now = () => performance.now(), rollMs = () => ROLL_MS, later = timeout }: SpinRevealOptions = {}) {
   let hold: SpinHold | null = null, before: SpinShown | null = null, cancel: (() => void) | null = null;
   const listeners = new Set<() => void>();
   const stop = (): void => { cancel?.(); cancel = null; };
+  const tell = (): void => { listeners.forEach((fn) => { fn(); }); };
   return {
     shown: (s: GameState): GameState => {
       const t = now();
-      const next = holdFor(hold, before, s, t, rollMs());
+      const ms = rollMs();
+      const next = holdFor(hold, before, s, t, ms > 0 ? ms + LAND_SLACK_MS : 0);
       if (next !== hold) {
-        stop();
+        // A hold that ran out here keeps its timer, which tells the subscribers; a changed spin needs no telling.
+        const ranOut = hold !== null && next === null && (s.roulette?.spin ?? null) === hold.spin;
+        if (!ranOut) stop();
         hold = next;
-        if (next) cancel = later(() => { cancel = null; hold = null; listeners.forEach((fn) => { fn(); }); }, next.until - t);
+        if (next) cancel = later(() => { cancel = null; hold = null; tell(); }, next.until - t);
       }
       before = spinShown(s);
       return shownState(s, hold);
+    },
+    /** The panel's ball has come to rest on `spin`. */
+    land(spin: RouletteSpin | null): void {
+      if (!hold || hold.spin !== spin) return;
+      stop();
+      hold = null;
+      tell();
     },
     /** Whether a result is being held back now. */
     holding: (): boolean => hold !== null,

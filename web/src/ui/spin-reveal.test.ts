@@ -7,7 +7,7 @@ import { rouletteBoard } from '../game/roulette';
 import { SAVE_KEY } from '../game/save';
 import { createGameStore } from '../game/store';
 import { ROLL_MS } from './roulette-wheel';
-import { createSpinReveal, holdFor, shownState, spinShown } from './spin-reveal';
+import { createSpinReveal, holdFor, LAND_SLACK_MS, shownState, spinShown } from './spin-reveal';
 
 const source = createPrerunSource({ chsh: parseChshExport(chshJson), wiesner: parseWiesnerExport(wiesnerJson) }, 'ibm-noise-model');
 const board = rouletteBoard(parseRouletteExport(rouletteJson));
@@ -38,6 +38,8 @@ function wheel({ bankroll = 9000, ms = ROLL_MS }: { bankroll?: number; ms?: numb
   store.subscribe((s) => { const v = reveal.shown(s); shown.push({ ...v }); });
   let told = 0;
   reveal.subscribe(() => { told += 1; shown.push({ ...reveal.shown(store.state) }); });
+  /** Moves the clock without running the timers, as a late timer would. */
+  const skip = (by: number) => { t += by; };
   const advance = (by: number) => {
     t += by;
     for (const timer of timers) if (timer.live && timer.at <= t) { timer.live = false; timer.fn(); }
@@ -55,7 +57,7 @@ function wheel({ bankroll = 9000, ms = ROLL_MS }: { bankroll?: number; ms?: numb
   };
   const spin = (lands: number) => { draw = at(lands); store.rouletteSpin(board, limitPocket); };
   const last = () => shown[shown.length - 1];
-  return { store, reveal, storage, advance, draft, spin, last, told: () => told, live: () => timers.filter((x) => x.live).length };
+  return { store, reveal, storage, skip, advance, draft, spin, last, told: () => told, live: () => timers.filter((x) => x.live).length };
 }
 
 describe('holdFor', () => {
@@ -103,8 +105,10 @@ describe('shownState', () => {
 });
 
 describe('createSpinReveal', () => {
+  const FALLBACK = ROLL_MS + LAND_SLACK_MS;
+
   it('shows the pre-spin bankroll until the ball lands, while the store has settled and saved at once', () => {
-    const { store, storage, advance, draft, spin, last, told } = wheel();
+    const { reveal, store, storage, advance, draft, spin, last, told } = wheel();
     draft();
     spin(other);
     expect(store.state.bankroll).toBe(8900);
@@ -113,29 +117,76 @@ describe('createSpinReveal', () => {
     expect(last()?.roulette?.spin).toBeNull();
     advance(1000);
     expect(told()).toBe(0);
-    advance(ROLL_MS - 1000);
+    reveal.land(store.state.roulette?.spin ?? null);
     expect(told()).toBe(1);
     expect(last()?.bankroll).toBe(8900);
     expect(last()?.roulette?.spin).toBe(store.state.roulette?.spin);
   });
 
+  it('waits for the ball past the usual roll, as a background tab would leave it', () => {
+    const { reveal, store, advance, draft, spin, last, told } = wheel();
+    draft();
+    spin(other);
+    advance(ROLL_MS + 500);
+    expect(reveal.holding()).toBe(true);
+    expect(told()).toBe(0);
+    expect(last()?.bankroll).toBe(9000);
+    reveal.land(store.state.roulette?.spin ?? null);
+    expect(told()).toBe(1);
+    expect(last()?.bankroll).toBe(8900);
+  });
+
+  it('lets go on its own after the fallback when no ball reports landing', () => {
+    const { reveal, advance, draft, spin, last, told } = wheel();
+    draft();
+    spin(other);
+    advance(FALLBACK - 1);
+    expect(told()).toBe(0);
+    advance(1);
+    expect(told()).toBe(1);
+    expect(reveal.holding()).toBe(false);
+    expect(last()?.bankroll).toBe(8900);
+  });
+
+  it('still tells its subscribers when another reader sees the hold run out first', () => {
+    const { reveal, store, skip, advance, draft, spin, told } = wheel();
+    draft();
+    spin(other);
+    skip(FALLBACK);
+    expect(reveal.shown(store.state).bankroll).toBe(8900);
+    expect(told()).toBe(0);
+    advance(0);
+    expect(told()).toBe(1);
+  });
+
+  it('ignores a landing for a spin it is not holding', () => {
+    const { reveal, draft, spin, told } = wheel();
+    draft();
+    spin(other);
+    reveal.land(null);
+    expect(reveal.holding()).toBe(true);
+    expect(told()).toBe(0);
+  });
+
   it('holds back a clearing win, so the cleared rooms wait too', () => {
-    const { store, advance, draft, spin, last } = wheel();
+    const { reveal, store, draft, spin, last } = wheel();
     draft();
     spin(limitPocket);
     expect(store.state.cleared).toContain('roulette');
     expect(last()?.cleared).not.toContain('roulette');
-    advance(ROLL_MS);
+    reveal.land(store.state.roulette?.spin ?? null);
     expect(last()?.cleared).toContain('roulette');
   });
 
   it('shows the result at once when there is no roll', () => {
-    const { store, draft, spin, last, live } = wheel({ ms: 0 });
+    const { reveal, store, draft, spin, last, live, told } = wheel({ ms: 0 });
     draft();
     spin(other);
     expect(last()?.bankroll).toBe(8900);
     expect(last()?.roulette?.spin).toBe(store.state.roulette?.spin);
     expect(live()).toBe(0);
+    reveal.land(store.state.roulette?.spin ?? null);
+    expect(told()).toBe(0);
   });
 
   it('lets go at once when the round is dropped mid-roll, with no timer left to fire', () => {
@@ -145,7 +196,7 @@ describe('createSpinReveal', () => {
     store.rouletteLeave();
     expect(last()?.bankroll).toBe(8900);
     expect(live()).toBe(0);
-    advance(ROLL_MS);
+    advance(FALLBACK);
     expect(told()).toBe(0);
   });
 
@@ -157,12 +208,12 @@ describe('createSpinReveal', () => {
     reveal.dispose();
     expect(reveal.holding()).toBe(false);
     expect(live()).toBe(0);
-    advance(ROLL_MS);
+    advance(FALLBACK);
     expect(told()).toBe(0);
   });
 
   it('lets go at once when the next round opens, and holds the next spin afresh', () => {
-    const { reveal, advance, draft, spin, last, told } = wheel();
+    const { reveal, store, advance, draft, spin, last, told } = wheel();
     draft();
     spin(other);
     advance(1000);
@@ -171,7 +222,7 @@ describe('createSpinReveal', () => {
     expect(last()?.bankroll).toBe(8900);
     spin(other);
     expect(last()?.bankroll).toBe(8900);
-    advance(ROLL_MS);
+    reveal.land(store.state.roulette?.spin ?? null);
     expect(told()).toBe(1);
     expect(last()?.bankroll).toBe(8800);
   });

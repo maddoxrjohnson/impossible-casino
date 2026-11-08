@@ -15,6 +15,10 @@ export interface RoulettePanelOptions {
   onSpin: (pocket: number) => void;
   onRestart: () => void;
   onStake: (value: number) => void;
+  /** What of the state to show. The ball follows the store's spin, and the rest of the panel waits for it here. */
+  shown?: (s: GameState) => GameState;
+  /** The ball has come to rest on `spin`, or was placed there at once with no roll. */
+  onLanded?: (spin: RouletteSpin) => void;
 }
 
 /** The pocket ring, the label radii and the hub, in wheel units: the wheel is 200 across. */
@@ -42,7 +46,7 @@ function wheelSvg(count: number): string {
   </svg>`;
 }
 
-export function createRoulettePanel({ board, text, stakes, onOpen, onPlay, onSpin, onRestart, onStake }: RoulettePanelOptions) {
+export function createRoulettePanel({ board, text, stakes, onOpen, onPlay, onSpin, onRestart, onStake, shown: showState = (s) => s, onLanded = () => undefined }: RoulettePanelOptions) {
   const box = document.createElement('section');
   box.className = 'dc-roulette';
   box.setAttribute('aria-label', 'The Roulette Wheel');
@@ -114,6 +118,7 @@ export function createRoulettePanel({ board, text, stakes, onOpen, onPlay, onSpi
     if (!at.done) { rollFrame = requestAnimationFrame(tick); return; }
     ballDeg = at.deg;
     roll = null;
+    if (seenSpin) onLanded(seenSpin);
     if (held) paint(held);
   };
   /** Follows the store's spin: a new one rolls the ball to its landed pocket, none parks it out of sight. */
@@ -124,7 +129,7 @@ export function createRoulettePanel({ board, text, stakes, onOpen, onPlay, onSpi
     ball.classList.toggle('is-on', !!spin);
     if (!spin) return;
     const plan = rollPlan(spin.landed, ROULETTE_POCKETS, ballDeg, reduced());
-    if (plan.ms === 0) { ballDeg = plan.to; placeBall(plan.to, REST_R); return; }
+    if (plan.ms === 0) { ballDeg = plan.to; placeBall(plan.to, REST_R); onLanded(spin); return; }
     roll = { plan, t0: performance.now() };
     placeBall(plan.from, ballAt(plan, 0).r);
     rollFrame = requestAnimationFrame(tick);
@@ -133,11 +138,13 @@ export function createRoulettePanel({ board, text, stakes, onOpen, onPlay, onSpi
     focusMark.setAttribute('d', focused === null ? '' : pocketPath(focused, ROULETTE_POCKETS, RING_IN, RING_OUT));
   };
 
-  const paint = (s: GameState): void => {
+  const paint = (state: GameState): void => {
     // A new draft starts with no pocket picked.
-    if (s.roulette?.turn !== 'spin') picked = null;
-    follow(s.roulette?.spin ?? null);
+    if (state.roulette?.turn !== 'spin') picked = null;
+    follow(state.roulette?.spin ?? null);
     const rolling = roll !== null;
+    // Until the ball lands, the panel reads as it did before the spin: the goal, the button, the stakes and the rows.
+    const s = showState(state);
     const view = rouletteView(s, board, text, picked);
     goal.textContent = view.goal;
     draftList.replaceChildren(...view.drafted.map((d) => {

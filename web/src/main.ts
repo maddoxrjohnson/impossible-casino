@@ -85,7 +85,7 @@ async function boot(root: HTMLElement): Promise<void> {
     const source = withPressedRun(withChipRuns(live, exports), exports, () => press.result());
     const store = createGameStore({ source });
     const audio = createAudio();
-    // A spin settles in the store at once; everything off the Roulette panel shows it as the panel's ball lands.
+    // A spin settles in the store at once; the HUD, the sound and the rest of the panel show it as the panel's ball lands.
     const reveal = createSpinReveal({ rollMs: () => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : ROLL_MS) });
     const cage = cageBoard(exports.wiesner, RUN_ID);
     const wheel = rouletteBoard(rouletteExport, playedRunId(rouletteExport));
@@ -150,6 +150,10 @@ async function boot(root: HTMLElement): Promise<void> {
         },
         onLeave: () => {
           store.rouletteLeave();
+        },
+        shown: reveal.shown,
+        onLanded: (spin) => {
+          reveal.land(spin);
         },
       },
     });
