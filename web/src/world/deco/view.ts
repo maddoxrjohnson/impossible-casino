@@ -10,6 +10,7 @@ import type { StageSize, StageView } from '../../render/stage';
 import type { Hud, SideName } from '../../ui/hud';
 import { createHudSync } from '../../ui/hud-sync';
 import { createLines, pastClassical, pct } from '../../ui/lines';
+import { rollBoost } from '../../ui/roulette-wheel';
 import { buildWorld, FROST, TIERS, TOP_Y, SEAL_S, FLOOR_Y, TABLE_Y, PAIR_A, PAIR_B, WIN_DIR } from './scene';
 import { questionCell } from './textures';
 import { createPost } from './post';
@@ -143,6 +144,8 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
 
   // --- tiny timeline: tweens and scheduled beats, on wall-clock seconds so a slow frame never stalls the story.
   let now = 0, tweens: Tween[] = [], beats: Beat[] = [];
+  // The door wheels race while the panel's ball rolls, then settle back.
+  let wheelSpin = store.state.roulette?.spin ?? null, wheelSpunAt = -Infinity;
   // wash: how much colour the cleared rooms have let into the whole house, from rooms.ts.
   const fx = { env: 1, exposure: 1.02, ca: 0, shake: 0, spin: 0, rise: 0, fade: 0, chipBase: .55, lamp: 1, flash: 0, pluck: 0, lit: 0, lift: 0, wash: colourLevel(store.state.cleared) };
   const tw = <K extends string>(obj: { [P in K]: number }, key: K, to: number, dur: number, ease: Ease = EASE.out, delay = 0) => {
@@ -455,7 +458,9 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     world.sealLight.intensity = U.uImpact.value * 60 + fx.flash * 50 * U.uSc.value;
     world.sealLight.color.copy(U.uImpactCol.value);
     scene.environmentIntensity = fx.env * (1 + lit * .15);
-    world.doors.forEach((x) => { if (x.wheel) x.wheel.rotation.z -= dt * .9; });
+    if ((st.roulette?.spin ?? null) !== wheelSpin) { wheelSpin = st.roulette?.spin ?? null; if (wheelSpin) wheelSpunAt = now; }
+    const race = wheelSpin && !reducedMotion ? rollBoost((now - wheelSpunAt) * 1000) * 7 : 0;
+    world.doors.forEach((x) => { if (x.wheel) x.wheel.rotation.z -= dt * (.9 + race); });
 
     // Lamp: the hoop swings now, its light swings late, and that lag is the first thing wrong here.
     const big = reducedMotion ? 0 : fx.lift, lagT = .85 + big * 1.1;
