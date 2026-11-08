@@ -129,6 +129,22 @@ describe('rouletteView drafting', () => {
     expect(spin.deck.every((c) => c.disabled)).toBe(true);
   });
 
+  it('says in words what each card does to the wheel, with no odds in it', () => {
+    const { deck } = rouletteView(state({ roulette: lineTo(board, [2]) }), board, text, null);
+    expect(deck.map((c) => c.name)).toEqual(['Sweep', 'Spin q0', 'Tie q1-q2', 'Tie q1-q2', 'Tie q3-q4', 'Tie q3-q4']);
+    expect(deck[0]?.tip).toMatch(/every qubit/);
+    expect(deck[0]?.tip).toMatch(/tied pair/);
+    expect(deck[1]?.tip).toMatch(/q0/);
+    expect(deck[3]?.tip).toMatch(/q1 and q2/);
+    expect(deck[4]?.tip).toMatch(/q3 and q4/);
+    expect(deck[4]?.tip).toMatch(/twin/);
+    for (const card of deck) {
+      expect(card.tip).not.toMatch(/\d+\s*(in|%|\/)|chance|odds/i);
+      expect(card.label).toContain(card.tip);
+    }
+    expect(deck[2]?.label).toMatch(/^Tie q1-q2, played by the house\. /);
+  });
+
   it('locks the stake for the draft', () => {
     expect(rouletteView(state({ roulette: opened }), board, text, null).stakes.every((s) => s.disabled)).toBe(true);
   });
@@ -261,6 +277,12 @@ describe('rouletteView rows and sources', () => {
     expect(sources[1]).toContain(provenanceLabel(board.provenance));
     expect(sources[1]).toContain('8,192');
     expect(sources.join(' ')).not.toMatch(/chip/i);
+  });
+
+  it('folds the stake note away between rounds, and keeps the draft note in view', () => {
+    expect(rouletteView(state(), board, text, null).noteFolded).toBe(true);
+    expect(rouletteView(state({ roulette: lineTo(board, [2]) }), board, text, null).noteFolded).toBe(false);
+    expect(rouletteView(state({ roulette: lineTo(board, LIMIT_LINE) }), board, text, null).noteFolded).toBe(false);
   });
 
   it('says the house rule while drafting and the bet on the spin turn', () => {

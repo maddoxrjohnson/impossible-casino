@@ -248,12 +248,13 @@ describe('cageView with a chip run', () => {
 
   it('says why a chip rate spreads wider, and never calls the shots independent', () => {
     const shown = cageView(state(), chipBoard);
-    expect(shown.note).toMatch(/fixed set of tickets/);
+    expect(shown.chipNote).toMatch(/fixed set of tickets/);
     expect(JSON.stringify(shown)).not.toMatch(/independent/i);
   });
 
   it('keeps the plain note when no chip run exists', () => {
     expect(cageView(state(), board).note).toBe("A run is a sample of shots, so it can land a little either side of the attack's rate.");
+    expect(cageView(state(), board).chipNote).toBeNull();
   });
 
   it('shows the split beside a chip forge and its own label', async () => {

@@ -62,7 +62,7 @@ export function createRoulettePanel({ board, text, stakes, onOpen, onPlay, onSpi
       <div class="dc-stakes" role="radiogroup" aria-label="Stake on this round"><span>Stake</span>${stakes.map((value) => `<label class="dc-stake"><input type="radio" name="dc-rl-stake" value="${value}"><span>${value.toLocaleString('en-US')}</span></label>`).join('')}</div>
       <div class="dc-cage-act"><button type="button" class="dc-btn"></button><div class="dc-cage-result" role="status"><b></b><span></span></div></div>
     </div>
-    <details class="dc-panel-more"><summary>Details</summary><dl class="dc-rl-rows"></dl></details>
+    <details class="dc-panel-more"><summary>Details</summary><dl class="dc-rl-rows"></dl><p class="dc-cage-note"></p></details>
     <p class="dc-cage-note"></p>
     <p class="dc-source dc-cage-source"></p>`;
 
@@ -92,7 +92,8 @@ export function createRoulettePanel({ board, text, stakes, onOpen, onPlay, onSpi
   const result = q<HTMLElement>('.dc-cage-result');
   const head = result.querySelector('b') as HTMLElement;
   const detail = result.querySelector('span') as HTMLElement;
-  const note = q<HTMLElement>('.dc-cage-note');
+  // The stake note waits in Details between rounds; the draft's note stays in view under it.
+  const [foldedNote, note] = [...box.querySelectorAll<HTMLElement>('.dc-cage-note')] as [HTMLElement, HTMLElement];
   const sourceTag = q<HTMLElement>('.dc-cage-source');
 
   let picked: number | null = null;
@@ -161,6 +162,7 @@ export function createRoulettePanel({ board, text, stakes, onOpen, onPlay, onSpi
       if (!dom) return;
       dom.textContent = card.name;
       dom.setAttribute('aria-label', card.label);
+      dom.title = card.tip;
       dom.setAttribute('aria-disabled', String(card.disabled));
       dom.classList.toggle('is-drafted', card.drafted);
     });
@@ -217,7 +219,9 @@ export function createRoulettePanel({ board, text, stakes, onOpen, onPlay, onSpi
     result.classList.toggle('is-won', !!told?.won);
     head.textContent = told?.head ?? '';
     detail.textContent = told?.detail ?? '';
-    note.textContent = view.note;
+    foldedNote.textContent = view.noteFolded ? view.note : '';
+    note.textContent = view.noteFolded ? '' : view.note;
+    note.hidden = view.noteFolded;
     sourceTag.textContent = view.sources.join(' · ');
   };
 

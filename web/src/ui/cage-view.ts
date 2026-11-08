@@ -37,6 +37,8 @@ export interface CageView {
   readonly result: CageResult | null;
   readonly goal: string;
   readonly note: string;
+  /** What the asterisk on chip rows means; shown beside the table whenever a chip row is. */
+  readonly chipNote: string | null;
   readonly sources: readonly string[];
 }
 
@@ -101,7 +103,8 @@ export function cageView(state: CageState, board: CageBoard): CageView {
     button: button(state),
     result: result(state),
     goal: state.cleared.includes('cage') ? 'The Cage is cleared.' : `Pass ${qubits(CAGE_CLEAR_LENGTH)} or longer to clear the Cage.`,
-    note: chip ? `${RUN_NOTE} ${CHIP_NOTE}` : RUN_NOTE,
+    note: RUN_NOTE,
+    chipNote: chip ? CHIP_NOTE : null,
     sources,
   };
 }

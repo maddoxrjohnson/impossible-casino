@@ -41,6 +41,8 @@ export interface RouletteDeckCard {
   readonly name: string;
   readonly drafted: boolean;
   readonly disabled: boolean;
+  /** What the card does to the wheel, in words. */
+  readonly tip: string;
   readonly label: string;
 }
 
@@ -74,6 +76,8 @@ export interface RouletteView {
   readonly result: RouletteResult | null;
   readonly rows: readonly (readonly [label: string, value: string])[];
   readonly note: string;
+  /** The note belongs in Details: it only guides play while a draft is on. */
+  readonly noteFolded: boolean;
   readonly sources: readonly string[];
 }
 
@@ -101,6 +105,15 @@ function pairOf(card: RouletteCard | undefined): string | null {
 /** The pairs the export marks tied at this stage, as "q1-q2". */
 function tiedAt(board: RouletteBoard, draft: readonly number[]): string[] {
   return (board.node(draft)?.tiedPairs ?? []).map((pair) => pair.map((q) => `q${q}`).join('-'));
+}
+
+/** What a card does to the wheel, read from its gates. Words only: every chance comes from the exported wheels. */
+function cardTip(card: RouletteCard): string {
+  const pair = pairOf(card);
+  if (pair) return `Ties ${pair.replace('-', ' and ')}. The wheel does not move, but a Sweep can no longer settle the pair. Its twin card unties it.`;
+  if (card.ops.length > 1) return 'Spins or settles every qubit at once, but cannot settle a tied pair.';
+  const q = card.ops[0]?.qubits[0];
+  return `Spins q${q} if it is settled, or settles it if it is spinning.`;
 }
 
 function tieNote(pair: string, was: boolean, now: boolean): string {
@@ -180,7 +193,9 @@ export function rouletteView(state: RouletteState, board: RouletteBoard, text: R
     deck: board.deck.map((card, i) => {
       const down = draft.includes(i), disabled = stage !== 'player' || down;
       const by = list.find((d) => d.card === i)?.by;
-      return { card: i, name: card.name, drafted: down, disabled, label: down ? `${card.name}, played by ${by === 'House' ? 'the house' : 'you'}` : card.name };
+      const tip = cardTip(card);
+      const name = down ? `${card.name}, played by ${by === 'House' ? 'the house' : 'you'}` : card.name;
+      return { card: i, name: card.name, drafted: down, disabled, tip, label: `${name}. ${tip}` };
     }),
     pockets: wheel.map((chance, pocket) => {
       const odds = oneIn(chance), isBet = pocket === bet, isLanded = pocket === landed;
@@ -205,6 +220,7 @@ export function rouletteView(state: RouletteState, board: RouletteBoard, text: R
     note: drafting
       ? clause(stage === 'spin' ? text.bet : text.houseRule)
       : `${clause(text.stakeRule)} Leaving the room drops a draft, and the stake is only taken at the spin.`,
+    noteFolded: !drafting,
     sources: [
       `Wheel: the exact ${text.wheelsMethod}`,
       `Spin, return and clear chance: one shot from ${shotsPerDraft(board)} per draft, ${provenanceLabel(board.provenance)}`,
