@@ -4,7 +4,8 @@ import wiesnerJson from '../../public/data/wiesner.v1.json';
 import rouletteJson from '../../public/data/roulette.v1.json';
 import { cageBoard, settleForge } from '../game/cage';
 import { createPrerunSource, parseChshExport, parseRouletteExport, parseWiesnerExport, provenanceLabel, type ChshResult, type SimulatorProvenance } from '../game/results';
-import { rouletteBoard, type RouletteRound } from '../game/roulette';
+import { playedRunId, rouletteBoard, type RouletteRound } from '../game/roulette';
+import { FIXTURE_JOB_ID, rouletteWithChip } from '../game/roulette-chip.fixture';
 import { BREAK_EVEN, START_DIAL } from '../game/rules';
 import { expertSheet, type ExpertSheet, type ExpertState } from './expert';
 import { oneIn } from './roulette-view';
@@ -280,5 +281,34 @@ describe('every sheet', () => {
       }
     }
     expect(text(sheet)).not.toMatch(/sample data/i);
+  });
+});
+
+describe('the Wheel sheet on a chip run', () => {
+  const withChip = parseRouletteExport(rouletteWithChip());
+  const chipWheel = rouletteBoard(withChip, playedRunId(withChip));
+  const LIMIT_LINE = [2, 3, 4, 0];
+  const node = chipWheel.node(LIMIT_LINE)!;
+  const finished: RouletteRound = { stake: 100, draft: LIMIT_LINE, turn: node.turn, wheel: chipWheel.wheel(LIMIT_LINE)!, best: node.value, spin: null };
+  const sheet = (on = chipWheel, r = withChip, round: RouletteRound | null = null) =>
+    expertSheet('roulette', { ...fresh, roulette: round }, { chsh, wiesner: parseWiesnerExport(bareWiesner()), roulette: r, wheel: on });
+
+  it('says the game spins on the chip and names its job', () => {
+    const maths = sheet().maths.join(' ');
+    expect(maths).toContain(`The game spins on IBM chip ibm_kingston, job ${FIXTURE_JOB_ID}.`);
+    expect(maths).not.toContain('spins on the noise model');
+  });
+
+  it('sets the chip run beside the exact wheel', () => {
+    const run = chart(sheet(chipWheel, withChip, finished)).series[1]!;
+    expect(run.label).toBe('IBM chip');
+    expect(run.source).toBe(`IBM chip ibm_kingston, job ${FIXTURE_JOB_ID}`);
+  });
+
+  it('says the noise model when the chip run cannot play', () => {
+    const partial = { ...withChip, edge: withChip.edge.filter((e) => e.run !== 'ibm-chip') };
+    const maths = sheet(rouletteBoard(partial, playedRunId(partial)), partial).maths.join(' ');
+    expect(maths).toContain('The game spins on the noise model.');
+    expect(maths).not.toContain('The game spins on IBM chip');
   });
 });

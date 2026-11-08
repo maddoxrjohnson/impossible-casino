@@ -342,7 +342,7 @@ function wheelSheet({ roulette: round }: ExpertState, r: RouletteExport, board: 
     grouped.set(card.name, { gates, count: (seen?.count ?? 0) + 1 });
   }
   const runOf = (id: string) => r.runs.find((run) => run.id === id);
-  const play = runOf(r.playRun)?.provenance;
+  const play = board.provenance;
   const straight = r.payouts.table.find((row) => row.bet === 'straight');
   const maths = [
     `Five qubits, read as five bits, give 2⁵ = ${ROULETTE_POCKETS} pockets: ${r.pocketOrder.split(', so ')[0]}.`,
@@ -352,7 +352,11 @@ function wheelSheet({ roulette: round }: ExpertState, r: RouletteExport, board: 
     `Played quantum, the best a player can force on one pocket against a perfect house is ${oneIn(houseLimit.value)}. Method: ${houseLimit.method}.`,
     `There are ${legalDrafts} legal drafts. ${reachableDrafts} of them can come up against this house, whose rule is: ${r.houseRule}.`,
     ...(straight ? [`A straight-up win pays ${money(straight.pays)} on ${money(r.payouts.stake)}: ${r.payouts.rule}.`] : []),
-    ...(play?.noiseModel ? [`The game spins on the noise model. Its qubits are a ${play.noiseModel.qubitSelection}.${play.noiseModel.scope ? ` What it covers: ${play.noiseModel.scope}.` : ''}`] : []),
+    ...(play.source === 'ibm-chip'
+      ? [`The game spins on ${provenanceLabel(play)}. Its qubits are a ${play.qubitSelection}.`]
+      : play.noiseModel
+        ? [`The game spins on the noise model. Its qubits are a ${play.noiseModel.qubitSelection}.${play.noiseModel.scope ? ` What it covers: ${play.noiseModel.scope}.` : ''}`]
+        : []),
   ];
   return {
     title: 'The maths at the Wheel',

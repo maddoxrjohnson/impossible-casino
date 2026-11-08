@@ -186,7 +186,9 @@ export type RouletteNode =
 
 export interface RoulettePoint {
   readonly draft: readonly number[];
-  readonly seed: number;
+  /** Null on a chip run, which takes no seed. */
+  readonly seed: number | null;
+  /** This draft's own shots. A chip run can give drafts different shots, up to its provenance's. */
   readonly shots: number;
   /** Shots per pocket, `ROULETTE_POCKETS` long. */
   readonly counts: readonly number[];
@@ -775,13 +777,19 @@ function parseRouletteNode(
 
 function parseRouletteRun(value: unknown, deckSize: number, path: string): RouletteRun {
   const raw = record(value, path);
+  const provenance = parseExportedProvenance(raw.provenance, `${path}.provenance`);
+  const chip = provenance.source === 'ibm-chip';
   const points = filled(raw.points, `${path}.points`).map((entry, i) => {
     const at = `${path}.points[${i}]`;
     const point = record(entry, at);
     const shots = integer(point.shots, `${at}.shots`, 1);
+    if (chip ? shots > provenance.shots : shots !== provenance.shots) {
+      fail(`${at}.shots`, chip ? `more than the run's ${provenance.shots}` : `expected the run's ${provenance.shots}`);
+    }
     return {
       draft: parseDraft(point.draft, deckSize, `${at}.draft`),
-      seed: finite(point.seed, `${at}.seed`),
+      // A chip takes no seed. A simulator run has to name the one it used.
+      seed: chip && point.seed === null ? null : finite(point.seed, `${at}.seed`),
       shots,
       counts: parseRouletteCounts(point.counts, shots, `${at}.counts`),
     };
@@ -792,7 +800,7 @@ function parseRouletteRun(value: unknown, deckSize: number, path: string): Roule
   );
   return {
     id: text(raw.id, `${path}.id`),
-    provenance: parseExportedProvenance(raw.provenance, `${path}.provenance`),
+    provenance,
     points,
   };
 }

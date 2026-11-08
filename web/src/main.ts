@@ -7,7 +7,7 @@ import { withChipRuns } from './game/chip';
 import { createLiveSource } from './game/live';
 import { createChipPress, pressStorage, withPressedRun } from './game/press';
 import { createPrerunSource, loadExports, loadRoulette } from './game/results';
-import { rouletteBoard } from './game/roulette';
+import { playedRunId, rouletteBoard } from './game/roulette';
 import { STAKES } from './game/rules';
 import { createGameStore } from './game/store';
 import { showFallback } from './ui/fallback';
@@ -84,7 +84,7 @@ async function boot(root: HTMLElement): Promise<void> {
     const store = createGameStore({ source });
     const audio = createAudio();
     const cage = cageBoard(exports.wiesner, RUN_ID);
-    const wheel = rouletteBoard(rouletteExport);
+    const wheel = rouletteBoard(rouletteExport, playedRunId(rouletteExport));
     const actions: Record<HudAction, () => void> = {
       deal: () => {
         store.deal();

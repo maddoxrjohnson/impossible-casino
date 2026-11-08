@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import rouletteJson from '../../public/data/roulette.v1.json';
 import { parseRouletteExport, ROULETTE_POCKETS, type RouletteExport } from './results';
-import { openRound, playCard, rouletteBoard, spinRound, type RouletteBoard, type RouletteRound } from './roulette';
+import { openRound, playCard, playedRunId, rouletteBoard, spinRound, type RouletteBoard, type RouletteRound } from './roulette';
+import { FIXTURE_EDGE, FIXTURE_JOB_ID, rouletteWithChip } from './roulette-chip.fixture';
 import { STAKES, type Rng } from './rules';
 
 const roulette = parseRouletteExport(rouletteJson);
@@ -90,6 +91,63 @@ describe('rouletteBoard', () => {
       roulette.logicalCircuits.find((c) => c.draft.join(',') === '2,3,4,0')?.qasm,
     );
     expect(board.circuit([2])).toBeNull();
+  });
+});
+
+describe('playedRunId', () => {
+  const withChip = parseRouletteExport(rouletteWithChip());
+
+  it('plays the noise model on the committed export, with any chip run set aside', () => {
+    const bare = parseRouletteExport({ ...rouletteJson, runs: rouletteJson.runs.filter((r) => r.provenance.source !== 'ibm-chip') });
+    expect(playedRunId(bare)).toBe('ibm-noise-model');
+  });
+
+  it('plays the chip run when it holds every finished draft and has an edge entry', () => {
+    expect(playedRunId(withChip)).toBe('ibm-chip');
+  });
+
+  it('falls back to the play run when the chip run misses a draft', () => {
+    const missing: RouletteExport = {
+      ...withChip,
+      runs: withChip.runs.map((r) => (r.id === 'ibm-chip' ? { ...r, points: r.points.slice(1) } : r)),
+    };
+    expect(playedRunId(missing)).toBe('ibm-noise-model');
+  });
+
+  it('falls back to the play run when the chip run has no edge entry', () => {
+    const bare: RouletteExport = { ...withChip, edge: withChip.edge.filter((e) => e.run !== 'ibm-chip') };
+    expect(playedRunId(bare)).toBe('ibm-noise-model');
+  });
+
+  it('never plays a simulator filed under the chip id', () => {
+    const mislabelled: RouletteExport = {
+      ...withChip,
+      runs: withChip.runs.map((r) => (r.id === 'ibm-chip' ? { ...r, provenance: withChip.runs[1]!.provenance } : r)),
+    };
+    expect(playedRunId(mislabelled)).toBe('ibm-noise-model');
+  });
+});
+
+describe('a board on the chip run', () => {
+  const withChip = parseRouletteExport(rouletteWithChip());
+  const chip = rouletteBoard(withChip, playedRunId(withChip));
+
+  it('reads its provenance and edge from the chip run', () => {
+    expect(chip.runId).toBe('ibm-chip');
+    expect(chip.provenance).toMatchObject({ source: 'ibm-chip', jobId: FIXTURE_JOB_ID });
+    expect(chip.edge).toMatchObject({ run: 'ibm-chip', bestReturn: FIXTURE_EDGE.bestReturn, clearChance: FIXTURE_EDGE.clearChance });
+    expect(chip.edge.worstSpin.return).toBe(FIXTURE_EDGE.worstSpin);
+  });
+
+  it('draws each spin from that draft’s own shots', () => {
+    const small = chip.points.find((p) => p.shots === 512)!;
+    const round = lineTo(chip, small.draft);
+    const last = small.counts.reduce((at, c, i) => (c > 0 ? i : at), 0);
+    const spun = spinRound(chip, round, last, () => 0.999999)?.spin;
+    expect(spun).toMatchObject({ shots: 512, landed: last, landedShots: small.counts[last] });
+    const top = chip.points.find((p) => p.shots === 8192)!;
+    const pocket = top.counts.findIndex((c) => c > 0);
+    expect(spinRound(chip, lineTo(chip, top.draft), pocket, () => drawOn(chip, top.draft, pocket))?.spin).toMatchObject({ shots: 8192, landed: pocket });
   });
 });
 

@@ -22,6 +22,7 @@ import {
   type Provenance,
   type SimulatorProvenance,
 } from './results';
+import { FIXTURE_JOB_ID, rouletteWithChip, type LooseRouletteJson } from './roulette-chip.fixture';
 import { chshWin, type Bit } from './rules';
 
 interface LooseRun {
@@ -769,6 +770,44 @@ describe('parseRouletteExport', () => {
 
   it.each([null, 3, 'x', []])('rejects %j as a roulette export', (raw) => {
     expect(() => parseRouletteExport(raw)).toThrow(Error);
+  });
+});
+
+describe('parseRouletteExport with a chip run', () => {
+  it('accepts a chip run with no seeds and its own shots on each draft', () => {
+    const parsed = parseRouletteExport(rouletteWithChip());
+    const chip = parsed.runs.find((r) => r.id === 'ibm-chip');
+    expect(parsed.runs.map((r) => r.id)).toEqual(['ideal', 'ibm-noise-model', 'ibm-chip']);
+    expect(parsed.playRun).toBe('ibm-noise-model');
+    expect(chip?.provenance).toMatchObject({ source: 'ibm-chip', backend: 'ibm_kingston', jobId: FIXTURE_JOB_ID, shots: 8192 });
+    expect(chip?.points).toHaveLength(108);
+    expect(chip?.points.every((p) => p.seed === null)).toBe(true);
+    expect(new Set(chip?.points.map((p) => p.shots))).toEqual(new Set([512, 8192]));
+    expect(chip?.points.filter((p) => p.shots === 8192)).toHaveLength(8);
+  });
+
+  const chipOf = (d: LooseRouletteJson) => d.runs.find((r) => r.id === 'ibm-chip')!;
+  const smallPoint = (d: LooseRouletteJson) => chipOf(d).points.find((p) => p.shots === 512)!;
+
+  it.each<[string, (d: LooseRouletteJson) => void, RegExp]>([
+    ['a null seed on a simulator run', (d) => (d.runs[1]!.points[0]!.seed = null), /seed/],
+    ['counts that miss the point’s own shots', (d) => (smallPoint(d).shots = 1024), /shots/],
+    ['a point with more shots than its run', (d) => {
+      const point = smallPoint(d);
+      point.shots = 16384;
+      point.counts[0]! += 16384 - 512;
+    }, /shots/],
+    ['a simulator point off its run’s shots', (d) => {
+      const point = d.runs[1]!.points[0]!;
+      point.shots = 4096;
+      point.counts = point.counts.map((c) => Math.floor(c / 2));
+      point.counts[0]! += 4096 - point.counts.reduce((sum, c) => sum + c, 0);
+    }, /shots/],
+    ['a chip run with no job id', (d) => (chipOf(d).provenance.jobId = null), /jobId/],
+  ])('rejects roulette with %s', (_name, spoil, message) => {
+    const bad = rouletteWithChip();
+    spoil(bad);
+    expect(() => parseRouletteExport(bad)).toThrow(message);
   });
 });
 

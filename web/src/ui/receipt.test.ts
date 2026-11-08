@@ -13,7 +13,8 @@ import {
 } from '../game/results';
 import { cageBoard, settleForge } from '../game/cage';
 import { withChipRuns } from '../game/chip';
-import { rouletteBoard, spinRound, type RouletteRound } from '../game/roulette';
+import { playedRunId, rouletteBoard, spinRound, type RouletteRound } from '../game/roulette';
+import { FIXTURE_JOB_ID, rouletteWithChip } from '../game/roulette-chip.fixture';
 import { chshReceipt, markerFor, rouletteReceipt, wiesnerReceipt } from './receipt';
 
 /** Only the simulators, so these tests hold before and after a real chip run lands in the file. */
@@ -359,6 +360,47 @@ describe('rouletteReceipt', () => {
     expect(value(receipt, 'Job')).toMatch(/^None/);
     expect(value(receipt, 'Software')).toBe('Qiskit 2.6.2, Aer 0.18.2');
     expect(value(receipt, 'Run date')).toBe(p.date);
+    expect(receipt.stamp).toMatch(/never touched a chip/);
+  });
+});
+
+describe('rouletteReceipt on a chip run', () => {
+  const withChip = parseRouletteExport(rouletteWithChip());
+  const board = rouletteBoard(withChip, playedRunId(withChip));
+  const settled = (draft: readonly number[]) => {
+    const point = board.point(draft)!;
+    const pocket = point.counts.findIndex((c) => c > 0);
+    const spin = spinRound(board, spinTurn(board, draft), pocket, () => 0)?.spin;
+    if (!spin) throw new Error('refused spin');
+    return { spin, point, pocket };
+  };
+
+  it('names the chip and its job, never a simulator', () => {
+    const receipt = rouletteReceipt(settled(LIMIT_LINE).spin, board, 100);
+    expect(value(receipt, 'Source')).toBe(`IBM chip ibm_kingston, job ${FIXTURE_JOB_ID}`);
+    expect(value(receipt, 'Backend')).toBe('ibm_kingston');
+    expect(value(receipt, 'Job')).toBe(FIXTURE_JOB_ID);
+    expect(value(receipt, 'Noise model')).toBeUndefined();
+    expect(value(receipt, 'Qubit choice')).toBe('best-case pick: test qubits');
+    expect(value(receipt, 'Software')).toBe('Qiskit 2.6.2, Runtime 0.51.0');
+    expect(receipt.stamp).toBe(`Ran on ibm_kingston. IBM job ${FIXTURE_JOB_ID}.`);
+    expect(JSON.stringify(receipt)).not.toMatch(/simulat/i);
+  });
+
+  it('shows the drawn draft’s own shots', () => {
+    expect(value(rouletteReceipt(settled(LIMIT_LINE).spin, board, 100), 'Shots')).toBe('8,192');
+    const small = board.points.find((p) => p.shots === 512)!;
+    const { spin, point, pocket } = settled(small.draft);
+    const receipt = rouletteReceipt(spin, board, 100);
+    expect(value(receipt, 'Shots')).toBe('512');
+    expect(value(receipt, 'Landed')).toBe(`Pocket ${pocket}: ${point.counts[pocket]} of 512 shots`);
+  });
+
+  it('names the noise model when the chip run cannot play', () => {
+    const partial = { ...withChip, edge: withChip.edge.filter((e) => e.run !== 'ibm-chip') };
+    const noisy = rouletteBoard(partial, playedRunId(partial));
+    const receipt = rouletteReceipt(spinRound(noisy, spinTurn(noisy, LIMIT_LINE), 0, () => 0)!.spin!, noisy, 100);
+    expect(value(receipt, 'Source')).toBe('Pre-run Qiskit simulator, fake_kingston noise model');
     expect(receipt.stamp).toMatch(/never touched a chip/);
   });
 });

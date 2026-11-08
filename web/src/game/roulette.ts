@@ -1,5 +1,6 @@
 // The Roulette Wheel: the draft, the house's play and the spin. Every chance, count and limit comes from the Qiskit export. No DOM.
 import { forgeWin } from './cage';
+import { chipRunIn } from './chip';
 import {
   draftKey,
   ROULETTE_POCKETS,
@@ -63,6 +64,15 @@ export interface RouletteRound {
   readonly best: number;
   /** Null until the spin settles the round. */
   readonly spin: RouletteSpin | null;
+}
+
+/** The chip run when it holds every finished draft the play run does and has its own edge entry. The export's play run otherwise. */
+export function playedRunId(roulette: RouletteExport): string {
+  const chip = chipRunIn(roulette.runs);
+  const play = roulette.runs.find((r) => r.id === roulette.playRun);
+  if (!chip || !play || !roulette.edge.some((e) => e.run === chip.id)) return roulette.playRun;
+  const held = new Set(chip.points.map((p) => draftKey(p.draft)));
+  return play.points.every((p) => held.has(draftKey(p.draft))) ? chip.id : roulette.playRun;
 }
 
 export function rouletteBoard(roulette: RouletteExport, runId: string = roulette.playRun): RouletteBoard {

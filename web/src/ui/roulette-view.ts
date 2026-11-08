@@ -114,6 +114,13 @@ const per100 = (r: number): string => (r * 100).toFixed(1);
 const pockets = (n: number): string => `${n} pocket${n === 1 ? '' : 's'}`;
 const sameWheel = (a: readonly number[] | null, b: readonly number[] | null): boolean => !!a && !!b && a.length === b.length && a.every((p, i) => p === b[i]);
 /** The export's rule up to its first semicolon, as a sentence. */
+/** The run's shots per draft, as a range when its drafts differ. */
+function shotsPerDraft(board: RouletteBoard): string {
+  const shots = board.points.map((p) => p.shots);
+  const low = Math.min(...shots);
+  const high = Math.max(...shots);
+  return low === high ? money(high) : `${money(low)} to ${money(high)}`;
+}
 const clause = (rule: string): string => { const head = rule.split(';')[0]?.trim() ?? ''; return `${head.charAt(0).toUpperCase()}${head.slice(1)}.`; };
 
 function drafted(board: RouletteBoard, draft: readonly number[]): RouletteDrafted[] {
@@ -200,7 +207,7 @@ export function rouletteView(state: RouletteState, board: RouletteBoard, text: R
       : `${clause(text.stakeRule)} Leaving the room drops a draft, and the stake is only taken at the spin.`,
     sources: [
       `Wheel: the exact ${text.wheelsMethod}`,
-      `Spin, return and clear chance: one shot from ${money(board.provenance.shots)} per draft, ${provenanceLabel(board.provenance)}`,
+      `Spin, return and clear chance: one shot from ${shotsPerDraft(board)} per draft, ${provenanceLabel(board.provenance)}`,
     ],
   };
 }

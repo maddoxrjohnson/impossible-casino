@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import rouletteJson from '../../public/data/roulette.v1.json';
 import { parseRouletteExport, provenanceLabel, ROULETTE_POCKETS } from '../game/results';
-import { openRound, playCard, rouletteBoard, spinRound, type RouletteBoard, type RouletteRound } from '../game/roulette';
+import { openRound, playCard, playedRunId, rouletteBoard, spinRound, type RouletteBoard, type RouletteRound } from '../game/roulette';
+import { FIXTURE_EDGE, FIXTURE_JOB_ID, rouletteWithChip } from '../game/roulette-chip.fixture';
 import { START_BANKROLL, type Rng } from '../game/rules';
 import { createRestartGuard } from './cage-view';
 import { oneIn, rouletteView, type RouletteState } from './roulette-view';
@@ -270,5 +271,30 @@ describe('rouletteView rows and sources', () => {
   it('sets the goal from the house limit, and marks the room cleared', () => {
     expect(rouletteView(state(), board, text, null).goal).toContain(oneIn(board.houseLimit));
     expect(rouletteView(state({ cleared: ['roulette'] }), board, text, null).goal).toMatch(/cleared/);
+  });
+});
+
+describe('rouletteView on a chip run', () => {
+  const withChip = parseRouletteExport(rouletteWithChip());
+  const chip = rouletteBoard(withChip, playedRunId(withChip));
+
+  it('names the chip and its job for the spins, and keeps the wheel exact', () => {
+    const { sources } = rouletteView(state(), chip, withChip, null);
+    expect(sources[0]).toContain(withChip.wheelsMethod);
+    expect(sources[1]).toBe(`Spin, return and clear chance: one shot from 512 to 8,192 per draft, IBM chip ibm_kingston, job ${FIXTURE_JOB_ID}`);
+    expect(sources.join(' ')).not.toMatch(/simulat|noise model/i);
+  });
+
+  it('reads the return and clear chance from the chip run’s edge', () => {
+    const { rows } = rouletteView(state(), chip, withChip, null);
+    const row = (k: string) => rows.find(([label]) => label === k)?.[1];
+    expect(row('Best return')).toContain(`no strategy gets back more than ${(FIXTURE_EDGE.bestReturn * 100).toFixed(1)} per 100`);
+    expect(row('Best return')).toContain(`the most is ${(FIXTURE_EDGE.worstSpin * 100).toFixed(1)} per 100`);
+    expect(row('Clear chance')).toContain(`${(FIXTURE_EDGE.clearChance * 100).toFixed(1)}%`);
+  });
+
+  it('keeps the dealer’s hint on the exact wheel', () => {
+    const view = rouletteView(state({ roulette: lineTo(chip, [2]) }), chip, withChip, null);
+    expect(view.hint).toMatch(/on the exact wheel\.$/);
   });
 });
