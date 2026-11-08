@@ -22,6 +22,8 @@ const DRONE_VOL = 0.035;
 
 export function createAudio(): GameAudio {
   let ctx: AudioContext | null = null, master: GainNode | null = null, rain: AudioBufferSourceNode | null = null;
+  // The rain bed sits well under the cues; at .22 it drowned them.
+  const RAIN_VOL = .05;
   let rainGain: GainNode | null = null, rainBand: BiquadFilterNode | null = null, noise: AudioBuffer | null = null;
   let drone: { o: OscillatorNode; g: GainNode }[] = [];
   let want: Ambience = { rain: 0.5, step: 0 }, on = false, gone = false, voices = 0, lastTick = -1;
@@ -29,7 +31,7 @@ export function createAudio(): GameAudio {
   function shape(a: Ambience, c: AudioContext, ramp: number) {
     if (rainGain && rainBand) {
       const t = c.currentTime;
-      rainGain.gain.cancelScheduledValues(t); rainGain.gain.setTargetAtTime(.22 * a.rain, t, ramp);
+      rainGain.gain.cancelScheduledValues(t); rainGain.gain.setTargetAtTime(RAIN_VOL * a.rain, t, ramp);
       rainBand.frequency.cancelScheduledValues(t); rainBand.frequency.setTargetAtTime(700 + 400 * a.rain, t, ramp);
     }
     drone.forEach(({ g }, i) => { g.gain.cancelScheduledValues(c.currentTime); g.gain.setTargetAtTime(i < a.step ? DRONE_VOL : 0, c.currentTime, ramp); });
@@ -40,7 +42,7 @@ export function createAudio(): GameAudio {
     let last = 0; for (let i = 0; i < d.length; i++) { const w = Math.random() * 2 - 1; last = last * .86 + w * .14; d[i] = last * 1.6; }
     rain = c.createBufferSource(); rain.buffer = buf; rain.loop = true;
     rainBand = c.createBiquadFilter(); rainBand.type = 'bandpass'; rainBand.frequency.value = 900; rainBand.Q.value = .4;
-    rainGain = c.createGain(); rainGain.gain.value = .22; rain.connect(rainBand); rainBand.connect(rainGain); rainGain.connect(master); rain.start();
+    rainGain = c.createGain(); rainGain.gain.value = RAIN_VOL; rain.connect(rainBand); rainBand.connect(rainGain); rainGain.connect(master); rain.start();
     // One second of white noise, shared by every burst.
     noise = c.createBuffer(1, c.sampleRate, c.sampleRate); const n = noise.getChannelData(0); for (let i = 0; i < n.length; i++) n[i] = Math.random() * 2 - 1;
     const low = c.createBiquadFilter(); low.type = 'lowpass'; low.frequency.value = 500; low.connect(master);
