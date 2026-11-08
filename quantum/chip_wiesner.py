@@ -5,9 +5,12 @@ From the repo root, with the owner present:
   .venv/bin/python -m quantum.chip_wiesner submit --lengths 4 --tickets 32 \
       --shots-per-ticket 32 --max-seconds 30
   .venv/bin/python -m quantum.chip_wiesner collect JOB_ID
+  .venv/bin/python -m quantum.chip_wiesner backfill JOB_ID
 
 `plan` reads calibration and spends no chip time. `submit` spends it, up to
---max-seconds, after which IBM cancels the job. Counts are raw.
+--max-seconds, after which IBM cancels the job. Counts are raw. `collect` keeps
+each ticket's own pass count, and `backfill` adds those to a record collected
+before they were kept, checking them against the passes already recorded.
 
 The simulators forge one fresh ticket per shot. A chip charges for every binding,
 so a length here runs a fixed set of random tickets at several shots each. The
@@ -124,6 +127,35 @@ def passes_from_result(result: Any, lengths: Sequence[int], shots: int) -> dict[
     return passes
 
 
+def ticket_passes_from_result(
+    result: Any, lengths: Sequence[int], tickets: int, shots_per_ticket: int
+) -> dict[int, list[int]]:
+    """Passes of each ticket, in ticket order, per length."""
+    if len(result) != len(lengths):
+        raise ValueError(f"expected {len(lengths)} results, got {len(result)}")
+    split = {}
+    for length, pub in zip(lengths, result, strict=True):
+        bits = pub.data.cashier
+        if bits.shape != (tickets,):
+            raise ValueError(f"length {length} has {bits.shape} tickets, expected {tickets}")
+        if bits.num_shots != shots_per_ticket:
+            raise ValueError(f"length {length} has the wrong number of shots per ticket")
+        split[length] = [bits[i].get_int_counts().get(0, 0) for i in range(tickets)]
+    return split
+
+
+def check_ticket_passes(
+    length: int, split: Sequence[int], passes: int, tickets: int, shots_per_ticket: int
+) -> None:
+    """Raises unless the per-ticket passes are the ones behind the recorded passes."""
+    if len(split) != tickets:
+        raise ValueError(f"length {length} has {len(split)} tickets, expected {tickets}")
+    if not all(0 <= n <= shots_per_ticket for n in split):
+        raise ValueError(f"length {length} has a ticket with impossible passes")
+    if sum(split) != passes:
+        raise ValueError(f"length {length} per-ticket passes add to {sum(split)}, not {passes}")
+
+
 def run_from_passes(
     run_id: str,
     backend: str,
@@ -134,9 +166,10 @@ def run_from_passes(
     today: date,
     job_id: str,
     passes: Mapping[int, int],
+    ticket_passes: Mapping[int, Sequence[int]] | None = None,
 ) -> dict[str, Any]:
     shots = tickets * shots_per_ticket
-    return {
+    run = {
         "id": run_id,
         "provenance": chip_provenance(backend, qubits, qubit_selection, shots, today, job_id),
         "ticketsPerPoint": tickets,
@@ -153,6 +186,24 @@ def run_from_passes(
             for length, count in passes.items()
         ],
     }
+    return run if ticket_passes is None else add_ticket_passes(run, ticket_passes)
+
+
+def add_ticket_passes(
+    run: dict[str, Any], ticket_passes: Mapping[int, Sequence[int]]
+) -> dict[str, Any]:
+    """A copy of the run with each point's per-ticket passes, checked against its passes."""
+    lengths = [point["length"] for point in run["points"]]
+    if sorted(ticket_passes) != sorted(lengths):
+        raise ValueError(f"per-ticket passes cover lengths {sorted(ticket_passes)}, not {lengths}")
+    points = []
+    for point in run["points"]:
+        split = list(ticket_passes[point["length"]])
+        check_ticket_passes(
+            point["length"], split, point["passes"], run["ticketsPerPoint"], run["shotsPerTicket"]
+        )
+        points.append({**point, "ticketPasses": split})
+    return {**run, "points": points}
 
 
 def qubit_errors(backend: BackendV2, qubits: Sequence[int]) -> list[dict[str, float]]:
@@ -220,7 +271,11 @@ def collect(args: argparse.Namespace) -> None:
     if job.status() != "DONE":
         return
     shots = record["tickets"] * record["shotsPerTicket"]
-    passes = passes_from_result(job.result(), record["lengths"], shots)
+    result = job.result()
+    passes = passes_from_result(result, record["lengths"], shots)
+    split = ticket_passes_from_result(
+        result, record["lengths"], record["tickets"], record["shotsPerTicket"]
+    )
     record["usageSeconds"] = job.usage()
     record["run"] = run_from_passes(
         args.run_id,
@@ -232,12 +287,32 @@ def collect(args: argparse.Namespace) -> None:
         job.creation_date.date(),
         args.job_id,
         passes,
+        split,
     )
     write_record(record)
     print(f"chip seconds used {record['usageSeconds']}")
     per_qubit = exact_pass_per_qubit()
     for length, count in passes.items():
         print(f"length {length}: {count / shots:.4f}, exact {per_qubit**length:.4f}")
+
+
+def backfill(args: argparse.Namespace) -> None:
+    """Add per-ticket passes to a collected record, changing nothing else in it."""
+    record = read_record(EXPERIMENT, args.job_id)
+    if "run" not in record:
+        raise ValueError(f"{args.job_id} has not been collected")
+    job = QiskitRuntimeService().job(args.job_id)
+    print(f"status {job.status()}")
+    if job.status() != "DONE":
+        return
+    split = ticket_passes_from_result(
+        job.result(), record["lengths"], record["tickets"], record["shotsPerTicket"]
+    )
+    record["run"] = add_ticket_passes(record["run"], split)
+    write_record(record)
+    for point in record["run"]["points"]:
+        tickets = len(point["ticketPasses"])
+        print(f"length {point['length']}: {tickets} tickets, {point['passes']} passes")
 
 
 def main() -> None:
@@ -256,6 +331,9 @@ def main() -> None:
     command.add_argument("job_id")
     command.add_argument("--run-id", default=CHIP_SOURCE)
     command.set_defaults(handler=collect)
+    command = commands.add_parser("backfill")
+    command.add_argument("job_id")
+    command.set_defaults(handler=backfill)
     args = parser.parse_args()
     args.handler(args)
 

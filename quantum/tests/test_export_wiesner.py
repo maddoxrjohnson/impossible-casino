@@ -1,6 +1,7 @@
 import json
 import math
 import random
+import statistics
 import subprocess
 import sys
 from datetime import date
@@ -20,7 +21,7 @@ import quantum.export
 import quantum.export_wiesner
 import quantum.wiesner
 from quantum.chip_wiesner import run_from_passes, ticket_seed
-from quantum.export import simulator_provenance, write_export, write_record
+from quantum.export import read_record, simulator_provenance, write_export, write_record
 from quantum.export_wiesner import (
     ATTACK,
     CHIP_JOBS,
@@ -33,8 +34,11 @@ from quantum.export_wiesner import (
     SHOTS,
     SX_PER_QUBIT,
     SIMULATOR_TICKETS_PER_SHOT,
+    binomial_std_err,
     build_export,
+    chip_run_with_std_err,
     chip_runs,
+    clustered_std_err,
     length_seed,
     limits,
     logical_circuits,
@@ -46,6 +50,7 @@ from quantum.export_wiesner import (
     quietest_qubits,
     refresh_chip_runs,
     sample_point,
+    with_std_err,
 )
 from quantum.wiesner import (
     LENGTHS,
@@ -103,7 +108,15 @@ def assert_honest_chip_run(run):
     tickets = run["ticketsPerPoint"]
     per_ticket = run["shotsPerTicket"]
     assert run["id"] == "ibm-chip", "the game reads a chip run only under this id"
-    assert set(run) == {"id", "provenance", "ticketsPerPoint", "shotsPerTicket", "points"}
+    assert set(run) == {
+        "id",
+        "provenance",
+        "ticketsPerPoint",
+        "shotsPerTicket",
+        "points",
+        "stdErrMethod",
+    }
+    assert run["stdErrMethod"].strip()
     assert provenance["source"] == "ibm-chip"
     assert provenance["backend"].startswith("ibm_")
     assert provenance["jobId"].strip()
@@ -112,7 +125,16 @@ def assert_honest_chip_run(run):
     assert provenance["shots"] == tickets * per_ticket
     assert run["points"]
     for point in run["points"]:
-        assert set(point) == {"length", "seed", "shots", "qubits", "passes", "passRate"}
+        assert set(point) == {
+            "length",
+            "seed",
+            "shots",
+            "qubits",
+            "passes",
+            "passRate",
+            "ticketPasses",
+            "stdErr",
+        }
         assert point["length"] in LENGTHS
         assert point["seed"] == ticket_seed(point["length"])
         assert point["shots"] == tickets * per_ticket
@@ -120,10 +142,20 @@ def assert_honest_chip_run(run):
         assert isinstance(point["passes"], int)
         assert 0 <= point["passes"] <= point["shots"]
         assert point["passRate"] == point["passes"] / point["shots"]
+        assert len(point["ticketPasses"]) == tickets
+        assert sum(point["ticketPasses"]) == point["passes"]
+        assert all(0 <= n <= per_ticket for n in point["ticketPasses"])
+        assert point["stdErr"] == clustered_std_err(point["ticketPasses"], per_ticket)
+
+
+def spread(total, tickets=32):
+    """Made-up per-ticket passes that add up to total."""
+    return [total // tickets + (i < total % tickets) for i in range(tickets)]
 
 
 def chip_run(job_id="job123", passes=None):
     """Counts made up for this file, purely to exercise the file handling."""
+    passes = passes or {4: 300}
     return run_from_passes(
         "ibm-chip",
         "ibm_kingston",
@@ -133,8 +165,13 @@ def chip_run(job_id="job123", passes=None):
         32,
         date(2026, 11, 7),
         job_id,
-        passes or {4: 300},
+        passes,
+        {length: spread(count) for length, count in passes.items()},
     )
+
+
+def exported(run):
+    return chip_run_with_std_err(run)
 
 
 def expected_provenance(run_id, shots, today, device):
@@ -245,10 +282,20 @@ def test_each_run_labels_its_true_source(export):
 
 def test_points_are_consistent_in_both_exports(export):
     for run in simulator_runs(export):
-        assert set(run) == {"id", "provenance", "points"}
+        assert set(run) == {"id", "provenance", "points", "stdErrMethod"}
+        assert run["stdErrMethod"].strip()
         shots = run["provenance"]["shots"]
         for point in run["points"]:
-            assert set(point) == {"length", "seed", "shots", "qubits", "passes", "passRate"}
+            assert set(point) == {
+                "length",
+                "seed",
+                "shots",
+                "qubits",
+                "passes",
+                "passRate",
+                "stdErr",
+            }
+            assert point["stdErr"] == binomial_std_err(point["passes"], shots)
             assert point["shots"] == shots
             assert isinstance(point["passes"], int)
             assert 0 <= point["passes"] <= shots
@@ -317,7 +364,7 @@ def test_committed_chip_runs_are_labelled_and_consistent(committed):
 
 
 def test_the_chip_run_check_passes_a_run_collect_would_write():
-    assert_honest_chip_run(chip_run(passes={2: 500, 4: 300}))
+    assert_honest_chip_run(exported(chip_run(passes={2: 500, 4: 300})))
 
 
 def test_the_chip_run_keeps_its_ticket_split_and_only_its_own_lengths():
@@ -334,7 +381,7 @@ def test_chip_runs_skips_a_job_with_no_run_yet(records):
     run = chip_run()
     records("collected", run=run)
     records("queued", maxSeconds=20)
-    assert chip_runs() == [run]
+    assert chip_runs() == [exported(run)]
 
 
 def test_chip_runs_refuses_repeated_run_ids(records):
@@ -350,7 +397,7 @@ def test_build_export_appends_chip_runs_after_the_simulators(records, small_expo
     built = build_export(lengths=SMALL_LENGTHS, shots=SMALL_SHOTS, today=date(2026, 11, 7))
     assert [r["id"] for r in built["runs"]] == ["ideal", "ibm-noise-model", "ibm-chip"]
     assert built["runs"][:2] == small_export["runs"]
-    assert built["runs"][2] == run
+    assert built["runs"][2] == exported(run)
 
 
 def test_chip_only_leaves_the_file_alone_with_nothing_collected(records, export_copy):
@@ -370,7 +417,7 @@ def test_chip_only_keeps_every_simulator_byte_and_everything_else(
     refresh_chip_runs(export_copy)
     assert export_copy.read_bytes().startswith(simulators + b",\n")
     written = json.loads(export_copy.read_text())
-    assert written["runs"] == [*simulator_runs(committed), run]
+    assert written["runs"] == [*simulator_runs(committed), exported(run)]
     assert {k: v for k, v in written.items() if k != "runs"} == {
         k: v for k, v in committed.items() if k != "runs"
     }
@@ -382,7 +429,7 @@ def test_chip_only_replaces_chip_runs_rather_than_stacking_them(records, export_
     newer = chip_run("second")
     write_record({"experiment": "wiesner", "jobId": "first", "run": newer})
     refresh_chip_runs(export_copy)
-    assert committed_chip_runs(json.loads(export_copy.read_text())) == [newer]
+    assert committed_chip_runs(json.loads(export_copy.read_text())) == [exported(newer)]
 
 
 def test_chip_only_flag_never_regenerates_the_simulators(records, export_copy, monkeypatch):
@@ -394,7 +441,7 @@ def test_chip_only_flag_never_regenerates_the_simulators(records, export_copy, m
     run = chip_run()
     records("collected", run=run)
     main(["--chip-only"])
-    assert committed_chip_runs(json.loads(export_copy.read_text())) == [run]
+    assert committed_chip_runs(json.loads(export_copy.read_text())) == [exported(run)]
 
 
 def test_the_exporter_does_not_load_the_chip_module():
@@ -402,6 +449,104 @@ def test_the_exporter_does_not_load_the_chip_module():
     code = "import sys, quantum.export_wiesner; sys.exit('quantum.chip' in sys.modules)"
     root = Path(__file__).resolve().parents[2]
     assert subprocess.run([sys.executable, "-c", code], cwd=root, check=False).returncode == 0
+
+
+# Standard errors
+
+
+def test_clustered_std_err_matches_a_hand_calculation():
+    # fractions 1, 1/2, 1, 1/2: mean 3/4, sample variance (4 * 1/16) / 3, sd sqrt(1/12)
+    assert clustered_std_err([4, 2, 4, 2], 4) == pytest.approx(math.sqrt(1 / 48))
+
+
+def test_clustered_std_err_is_zero_when_every_ticket_passes_alike():
+    assert clustered_std_err([3, 3, 3], 4) == 0
+
+
+def test_clustered_std_err_refuses_what_it_cannot_estimate():
+    with pytest.raises(ValueError, match="two tickets"):
+        clustered_std_err([2], 4)
+    with pytest.raises(ValueError, match="shots"):
+        clustered_std_err([2, 5], 4)
+
+
+def test_binomial_std_err_is_the_textbook_formula():
+    assert binomial_std_err(50, 100) == pytest.approx(0.05)
+    assert binomial_std_err(0, 100) == 0
+    assert binomial_std_err(100, 100) == 0
+    assert binomial_std_err(8192 * 3 // 4, 8192) == pytest.approx(math.sqrt(0.75 * 0.25 / 8192))
+
+
+def test_binomial_std_err_refuses_impossible_counts():
+    with pytest.raises(ValueError, match="passes"):
+        binomial_std_err(101, 100)
+
+
+def test_with_std_err_adds_only_the_error():
+    point = {"length": 1, "shots": 100, "passes": 50, "passRate": 0.5}
+    assert with_std_err(point) == {**point, "stdErr": 0.05}
+
+
+@pytest.mark.parametrize("name", ["ideal", "ibm-noise-model"])
+def test_simulator_runs_say_their_error_is_binomial(small_export, name):
+    assert "binomial" in run_named(small_export, name)["stdErrMethod"]
+
+
+def committed_chip_records():
+    return [read_record("wiesner", job_id) for job_id in CHIP_JOBS]
+
+
+def test_committed_chip_error_follows_the_records_per_ticket_passes(committed):
+    records = committed_chip_records()
+    assert records
+    for record in records:
+        run = record["run"]
+        exported_run = next(r for r in committed_chip_runs(committed) if r["id"] == run["id"])
+        assert "clustered" in exported_run["stdErrMethod"]
+        for stored, point in zip(run["points"], exported_run["points"], strict=True):
+            assert sum(stored["ticketPasses"]) == stored["passes"]
+            assert len(stored["ticketPasses"]) == record["tickets"]
+            fractions = [n / record["shotsPerTicket"] for n in stored["ticketPasses"]]
+            expected = statistics.stdev(fractions) / math.sqrt(len(fractions))
+            assert point["stdErr"] == pytest.approx(expected, rel=1e-12)
+
+
+def test_the_committed_chip_error_is_wider_than_independent_shots_would_give(committed):
+    """Replayed tickets make shots dependent, so the honest error is not the binomial one."""
+    for run in committed_chip_runs(committed):
+        for point in run["points"]:
+            assert point["stdErr"] > 0
+            assert point["stdErr"] > binomial_std_err(point["passes"], point["shots"])
+
+
+def test_committed_chip_error_is_near_the_hand_calculation(committed):
+    run = committed_chip_runs(committed)[0]
+    expected = {1: 0.024, 2: 0.029, 4: 0.020}
+    for length, value in expected.items():
+        assert point_at(run, length)["stdErr"] == pytest.approx(value, abs=0.002)
+
+
+def test_chip_run_with_std_err_refuses_per_ticket_passes_that_do_not_add_up():
+    run = chip_run(passes={4: 300})
+    run["points"][0]["ticketPasses"][0] += 1
+    with pytest.raises(ValueError, match="passes"):
+        chip_run_with_std_err(run)
+
+
+def test_chip_run_with_std_err_refuses_a_point_with_no_per_ticket_passes():
+    run = run_from_passes(
+        "ibm-chip", "ibm_kingston", CHIP_QUBITS, CHIP_SELECTION, 32, 32,
+        date(2026, 11, 7), "job123", {4: 300},
+    )
+    with pytest.raises(ValueError, match="ticketPasses"):
+        chip_run_with_std_err(run)
+
+
+def test_chip_run_with_std_err_leaves_its_input_alone():
+    run = chip_run()
+    before = json.dumps(run)
+    chip_run_with_std_err(run)
+    assert json.dumps(run) == before
 
 
 # Seeds
@@ -586,7 +731,8 @@ def test_committed_ideal_run_matches_the_limit_within_shot_noise(committed):
 @pytest.mark.parametrize("length", LENGTHS)
 def test_committed_ideal_points_replay_exactly(committed, length):
     stored = point_at(run_named(committed, "ideal"), length)
-    assert sample_point(length, stored["shots"], stored["seed"], AerSimulator()) == stored
+    point = sample_point(length, stored["shots"], stored["seed"], AerSimulator())
+    assert with_std_err(point) == stored
 
 
 @pytest.fixture(scope="module")
@@ -601,7 +747,8 @@ def test_committed_noisy_points_replay_exactly(committed, committed_noise, lengt
     stored = point_at(run_named(committed, "ibm-noise-model"), length)
     backend, _ = committed_noise
     layout = stored["qubits"]
-    assert sample_point(length, stored["shots"], stored["seed"], backend, layout) == stored
+    point = sample_point(length, stored["shots"], stored["seed"], backend, layout)
+    assert with_std_err(point) == stored
 
 
 def test_replay_notices_a_dropped_or_changed_layout(committed, committed_noise):

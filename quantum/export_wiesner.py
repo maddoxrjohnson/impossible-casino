@@ -3,6 +3,9 @@
 Run from the repo root: .venv/bin/python -m quantum.export_wiesner
 Add --chip-only to rewrite just the chip runs and leave the simulators as written.
 
+Every point carries stdErr, in the same units as passRate, and every run says in
+stdErrMethod how it was found.
+
 The noisy run uses Aer with a noise model built from IBM's stored fake_kingston
 calibration, pinned to that snapshot's eight quietest qubits. It is a simulation,
 and the provenance says so. Chip runs come from the records in CHIP_JOBS, and
@@ -17,6 +20,7 @@ import argparse
 import json
 import math
 import random
+import statistics
 from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
@@ -73,6 +77,16 @@ BY_LENGTH_METHOD = (
     "with no entangling gates"
 )
 
+SIMULATOR_STD_ERR_METHOD = (
+    "binomial: square root of passRate times (1 minus passRate) over shots; "
+    "every shot forges a fresh random ticket, so shots are independent"
+)
+CHIP_STD_ERR_METHOD = (
+    "ticket-clustered: standard deviation of the per-ticket pass fractions "
+    "(n minus 1 divisor) over the square root of the tickets; "
+    "each ticket is replayed for several shots, so shots are not independent"
+)
+
 # Each qubit is measured twice and each of its four RY gates compiles to two sx.
 MEASURES_PER_QUBIT = 2
 SX_PER_QUBIT = 8
@@ -119,6 +133,46 @@ def quietest_qubits(backend: BackendV2, count: int) -> list[int]:
         )
 
     return sorted(filter(usable, range(backend.num_qubits)), key=cost)[:count]
+
+
+def binomial_std_err(passes: int, shots: int) -> float:
+    """Standard error of passes / shots when every shot is an independent trial."""
+    if not 0 <= passes <= shots:
+        raise ValueError(f"passes must be between 0 and {shots}, got {passes}")
+    rate = passes / shots
+    return math.sqrt(rate * (1 - rate) / shots)
+
+
+def clustered_std_err(ticket_passes: Sequence[int], shots_per_ticket: int) -> float:
+    """Standard error of the pass rate when the unit of chance is a whole ticket.
+
+    The spread of the per-ticket pass fractions covers both the choice of ticket
+    and the shots replayed on it.
+    """
+    if len(ticket_passes) < 2:
+        raise ValueError("a clustered error needs at least two tickets")
+    if not all(0 <= n <= shots_per_ticket for n in ticket_passes):
+        raise ValueError(f"every ticket must pass between 0 and {shots_per_ticket} shots")
+    fractions = [n / shots_per_ticket for n in ticket_passes]
+    return statistics.stdev(fractions) / math.sqrt(len(fractions))
+
+
+def with_std_err(point: dict[str, Any]) -> dict[str, Any]:
+    """A simulator point with its binomial standard error, leaving sample_point as is."""
+    return {**point, "stdErr": binomial_std_err(point["passes"], point["shots"])}
+
+
+def chip_run_with_std_err(run: dict[str, Any]) -> dict[str, Any]:
+    """A chip run with each point's clustered standard error, from its per-ticket passes."""
+    points = []
+    for point in run["points"]:
+        if "ticketPasses" not in point:
+            raise ValueError(f"length {point['length']} has no ticketPasses to set an error from")
+        split = point["ticketPasses"]
+        if len(split) != run["ticketsPerPoint"] or sum(split) != point["passes"]:
+            raise ValueError(f"length {point['length']} ticketPasses do not match its passes")
+        points.append({**point, "stdErr": clustered_std_err(split, run["shotsPerTicket"])})
+    return {**run, "points": points, "stdErrMethod": CHIP_STD_ERR_METHOD}
 
 
 def noise_model_label(device: BackendV2) -> dict[str, str]:
@@ -173,9 +227,12 @@ def ideal_run(lengths: Sequence[int], shots: int, today: date) -> dict[str, Any]
         "id": "ideal",
         "provenance": simulator_provenance(backend.name, shots, today),
         "points": [
-            sample_point(length, shots, length_seed(IDEAL_BASE_SEED, length), backend)
+            with_std_err(
+                sample_point(length, shots, length_seed(IDEAL_BASE_SEED, length), backend)
+            )
             for length in lengths
         ],
+        "stdErrMethod": SIMULATOR_STD_ERR_METHOD,
     }
 
 
@@ -189,14 +246,17 @@ def noisy_run(lengths: Sequence[int], shots: int, today: date) -> dict[str, Any]
             backend.name, shots, today, noise_model=noise_model_label(device), qubits=qubits
         ),
         "points": [
-            sample_point(length, shots, length_seed(NOISY_BASE_SEED, length), backend, qubits)
+            with_std_err(
+                sample_point(length, shots, length_seed(NOISY_BASE_SEED, length), backend, qubits)
+            )
             for length in lengths
         ],
+        "stdErrMethod": SIMULATOR_STD_ERR_METHOD,
     }
 
 
 def chip_runs() -> list[dict[str, Any]]:
-    return collected_runs("wiesner", CHIP_JOBS)
+    return [chip_run_with_std_err(run) for run in collected_runs("wiesner", CHIP_JOBS)]
 
 
 def limits(lengths: Sequence[int]) -> dict[str, Any]:
