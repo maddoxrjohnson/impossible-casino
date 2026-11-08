@@ -119,11 +119,13 @@ function drawSeries(root: SVGSVGElement, s: ExpertSeries, sx: (x: number) => num
     svg('path', { d, fill: 'none', stroke: colour, 'stroke-width': 2, 'stroke-dasharray': DASH[s.line], 'stroke-linejoin': 'round', 'stroke-linecap': s.line === 'dot' ? 'round' : 'butt' }, g);
   }
   for (const p of s.points) {
-    if (p.lo !== undefined && p.hi !== undefined) {
+    const barred = p.lo !== undefined && p.hi !== undefined;
+    // A barred point gets a small hollow mark under its bar, so the bar is never hidden by the mark.
+    if (s.shape) shapeAt(s.shape, sx(p.x), sy(p.y), barred ? 2.6 : 4, barred ? { fill: PAPER, stroke: colour, 'stroke-width': 1.5 } : { fill: colour, stroke: PAPER, 'stroke-width': 2 }, g);
+    if (barred) {
       const x = sx(p.x), y0 = sy(p.lo), y1 = sy(p.hi);
-      svg('path', { d: `M${x} ${y0}V${y1}M${x - 3.5} ${y0}H${x + 3.5}M${x - 3.5} ${y1}H${x + 3.5}`, stroke: colour, 'stroke-width': 1.25, fill: 'none' }, g);
+      svg('path', { d: `M${x} ${y0}V${y1}M${x - 5} ${y0}H${x + 5}M${x - 5} ${y1}H${x + 5}`, stroke: colour, 'stroke-width': 1.5, fill: 'none' }, g);
     }
-    if (s.shape) shapeAt(s.shape, sx(p.x), sy(p.y), 4, { fill: colour, stroke: PAPER, 'stroke-width': 2 }, g);
     // A hover target wider than the mark, carrying the value.
     const hit = svg('rect', { x: sx(p.x) - Math.max(6, step / 2), y: s.bars ? sy(Math.max(p.y, 0)) - 12 : sy(p.y) - 12, width: Math.max(12, step), height: s.bars ? base - sy(Math.max(p.y, 0)) + 12 : 24, class: 'dc-ex-hit' }, g);
     svg('title', {}, hit, p.tip);
