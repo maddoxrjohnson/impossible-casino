@@ -41,7 +41,7 @@ export function createLines(limits: Limits): Record<LineKey, string> {
     intro: 'You and a partner sit in separate rooms. Each of you draws a question, 0 or 1, and answers without talking. Answer alike and you win, unless you both drew a 1. Then you must differ.',
     classical: 'You both always say 0. It is the best plan two people can make in advance, and it fails only when both questions come up 1.',
     wall: `Three hands in four. That glass is where every plan made in advance stops, and you need ${even} to break even. I keep a pair of particles for people in your position.`,
-    entangled: 'That colour was always in the building. The glass held, barely. Turn your dial until the pair does what no plan can, then pick a stake and run it.',
+    entangled: 'That color was always in the building. The glass held, barely. Turn your dial until the pair does what no plan can, then pick a stake and run it.',
     beyond: 'Your two answers just won more often than any plan manages on average, and the rules gave you no way to signal each other. The house has no rule for this. It only has more floors.',
     low: 'Not past the line. A good plan could do that much.',
     over: `Past the line, which no plan can do. Until you clear ${even} the house still takes your money, so keep turning.`,

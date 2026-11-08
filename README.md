@@ -5,7 +5,7 @@ A 1920s casino built inside a quantum computer, where each room is a game whose 
 - **Play:** https://impossible-casino.vercel.app
 - **Demo video:** YOUTUBE_VIDEO_LINK
 
-Built for the VT Qiskit hackathon. Every quantum number in the game comes from Qiskit. Each result is labelled with where it came from: the live Qiskit simulator, a pre-run Qiskit simulator (ideal or IBM noise model), or a named IBM chip with its job ID. The claim is not speed. The headline claim, made only for the Tables, is beating a proven classical limit in a game. The Cage and the Roulette Wheel show other quantum limits that you can measure, and the house still wins at both.
+Built for the VT Qiskit hackathon. Every quantum number in the game comes from Qiskit. Each result is labeled with where it came from: the live Qiskit simulator, a pre-run Qiskit simulator (ideal or IBM noise model), or a named IBM chip with its job ID. The claim is not speed. The headline claim, made only for the Tables, is beating a proven classical limit in a game. The Cage and the Roulette Wheel show other quantum limits that you can measure, and the house still wins at both.
 
 ## What's new here
 - **A quantum advantage with a price on it.** The CHSH game and Wiesner money are standard textbook examples. This project makes them bets. The house pays 25 on 100 at the Tables, so break-even is 80%, between the classical 75% and the quantum 85.36%. A classical player loses money over time, and an entangled one wins. The house edge is how a casino prices an advantage, so it is a natural way to show one.
@@ -41,12 +41,12 @@ All runs used `ibm_kingston`. The qubits were the best-case pick from that day's
 | --- | --- | --- | --- |
 | Tables | `dbnneo0qtr0c73adbufg` | CHSH at 9 dial settings, 4,096 shots per question pair | Peak **84.48% ± 0.28%** at the middle setting: 33.5 standard errors past the 75% classical limit, and past the 80% break-even. CHSH S = 2.76 (classical bound 2, quantum limit 2.83). At that setting: ideal simulator 85.32%, noise model 84.80%. |
 | Cage | `dbnp35gou4as73b4tusg` | Wiesner forgery, lengths 1 to 8, 128 random notes × 8 shots each, with mid-circuit measurement | Pass rate against exact: 78.2% vs 75.0% at length 1, 27.8% vs 31.6% at 4, 9.6% vs 10.0% at 8. Lengths 1 and 2 are within sampling spread of the exact rate. |
-| Roulette | `dbns0f5t7fqc73ak4isg` | All 108 reachable drafts on 5 qubits, 116,736 shots | **Not used in play.** On the chip, the wheel leans towards pocket 0, so one draft would beat the house. The game plays the IBM noise model instead, and labels it that way. |
+| Roulette | `dbns0f5t7fqc73ak4isg` | All 108 reachable drafts on 5 qubits, 116,736 shots | **Not used in play.** On the chip, the wheel leans toward pocket 0, so one draft would beat the house. The game plays the IBM noise model instead, and labels it that way. |
 
 Earlier pilot runs are kept in `quantum/chip_runs/` with their job IDs (`dbnna5gqtr0c73adbo90`, `dbnoi58ou4as73b4tcr0`).
 
 ## What I learned
-- **Hardware noise can do more than blur a result.** On the chip, the Roulette wheel leaned towards one pocket, enough to give the player an edge the math forbids. The honest fix was to show it and play the noise model, not to re-run until it looked right.
+- **Hardware noise can do more than blur a result.** On the chip, the Roulette wheel leaned toward one pocket, enough to give the player an edge the math forbids. The honest fix was to show it and play the noise model, not to re-run until it looked right.
 - **Error bars need the right model.** The Cage replays each random note for several shots, so the shots are not independent. Naive error bars came out too tight; clustering by note gives honest ones.
 - **Near a limit, the sample matters.** At one qubit the chip passed 78.2%, but those 128 particular notes were expected to give 78.1%, so the chip did not beat 75%.
 - **Design for failure first.** Pre-run exports, then the live simulator, then the chip: the site never breaks when the backend is down.
@@ -68,7 +68,7 @@ api/       FastAPI on Google Cloud Run: live Qiskit Aer runs
 - **Physics stays in Python.** TypeScript only looks up, samples and animates results that Qiskit produced. It never works out the physics itself.
 - **The live API is optional.** The site plays fully from the exported results if the API is asleep, down or removed, and the source label says so. Live runs are noisy Aer simulations that use IBM's `fake_kingston` calibration. A chip button exists but is owner-only and capped. See [`api/README.md`](api/README.md).
 - **Receipts and the math.** Every result opens a paper casino marker with the real circuit, source, shots and job ID. An optional "The math" sheet has the derivations and charts with error bars.
-- **Sound** is synthesised live in the browser and is off until you turn it on.
+- **Sound** is synthesized live in the browser and is off until you turn it on.
 - **Devices:** desktop first, playable on phones with lower graphics settings, and a flat table when WebGL is unavailable.
 
 ## Reading the code

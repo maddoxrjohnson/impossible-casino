@@ -8,9 +8,9 @@ FastAPI service for live Qiskit runs. The game plays fully without it: the clien
 | `POST /v1/chsh` `{dial}` | A live CHSH run. The dial must be on the exported grid. |
 | `POST /v1/wiesner` `{length}` | A live forgery run, length 1 to 8. |
 | `POST /v1/chip/run` `{passphrase}` | One press: CHSH at dial 0.5 on `ibm_kingston`, 1024 shots per question pair. Behind the gate and the spending limits below. Answers at once with `{status: "queued", jobId, backend}`. |
-| `GET /v1/chip/run/{jobId}` | Poll a press. No passphrase. `queued`, `running`, `cancelled` or `error` carry no numbers. `done` carries `result`, a CHSH result labelled `ibm-chip` with the job id, chip, qubits and date. Only jobs tagged `impossible-casino-live` are served; any other id is 404. Finished answers are kept in memory, and a waiting status is reused for 5 s. |
+| `GET /v1/chip/run/{jobId}` | Poll a press. No passphrase. `queued`, `running`, `cancelled` or `error` carry no numbers. `done` carries `result`, a CHSH result labeled `ibm-chip` with the job id, chip, qubits and date. Only jobs tagged `impossible-casino-live` are served; any other id is 404. Finished answers are kept in memory, and a waiting status is reused for 5 s. |
 
-Every run on the other routes is a noisy Aer simulation with a fresh seed, using the stored `fake_kingston` calibration, and is labelled `live-simulator`.
+Every run on the other routes is a noisy Aer simulation with a fresh seed, using the stored `fake_kingston` calibration, and is labeled `live-simulator`.
 
 ### Chip presses
 
@@ -55,7 +55,7 @@ All are environment variables, read once at startup. A bad value stops the servi
 | `CHIP_POLL_LIMIT_PER_MINUTE` | 30 | Polls per client per instance. A poll the cache cannot answer is two IBM calls. |
 | `CHIP_POLL_CAP_PER_MINUTE` | 120 | Polls per instance, across all clients. |
 | `CORS_ORIGINS` | production site | Comma-separated full origins. Replaces the default. Previews and localhost ports are matched separately. |
-| `RUN_LIMIT_PER_MINUTE` | 20 | Runs per client address per instance. A real player tops out near 18, or more if they also forge. Everyone behind one address shares it, so past the limit a room on one network gets pre-run results, labelled as such, until the minute resets. |
+| `RUN_LIMIT_PER_MINUTE` | 20 | Runs per client address per instance. A real player tops out near 18, or more if they also forge. Everyone behind one address shares it, so past the limit a room on one network gets pre-run results, labeled as such, until the minute resets. |
 | `RUN_CAP_PER_HOUR` | 12000 | Requests that reach a run, per instance, across all clients. Past it, 429 until the hour ends. It binds CHSH runs but not Wiesner runs, which are too slow to reach it, so it does not bound compute cost. |
 | `CHIP_LIMIT_PER_MINUTE` | 5 | Presses, right or wrong, per client per instance. |
 | `MAX_CLIENTS` | 10000 | Clients each rate limiter remembers. |
@@ -228,4 +228,4 @@ The figures below are estimates to confirm against the current Google Cloud pric
 gcloud run services delete impossible-casino-api --region=us-east1
 ```
 
-Deleting the service is safe. The site falls back to its exported results and keeps working, labelled pre-run. To bring it back, run the deploy command again.
+Deleting the service is safe. The site falls back to its exported results and keeps working, labeled pre-run. To bring it back, run the deploy command again.
