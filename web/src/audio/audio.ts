@@ -82,7 +82,7 @@ export function createAudio(): GameAudio {
   /** The ball clicks round the rim, each gap longer than the last, then the result lands. */
   function ballRun(c: AudioContext, out: AudioNode, t: number) {
     for (let at = 0, gap = .045; at < SPIN_RUN_S; at += gap, gap *= 1.17) {
-      burst(c, out, t + at, .018, .1 * (1 - at / SPIN_RUN_S * .5), 'bandpass', 2600 - 700 * (at / SPIN_RUN_S), 1800, 3);
+      burst(c, out, t + at, .018, .32 * (1 - at / SPIN_RUN_S * .5), 'bandpass', 2600 - 700 * (at / SPIN_RUN_S), 1800, 3);
     }
   }
 
@@ -98,7 +98,7 @@ export function createAudio(): GameAudio {
     },
     forgePass(c, out, t) { chime(c, out, t, [784, 1175], .09, .06); },
     forgeFail(c, out, t) { buzz(c, out, 62, t, .4, .09); },
-    card(c, out, t) { burst(c, out, t, .035, .12, 'bandpass', 1800, 1200, 1.2); tone(c, out, 210, t, .06, .05, 'sine', 140); },
+    card(c, out, t) { burst(c, out, t, .035, .36, 'bandpass', 1800, 1200, 1.2); tone(c, out, 210, t, .06, .14, 'sine', 140); },
     spinWin(c, out, t) { ballRun(c, out, t); chime(c, out, t + SPIN_RUN_S, [659, 988, 1319], .1, .06); },
     spinLoss(c, out, t) { ballRun(c, out, t); tone(c, out, 120, t + SPIN_RUN_S, .5, .1, 'triangle', 80); },
   };

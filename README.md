@@ -46,7 +46,7 @@ All runs used `ibm_kingston`. The qubits were the best-case pick from that day's
 Earlier pilot runs are kept in `quantum/chip_runs/` with their job IDs (`dbnna5gqtr0c73adbo90`, `dbnoi58ou4as73b4tcr0`).
 
 ## What I learned
-- **Hardware noise can do more than blur a result.** On the chip, the Roulette wheel leaned towards one pocket, enough to give the player an edge the maths forbids. The honest fix was to show it and play the noise model, not to re-run until it looked right.
+- **Hardware noise can do more than blur a result.** On the chip, the Roulette wheel leaned towards one pocket, enough to give the player an edge the math forbids. The honest fix was to show it and play the noise model, not to re-run until it looked right.
 - **Error bars need the right model.** The Cage replays each random note for several shots, so the shots are not independent. Naive error bars came out too tight; clustering by note gives honest ones.
 - **Near a limit, the sample matters.** At one qubit the chip passed 78.2%, but those 128 particular notes were expected to give 78.1%, so the chip did not beat 75%.
 - **Design for failure first.** Pre-run exports, then the live simulator, then the chip: the site never breaks when the backend is down.
@@ -67,7 +67,7 @@ api/       FastAPI on Google Cloud Run: live Qiskit Aer runs
 
 - **Physics stays in Python.** TypeScript only looks up, samples and animates results that Qiskit produced. It never works out the physics itself.
 - **The live API is optional.** The site plays fully from the exported results if the API is asleep, down or removed, and the source label says so. Live runs are noisy Aer simulations that use IBM's `fake_kingston` calibration. A chip button exists but is owner-only and capped. See [`api/README.md`](api/README.md).
-- **Receipts and the maths.** Every result opens a paper casino marker with the real circuit, source, shots and job ID. An optional "The maths" sheet has the derivations and charts with error bars.
+- **Receipts and the math.** Every result opens a paper casino marker with the real circuit, source, shots and job ID. An optional "The math" sheet has the derivations and charts with error bars.
 - **Sound** is synthesised live in the browser and is off until you turn it on.
 - **Devices:** desktop first, playable on phones with lower graphics settings, and a flat table when WebGL is unavailable.
 
@@ -75,7 +75,7 @@ api/       FastAPI on Google Cloud Run: live Qiskit Aer runs
 - `quantum/chsh.py`, `wiesner.py`, `roulette.py`: the circuits and the limits, each with a docstring explaining the game.
 - `quantum/export_*.py` and `quantum/chip_*.py`: the simulator exports and the chip runs, with full provenance.
 - `web/src/game/`: game rules and result lookup (`results.ts` parses the exports, `store.ts` runs the game).
-- `web/src/ui/receipt.ts` and `expert.ts`: the receipts and the maths sheet.
+- `web/src/ui/receipt.ts` and `expert.ts`: the receipts and the math sheet.
 - `api/main.py`: the live Qiskit service and its spending guards.
 
 ## Run it locally

@@ -1,4 +1,4 @@
-// The expert layer: the maths, charts and tables behind each room, as plain data. Every number is read from an export or a result. No DOM.
+// The expert layer: the math, charts and tables behind each room, as plain data. Every number is read from an export or a result. No DOM.
 import {
   provenanceLabel,
   ROULETTE_POCKETS,
@@ -161,7 +161,7 @@ function tablesSheet({ dial, result }: ExpertState, chsh: ChshExport): ExpertShe
     ? [`IBM chip at the middle setting: ${pct(chipPeak.winRate, 2)} ± ${pct(chipPeak.stdErr, 2)}, about ${Math.round(chipPeak.sigmasAboveClassical)} standard errors above ${pct(classical.value)}. CHSH S = ${chipPeak.chshS.toFixed(2)} (classical bound ${sValue(classical.chshS)}, quantum limit ${sValue(quantum.chshS)}).`]
     : [];
   return {
-    title: 'The maths at the Tables',
+    title: 'The math at the Tables',
     sub: SUB,
     maths: [
       'You draw a question x and your partner draws y, each 0 or 1. You answer a, they answer b. A hand wins when a ⊕ b = x ∧ y: answer alike, unless both questions are 1, and then differ.',
@@ -271,7 +271,7 @@ function cageSheet({ forge }: ExpertState, w: WiesnerExport): ExpertSheet {
     return p.stdErr === undefined ? pct(p.passRate, 1) : `${pct(p.passRate, 1)} ± ${pct(p.stdErr, 1)}`;
   };
   return {
-    title: 'The maths at the Cage',
+    title: 'The math at the Cage',
     sub: SUB,
     maths,
     charts: [{
@@ -367,7 +367,7 @@ function wheelSheet({ roulette: round }: ExpertState, r: RouletteExport, board: 
         : []),
   ];
   return {
-    title: 'The maths at the Wheel',
+    title: 'The math at the Wheel',
     sub: SUB,
     maths,
     charts: [{

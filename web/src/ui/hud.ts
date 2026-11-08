@@ -34,7 +34,7 @@ export interface HudOptions {
   onSound: (on: boolean) => void;
   /** The marker for the room in view, or null when there is nothing to show. */
   onReceipt: (room: SideName | null) => Receipt | null;
-  /** The maths, charts and tables for the room in view, built when the player asks for them. */
+  /** The math, charts and tables for the room in view, built when the player asks for them. */
   onExpert: (room: SideName | null) => ExpertSheet;
   /** The Cage's board, read from the export. */
   cage: CageBoard;
@@ -84,7 +84,7 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   row.append(main, alt);
   const stubs = el('div', 'dc-row');
   const receiptBtn = el('button', 'dc-stub', 'Receipt'); receiptBtn.type = 'button'; receiptBtn.disabled = true;
-  const expertBtn = el('button', 'dc-stub', 'The maths'); expertBtn.type = 'button'; expertBtn.setAttribute('aria-haspopup', 'dialog'); expertBtn.setAttribute('aria-disabled', 'true');
+  const expertBtn = el('button', 'dc-stub', 'The math'); expertBtn.type = 'button'; expertBtn.setAttribute('aria-haspopup', 'dialog'); expertBtn.setAttribute('aria-disabled', 'true');
   const liftBtn = el('button', 'dc-stub dc-lift-stub', 'Elevator'); liftBtn.type = 'button'; liftBtn.setAttribute('aria-haspopup', 'dialog');
   const soundBtn = el('button', 'dc-stub', 'Sound off'); soundBtn.type = 'button'; soundBtn.setAttribute('aria-pressed', 'false');
   stubs.append(receiptBtn, expertBtn, liftBtn, soundBtn);
@@ -119,7 +119,7 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   marker.append(el('h2', '', 'Casino marker'), markerSub, circuitTitle, pre, circuitNote, details, stamp, close);
   receipt.append(marker);
 
-  // The expert layer: the same paper as the marker, wider, holding the maths, charts and tables. Nothing in it shows unless asked for.
+  // The expert layer: the same paper as the marker, wider, holding the math, charts and tables. Nothing in it shows unless asked for.
   const expert = el('div', 'dc-receipt dc-expert');
   expert.setAttribute('role', 'dialog'); expert.setAttribute('aria-modal', 'true'); expert.setAttribute('aria-labelledby', 'dc-expert-h');
   const sheet = el('div', 'dc-marker dc-sheet');

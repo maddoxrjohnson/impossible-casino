@@ -40,7 +40,7 @@ const POSE: Record<Phase, Pose> = {
   classical: { r: 2.9, a: 1.8, y: 3.3, ty: .95, fov: 72 },
   wall: { r: .3, a: Math.PI / 2, y: 1.72, ty: 7.75, fov: 72 },
   entangled: { r: 3.15, a: 1.5, y: 4.7, ty: -.35, fov: 72 },
-  beyond: { r: 23, a: 1.22, y: 15, ty: 9, fov: 60 },
+  beyond: { r: 3.15, a: 1.5, y: 4.7, ty: -.35, fov: 72 },   // the table stays framed after the seal goes, so later runs play up close
 };
 
 const RAIN_MAP_FRAG = /* glsl */`
@@ -268,12 +268,12 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     after(6.2, () => { story.locked = false; hudSync(store.state); });
   }
   // The rules break: the balconies begin to turn, vapour falls upward, cards leave the deck and current climbs the bore.
-  function rulesBreak() {
+  function rulesBreak(keys: Pose[]) {
     rulesGone = true;
     tw(fx, 'spin', 1, 3.2, EASE.inOut); tw(fx, 'rise', 1, 3, EASE.inOut); tw(fx, 'lift', 1, 4, EASE.inOut); tw(fx, 'env', 1.16, 2.4); tw(fx, 'lamp', 1.2, 2.4);
     tw(U.uPeel, 'value', 1.32, 7, EASE.inOut, 1);
     world.beam.visible = true; tw(U.uBeam, 'value', 1, 2.2, EASE.out, .4);
-    glide([{ r: 8.4, a: 1.5, y: 5, ty: 2.6, fov: 58 }, POSE.beyond], 4.6);
+    glide([...keys, POSE.beyond], 4.6);
   }
   // The payoff. Once the run has finished past the line, the camera tips back to the glass.
   function shatterSequence() {
@@ -291,7 +291,8 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
       fx.flash = 1; fx.shake = reducedMotion ? 0 : .22; fx.ca = reducedMotion ? 0 : .009; fx.exposure = 2.4;
       tw(fx, 'exposure', 1.02, 1.5); tw(fx, 'shake', 0, 1.4); tw(fx, 'ca', 0, 1.4);
     });
-    after(2.75, rulesBreak);
+    // The camera drops from the glass back onto the table.
+    after(2.75, () => { rulesBreak([{ r: 1.5, a: 1.6, y: 2.3, ty: 3.4, fov: 66 }, { r: 2.7, a: 1.54, y: 3, ty: 1.9, fov: 64 }]); });
     after(3.2, () => { world.seal.visible = false; world.sealRing.visible = false; });
     after(6.4, () => { world.shards.visible = false; story.locked = false; hudSync(store.state); });
   }
@@ -321,7 +322,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     }
     if (p === 'beyond') {
       if (prev === 'entangled') shatterSequence();
-      else { clearStory(); story.locked = false; landEntangled(); U.uOpen.value = 1.2; U.uCrack.value = 1; world.seal.visible = false; world.sealRing.visible = false; rulesBreak(); }
+      else { clearStory(); story.locked = false; landEntangled(); U.uOpen.value = 1.2; U.uCrack.value = 1; world.seal.visible = false; world.sealRing.visible = false; rulesBreak([{ r: 8, a: 1.5, y: 4, ty: 2, fov: 54 }]); }
     }
   }
   function landEntangled() {

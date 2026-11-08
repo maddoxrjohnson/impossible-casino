@@ -45,6 +45,7 @@ export function createCagePanel({ board, stakes, onForge, onRestart, onStake }: 
   let held: GameState | null = null;
   let act: 'forge' | 'restart' | null = null;
   let armTimer = 0;
+  let lastForge: GameState['forge'] = null;
   const guard = createRestartGuard(() => performance.now());
 
   const paint = (s: GameState): void => {
@@ -72,6 +73,9 @@ export function createCagePanel({ board, stakes, onForge, onRestart, onStake }: 
     head.textContent = view.result?.head ?? '';
     detail.textContent = view.result?.detail ?? '';
     sourceTag.textContent = view.sources.join(' · ');
+    // A fresh result on a short window brings its source line into view; the board scrolls inside.
+    if (view.result && s.forge && s.forge !== lastForge) requestAnimationFrame(() => { box.scrollTop = box.scrollHeight; });
+    lastForge = s.forge;
   };
 
   const onLength = (e: Event): void => { if (e.target instanceof HTMLInputElement) length = +e.target.value; };
