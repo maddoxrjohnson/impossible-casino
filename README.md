@@ -1,11 +1,11 @@
 # The Impossible Casino
 
-A 1920s casino built inside a quantum computer. Each room is a bet that no ordinary strategy can win over time. Entanglement and superposition can, and real IBM quantum hardware shows it.
+A 1920s casino built inside a quantum computer, where each room is a game whose odds are set by quantum rules. The headline is the Impossible Tables: no plan agreed in advance can win over time, an entangled pair can, and a real IBM chip did.
 
 - **Play:** LIVE_DEMO_LINK
 - **Demo video:** YOUTUBE_VIDEO_LINK
 
-Built for the VT Qiskit hackathon. Every quantum number in the game comes from Qiskit. Each result is labelled with where it came from: the live Qiskit simulator, a pre-run Qiskit simulator (ideal or IBM noise model), or a named IBM chip with its job ID. The claim is not speed. The claim is beating a proven classical limit in a game.
+Built for the VT Qiskit hackathon. Every quantum number in the game comes from Qiskit. Each result is labelled with where it came from: the live Qiskit simulator, a pre-run Qiskit simulator (ideal or IBM noise model), or a named IBM chip with its job ID. The claim is not speed. The headline claim, made only for the Tables, is beating a proven classical limit in a game. The Cage and the Roulette Wheel show other quantum limits that you can measure, and the house still wins at both.
 
 ## The rooms
 
@@ -34,7 +34,7 @@ All runs used `ibm_kingston`. The qubits were the best-case pick from that day's
 
 | Room | Job ID | What ran | Result |
 | --- | --- | --- | --- |
-| Tables | `dbnneo0qtr0c73adbufg` | CHSH at 9 dial settings, 4,096 shots per question pair | Peak **84.48%** at the middle setting, past the 75% classical limit and the 80% break-even. Ideal simulator: 85.34%. Noise model: 84.80%. |
+| Tables | `dbnneo0qtr0c73adbufg` | CHSH at 9 dial settings, 4,096 shots per question pair | Peak **84.48%** at the middle setting, past the 75% classical limit and the 80% break-even. At that setting: ideal simulator 85.32%, noise model 84.80%. |
 | Cage | `dbnp35gou4as73b4tusg` | Wiesner forgery, lengths 1 to 8, 128 random notes × 8 shots each, with mid-circuit measurement | Pass rate against exact: 78.2% vs 75.0% at length 1, 27.8% vs 31.6% at 4, 9.6% vs 10.0% at 8. Lengths 1 and 2 are within sampling spread of the exact rate. |
 | Roulette | `dbns0f5t7fqc73ak4isg` | All 108 reachable drafts on 5 qubits, 116,736 shots | **Not used in play.** On the chip, the wheel leans towards pocket 0, so one draft would beat the house. The game plays the IBM noise model instead, and labels it that way. |
 
