@@ -168,7 +168,7 @@ export function createRoulettePanel({ board, text, stakes, onOpen, onPlay, onSpi
     tied.textContent = view.tied.length ? `Tied: ${view.tied.join(', ')}` : '';
     tied.hidden = !view.tied.length;
     last.textContent = view.lastCard ?? '';
-    locked = view.pocketsLocked;
+    locked = view.pocketsLocked || rolling;
     wheelGroup.setAttribute('aria-disabled', String(locked));
     let landedAt: number | null = null, betAt: number | null = null;
     view.pockets.forEach((p, i) => {
