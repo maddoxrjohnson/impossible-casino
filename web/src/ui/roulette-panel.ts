@@ -51,7 +51,7 @@ export function createRoulettePanel({ board, text, stakes, onOpen, onPlay, onSpi
   box.className = 'dc-roulette';
   box.setAttribute('aria-label', 'The Roulette Wheel');
   box.hidden = true;
-  box.innerHTML = `<h2>Gather the wheel</h2><p class="dc-cage-goal"></p>
+  box.innerHTML = `<h2>Gather the wheel</h2><p class="dc-panel-how">Pick a stake and open a round. You and the house take turns playing cards that shape the wheel; then tap a pocket on the wheel and spin.</p><p class="dc-cage-goal"></p>
     <ol class="dc-rl-draft" aria-label="Cards drafted"></ol>
     <div class="dc-rl-play">
       <div class="dc-rl-deck" role="group" aria-label="The deck">${board.deck.map((_, i) => `<button type="button" class="dc-rl-card" data-card="${i}"></button>`).join('')}</div>
@@ -62,7 +62,7 @@ export function createRoulettePanel({ board, text, stakes, onOpen, onPlay, onSpi
       <div class="dc-stakes" role="radiogroup" aria-label="Stake on this round"><span>Stake</span>${stakes.map((value) => `<label class="dc-stake"><input type="radio" name="dc-rl-stake" value="${value}"><span>${value.toLocaleString('en-US')}</span></label>`).join('')}</div>
       <div class="dc-cage-act"><button type="button" class="dc-btn"></button><div class="dc-cage-result" role="status"><b></b><span></span></div></div>
     </div>
-    <dl class="dc-rl-rows"></dl>
+    <details class="dc-panel-more"><summary>Details</summary><dl class="dc-rl-rows"></dl></details>
     <p class="dc-cage-note"></p>
     <p class="dc-source dc-cage-source"></p>`;
 
@@ -189,6 +189,8 @@ export function createRoulettePanel({ board, text, stakes, onOpen, onPlay, onSpi
     const shown = rolling ? null : landedAt;
     landedMark.setAttribute('d', shown === null ? '' : pocketPath(shown, ROULETTE_POCKETS, RING_IN, RING_OUT));
     wheelGroup.classList.toggle('is-won', shown !== null && shown === betAt);
+    // Open pockets and no bet yet: the wheel is the next thing to press.
+    wheelGroup.classList.toggle('is-waiting', !locked && betAt === null);
     const spin = s.roulette?.spin;
     const litCount = view.pockets.filter((p) => p.chance > 0).length;
     const betOdds = betAt === null ? '' : view.pockets[betAt]?.odds ?? '';

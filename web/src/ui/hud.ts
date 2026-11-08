@@ -57,8 +57,8 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   const hud = el('div', 'dc-hud');
   const plaque = el('div', 'dc-plaque', `
     <div class="dc-cell"><div class="dc-k">Bankroll</div><div class="dc-v" data-v="bank"></div><div class="dc-s" data-v="delta">&nbsp;</div></div>
-    <div class="dc-cell"><div class="dc-k">Win rate</div><div class="dc-v" data-v="rate"></div><div class="dc-s" data-v="hands"></div></div>
-    <div class="dc-cell is-limit"><div class="dc-k">The limit</div><div class="dc-v" data-v="limit"></div><div class="dc-s" data-v="even"></div></div>`);
+    <div class="dc-cell is-tables-only"><div class="dc-k">Win rate</div><div class="dc-v" data-v="rate"></div><div class="dc-s" data-v="hands"></div></div>
+    <div class="dc-cell is-limit is-tables-only"><div class="dc-k">The limit</div><div class="dc-v" data-v="limit"></div><div class="dc-s" data-v="even"></div></div>`);
   const mid = el('div', 'dc-mid');
   const title = el('div', 'dc-title', `<h1>The Impossible <br>Casino</h1><p>Built inside a dilution refrigerator</p>`);
   const cagePanel = createCagePanel({ board: cage, stakes, onForge, onRestart: () => { onAction('restart'); }, onStake });

@@ -35,6 +35,9 @@
 .dc-v small { font: 400 12px/1 "Federo", Georgia, serif; }
 .dc-s { font: italic 500 13px/1.15 "Bodoni Moda", Georgia, serif; text-shadow: 0 1px 0 rgba(255,244,205,.45); white-space: nowrap; }
 .dc-cell.is-limit { transition: color .3s; }
+/* The Cage and the Wheel have their own odds in the panel; the plaque keeps only the bankroll there. */
+.is-side .dc-cell.is-tables-only { display: none; }
+.is-side .dc-plaque { grid-template-columns: minmax(0,1fr); width: min(240px, 100%); }
 
 .dc-mid { align-self: stretch; display: grid; width: 100%; min-height: 0; grid-template-rows: auto 1fr; justify-items: center; }
 .dc-title { grid-row: 1; margin: clamp(6px, 1.6vh, 18px) 0 0; text-align: center; color: #f3f0e8; opacity: 1; transition: opacity .5s ease, transform .9s var(--out), filter .5s ease; }
@@ -205,6 +208,10 @@
   background: rgba(4,4,4,.93); outline: 1px solid rgba(212,174,93,.75); outline-offset: -5px; box-shadow: 0 0 0 1px #000; }
 .dc-cage[hidden], .dc-roulette[hidden] { display: none; }
 .dc-cage h2, .dc-roulette h2 { margin: 0; font: 400 25px/1.05 "Limelight", Georgia, serif; color: #f3f0e8; }
+.dc-panel-how { margin: 4px 0 2px; font: 400 14px/1.3 "Federo", Georgia, serif; color: #f1eee6; }
+.dc-panel-more { margin: 7px 0 0; font: 400 13px/1.25 "Federo", Georgia, serif; color: var(--silver); }
+.dc-panel-more > summary { cursor: pointer; width: max-content; color: #f6e5ae; }
+.dc-panel-more > summary:focus-visible { outline: 2px solid #f6e5ae; outline-offset: 2px; }
 .dc-cage-goal { margin: 2px 0 8px; font: italic 400 15px/1.2 "Bodoni Moda", Georgia, serif; color: #f6e5ae; }
 .dc-cage-head, .dc-cage-row { display: grid; grid-template-columns: 3.2em 1fr 1.25fr 1fr; align-items: center; column-gap: 6px; padding: 0 8px; }
 .dc-cage-head { font: 400 13px/1.2 "Federo", Georgia, serif; color: var(--silver); text-align: right; padding-bottom: 3px; }
@@ -257,6 +264,9 @@
 .dc-rl-wheel[aria-disabled="false"] .dc-rl-slot:hover { fill-opacity: calc(var(--lit) * .5 + .14); }
 .dc-rl-wheel[aria-disabled="true"] .dc-rl-slot { cursor: default; }
 .dc-rl-slot.is-bet { fill: url(#dcRlBrass); fill-opacity: 1; }
+.dc-rl-wheel.is-waiting .dc-rl-slot:not(.is-empty) { animation: dcRlWait 1.2s ease-in-out infinite alternate; }
+.dc-rl-wheel.is-waiting .dc-rl-slot:hover { animation: none; }
+@keyframes dcRlWait { to { fill-opacity: calc(var(--lit) * .5 + .22); } }
 .dc-rl-nums, .dc-rl-oddsg, .dc-rl-mark, .dc-rl-hub, .dc-rl-ball { pointer-events: none; }
 .dc-rl-num { font: 400 10.5px "Limelight", Georgia, serif; font-variant-numeric: lining-nums; fill: #f1eee6; text-anchor: middle; dominant-baseline: central; transition: fill .3s ease; }
 .dc-rl-odds { font: 400 7.6px "Federo", Georgia, serif; fill: var(--silver); text-anchor: middle; dominant-baseline: central; transition: fill .3s ease; }
@@ -308,15 +318,20 @@
 }
 @media (max-width: 800px) { .is-cage .dc-lift, .is-roulette .dc-lift { display: none; } }
 /* Short windows keep the Forge button in view without scrolling the board. */
-@media (max-height: 700px) { .dc-cage h2, .dc-roulette h2 { display: none; } .dc-rl-card { min-height: 26px; } .dc-roulette .dc-stake span { min-height: 28px; } .dc-cage-row { min-height: 24px; } .dc-cage .dc-stake span { min-height: 28px; } }
+@media (max-height: 700px) { .dc-cage h2, .dc-roulette h2, .dc-cage .dc-panel-how { display: none; } .dc-rl-card { min-height: 26px; } .dc-roulette .dc-stake span { min-height: 28px; } .dc-cage-row { min-height: 24px; } .dc-cage .dc-stake span { min-height: 28px; } }
 /* Short windows: the deck on one row and a slimmer note, so all 32 pockets fit above the pinned foot. */
 @media (max-height: 760px) {
-  .dc-roulette { padding-top: 10px; } .dc-roulette .dc-cage-goal { display: none; }
+  .dc-roulette { padding-top: 10px; } .dc-roulette .dc-cage-goal, .dc-roulette .dc-panel-how { display: none; }
   .dc-rl-deck { gap: 3px; } .dc-rl-card { min-height: 26px; padding: 2px 3px; font-size: 13px; }
   .dc-rl-draft { margin-bottom: 3px; font-size: 13px; } .dc-rl-turn { margin-top: 4px; font-size: 13px; }
   .dc-rl-last { min-height: 1.2em; margin: 4px 0 0; font-size: 12.5px; }
   .dc-rl-play { --rl-wheel: 178px; margin-top: 0; }
   .dc-roulette .dc-stakes, .dc-roulette .dc-cage-act { margin-top: 5px; }
+}
+/* Tall phones: the wheel takes its own row at near full width, so each pocket is a fair tap target. */
+@media (max-width: 620px) and (min-height: 761px) {
+  .dc-rl-play { --rl-wheel: min(300px, 100%); grid-template: "deck" auto "wheel" auto "side" auto / minmax(0,1fr); }
+  .dc-rl-wheel { width: var(--rl-wheel); justify-self: center; } .dc-rl-side { padding-top: 4px; }
 }
 @media (max-width: 620px) and (max-height: 760px) { .dc-rl-play { --rl-wheel: 164px; } .dc-rl-deck { grid-template-columns: repeat(6, minmax(0,1fr)); } }
 /* Too short for the lift to hang beside the dial panel. */
@@ -328,7 +343,7 @@
 @media (min-width: 800px) and (max-width: 1260px) and (min-height: 620px) and (max-height: 680px) {
   .dc-base .dc-dial { margin-bottom: 40px; } .dc-dial input[type="range"] { height: 32px; }
 }
-@media (prefers-reduced-motion: reduce) { .deco * { transition-duration: .01s !important; } }
+@media (prefers-reduced-motion: reduce) { .deco * { transition-duration: .01s !important; } .dc-rl-wheel.is-waiting .dc-rl-slot { animation: none; } }
 
 /* No WebGL. The HUD's parts and the flat table share one grid, so the HUD cannot land on the table, and a screen too short for both scrolls. */
 .deco.is-flat { display: grid; grid-template-columns: minmax(0,1fr); grid-template-rows: auto auto minmax(min-content,1fr) auto auto; justify-items: center; gap: 10px; box-sizing: border-box; padding: max(14px, env(safe-area-inset-top)) 16px 14px; overflow: hidden auto; background:
