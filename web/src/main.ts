@@ -1,15 +1,17 @@
 import './styles.css';
 import './ui/hud.css';
 import { createAudio } from './audio/audio';
-import { cageBoard, type ForgeAttempt } from './game/cage';
+import { ambienceFor, cuesFor, type CueState } from './audio/cues';
+import { cageBoard } from './game/cage';
 import { withChipRuns } from './game/chip';
 import { createLiveSource } from './game/live';
 import { createChipPress, pressStorage, withPressedRun } from './game/press';
 import { createPrerunSource, loadExports, loadRoulette } from './game/results';
-import { rouletteBoard, type RouletteSpin } from './game/roulette';
+import { rouletteBoard } from './game/roulette';
 import { STAKES } from './game/rules';
 import { createGameStore } from './game/store';
 import { showFallback } from './ui/fallback';
+import { expertSheet } from './ui/expert';
 import { createFlatTable } from './ui/flat';
 import { createHud, type HudAction } from './ui/hud';
 import { dialStep } from './ui/lines';
@@ -124,6 +126,7 @@ async function boot(root: HTMLElement): Promise<void> {
         audio.set(on);
       },
       onReceipt: (room) => markerFor(store.state, room, source.limits, cage, wheel),
+      onExpert: (room) => expertSheet(room, store.state, { chsh: exports.chsh, wiesner: exports.wiesner, roulette: rouletteExport, wheel }),
       cage,
       onForge: (length) => {
         void store.forge(length, cage.payoutStake);
@@ -156,16 +159,16 @@ async function boot(root: HTMLElement): Promise<void> {
       store.refreshPreview();
     });
     press.resume();
-    let heard: ForgeAttempt | null = null;
-    let heardSpin: RouletteSpin | null = null;
+    // The store mutates one state object in place, so what was heard is kept as a copy.
+    let heard: CueState | null = null;
+    // The 3D stage times the crack and the shatter to its own glass; only the flat table needs them played here.
+    let flat = false;
     store.subscribe((state) => {
       hud.cage(state);
       hud.roulette(state);
-      if (state.forge && state.forge !== heard) audio.tick(state.forge.passed);
-      heard = state.forge;
-      const spin = state.roulette?.spin ?? null;
-      if (spin && spin !== heardSpin) audio.tick(spin.won);
-      heardSpin = spin;
+      for (const cue of cuesFor(heard, state)) if (flat || (cue !== 'entangle' && cue !== 'shatter')) audio.cue(cue);
+      audio.ambience(ambienceFor(state));
+      heard = { phase: state.phase, forge: state.forge, roulette: state.roulette, cleared: [...state.cleared] };
     });
 
     let closed = false;
@@ -207,6 +210,7 @@ async function boot(root: HTMLElement): Promise<void> {
     );
     document.getElementById('status')?.remove();
     if (!stage) {
+      flat = true;
       closeFlat = createFlatTable(root, { store, source, hud, audio, stages: STAGE_LABELS });
     }
   } catch (error) {

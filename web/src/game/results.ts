@@ -113,12 +113,16 @@ export interface WiesnerPoint {
   readonly passes: number;
   readonly passRate: number;
   readonly qubits: readonly number[] | null;
+  /** One standard error on `passRate`, as a fraction. Optional; its run names the method. */
+  readonly stdErr?: number;
 }
 
 export interface WiesnerRun extends TicketShots {
   readonly id: string;
   readonly provenance: Provenance;
   readonly points: readonly WiesnerPoint[];
+  /** How the points' standard errors were worked out. Present whenever a point has one. */
+  readonly stdErrMethod?: string;
 }
 
 export interface WiesnerExport {
@@ -545,6 +549,7 @@ function parseWiesnerPoint(value: unknown, path: string): WiesnerPoint {
     passes,
     passRate: rate(raw.passRate, `${path}.passRate`),
     qubits: qubitList(raw.qubits, `${path}.qubits`),
+    ...(raw.stdErr === undefined ? {} : { stdErr: rate(raw.stdErr, `${path}.stdErr`) }),
   };
 }
 
@@ -574,11 +579,14 @@ function parseWiesnerRun(value: unknown, path: string): WiesnerRun {
     `${path}.points`,
   );
   const provenance = parseExportedProvenance(raw.provenance, `${path}.provenance`);
+  // An error bar has to say how it was made, so a point's stdErr needs its run's method.
+  const errors = raw.stdErrMethod !== undefined || points.some((p) => p.stdErr !== undefined);
   return {
     id: text(raw.id, `${path}.id`),
     provenance,
     points,
     ...parseTicketShots(raw, provenance, points, path),
+    ...(errors ? { stdErrMethod: text(raw.stdErrMethod, `${path}.stdErrMethod`) } : {}),
   };
 }
 

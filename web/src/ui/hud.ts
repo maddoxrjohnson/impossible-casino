@@ -4,6 +4,8 @@ import { ROOM_LIST, colourStep, elevatorStops, nextStop, roomInfo } from '../gam
 import type { RoomId } from '../game/rules';
 import type { GameState } from '../game/store';
 import { createCagePanel } from './cage-panel';
+import type { ExpertSheet } from './expert';
+import { expertBody } from './expert-chart';
 import type { Receipt } from './receipt';
 import { createRoulettePanel, type RoulettePanelOptions } from './roulette-panel';
 import type { StakeChoice } from './table';
@@ -31,6 +33,8 @@ export interface HudOptions {
   onSound: (on: boolean) => void;
   /** The marker for the room in view, or null when there is nothing to show. */
   onReceipt: (room: SideName | null) => Receipt | null;
+  /** The maths, charts and tables for the room in view, built when the player asks for them. */
+  onExpert: (room: SideName | null) => ExpertSheet;
   /** The Cage's board, read from the export. */
   cage: CageBoard;
   onForge: (length: number) => void;
@@ -45,7 +49,7 @@ const svg = (tag: string, attrs: Record<string, string | number>, parent?: Eleme
 const LIFT_A = (i: number) => -76 + i * 38;   // stage angle in degrees either side of straight up
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, html?: string) => { const n = document.createElement(tag); if (cls) n.className = cls; if (html != null) n.innerHTML = html; return n; };
 
-export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, onAction, onDial, onStake, onSound, onReceipt, cage, onForge, roulette }: HudOptions) {
+export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, onAction, onDial, onStake, onSound, onReceipt, onExpert, cage, onForge, roulette }: HudOptions) {
   root.classList.add('deco');
   root.dataset.colour = '0';
 
@@ -78,9 +82,10 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   row.append(main, alt);
   const stubs = el('div', 'dc-row');
   const receiptBtn = el('button', 'dc-stub', 'Receipt'); receiptBtn.type = 'button'; receiptBtn.disabled = true;
+  const expertBtn = el('button', 'dc-stub', 'The maths'); expertBtn.type = 'button'; expertBtn.setAttribute('aria-haspopup', 'dialog'); expertBtn.setAttribute('aria-disabled', 'true');
   const liftBtn = el('button', 'dc-stub dc-lift-stub', 'Elevator'); liftBtn.type = 'button'; liftBtn.setAttribute('aria-haspopup', 'dialog');
   const soundBtn = el('button', 'dc-stub', 'Sound off'); soundBtn.type = 'button'; soundBtn.setAttribute('aria-pressed', 'false');
-  stubs.append(receiptBtn, liftBtn, soundBtn);
+  stubs.append(receiptBtn, expertBtn, liftBtn, soundBtn);
   stubs.classList.add('dc-stubs');
   base.append(card, dial, row);
   const lift = el('div', 'dc-lift'); lift.setAttribute('role', 'img');
@@ -112,6 +117,17 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   marker.append(el('h2', '', 'Casino marker'), markerSub, circuitTitle, pre, circuitNote, details, stamp, close);
   receipt.append(marker);
 
+  // The expert layer: the same paper as the marker, wider, holding the maths, charts and tables. Nothing in it shows unless asked for.
+  const expert = el('div', 'dc-receipt dc-expert');
+  expert.setAttribute('role', 'dialog'); expert.setAttribute('aria-modal', 'true'); expert.setAttribute('aria-labelledby', 'dc-expert-h');
+  const sheet = el('div', 'dc-marker dc-sheet');
+  sheet.tabIndex = 0;
+  const sheetTitle = el('h2'); sheetTitle.id = 'dc-expert-h';
+  const sheetSub = el('p', 'sub'), sheetBody = el('div', 'dc-ex-body');
+  const sheetClose = el('button', 'dc-btn', 'Close'); sheetClose.type = 'button';
+  sheet.append(sheetTitle, sheetSub, sheetBody, sheetClose);
+  expert.append(sheet);
+
   // The elevator: a floor panel over the film, every stop listed top to bottom of the fridge.
   const elevator = el('div', 'dc-receipt dc-elevator');
   elevator.setAttribute('role', 'dialog'); elevator.setAttribute('aria-modal', 'true'); elevator.setAttribute('aria-labelledby', 'dc-elevator-h');
@@ -130,7 +146,7 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   car.append(floors, liftNote, stay);
   elevator.append(car);
 
-  root.append(hud, receipt, elevator);
+  root.append(hud, receipt, expert, elevator);
 
   const v = new Map<string, HTMLElement>(); root.querySelectorAll<HTMLElement>('[data-v]').forEach((n) => { if (n.dataset.v) v.set(n.dataset.v, n); });
   const cache = new Map<string, string | number>();
@@ -177,6 +193,23 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   let downOnBackdrop = false;
   const onReceiptDown = (e: PointerEvent) => { downOnBackdrop = e.target === receipt; };
   const onBackdrop = (e: MouseEvent) => { if (downOnBackdrop && e.target === receipt) onReceiptClose(); };
+  const isExpertOpen = () => expert.classList.contains('is-on');
+  let expertOn = false;
+  /** Built on every open, from the game as it is now, so it cannot go stale. */
+  const onExpertOpen = () => {
+    if (!expertOn || isExpertOpen() || isOpen()) return;
+    const data = onExpert(room);
+    sheetTitle.textContent = data.title; sheetSub.textContent = data.sub;
+    hud.inert = true; expert.classList.add('is-on');
+    // Charts are drawn at the width they show at, so their text keeps its size on a phone.
+    sheetBody.replaceChildren(expertBody(data, sheetBody.clientWidth));
+    sheet.scrollTop = 0; sheet.focus({ preventScroll: true });
+  };
+  const closeExpert = (refocus = true) => { if (!isExpertOpen()) return; hud.inert = false; expert.classList.remove('is-on'); if (refocus) expertBtn.focus({ preventScroll: true }); };
+  const onExpertClose = () => { closeExpert(); };
+  let downOnExpert = false;
+  const onExpertDown = (e: PointerEvent) => { downOnExpert = e.target === expert; };
+  const onExpertBackdrop = (e: MouseEvent) => { if (downOnExpert && e.target === expert) closeExpert(); };
   const isLiftOpen = () => elevator.classList.contains('is-on');
   /** The stops, the quiet hint on the stub and the panel, all from the cleared rooms. Nothing is forced. */
   const paintLift = () => {
@@ -195,7 +228,7 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
     liftBtn.setAttribute('aria-label', hint ? `Elevator, suggested next: ${nextName}` : 'Elevator');
   };
   const onLiftOpen = () => {
-    if (!liftOn || isLiftOpen() || isOpen()) return;
+    if (!liftOn || isLiftOpen() || isOpen() || isExpertOpen()) return;
     paintLift();
     hud.inert = true; elevator.classList.add('is-on');
     const next = floorBtns.find((f) => f.b.classList.contains('is-next')) ?? floorBtns.find((f) => f.id === here());
@@ -218,11 +251,12 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   const onLiftDown = (e: PointerEvent) => { downOnLift = e.target === elevator; };
   const onLiftBackdrop = (e: MouseEvent) => { if (downOnLift && e.target === elevator) closeLift(); };
   // A held Escape closes one thing, and never carries on out of the room behind it.
-  const onKey = (e: KeyboardEvent) => { if (e.key !== 'Escape') return; if (isOpen()) onReceiptClose(); else if (e.repeat) return; else if (isLiftOpen()) closeLift(); else onSide('back'); };
+  const onKey = (e: KeyboardEvent) => { if (e.key !== 'Escape') return; if (isOpen()) onReceiptClose(); else if (isExpertOpen()) closeExpert(); else if (e.repeat) return; else if (isLiftOpen()) closeLift(); else onSide('back'); };
   let soundOn = false;
   const onSnd = () => { soundOn = !soundOn; soundBtn.textContent = soundOn ? 'Sound on' : 'Sound off'; soundBtn.setAttribute('aria-pressed', String(soundOn)); onSound(soundOn); };
   main.addEventListener('click', clickMain); alt.addEventListener('click', clickAlt); input.addEventListener('input', onInput); stakeRow.addEventListener('change', onStakeChange);
   receiptBtn.addEventListener('click', onReceiptOpen); close.addEventListener('click', onReceiptClose); receipt.addEventListener('pointerdown', onReceiptDown); receipt.addEventListener('click', onBackdrop);
+  expertBtn.addEventListener('click', onExpertOpen); sheetClose.addEventListener('click', onExpertClose); expert.addEventListener('pointerdown', onExpertDown); expert.addEventListener('click', onExpertBackdrop);
   liftBtn.addEventListener('click', onLiftOpen); floors.addEventListener('click', onFloor); stay.addEventListener('click', onStay); elevator.addEventListener('pointerdown', onLiftDown); elevator.addEventListener('click', onLiftBackdrop); soundBtn.addEventListener('click', onSnd);
   // On the document, so Escape still works after a click on the canvas leaves focus on the page.
   document.addEventListener('keydown', onKey);
@@ -242,6 +276,8 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
     stubs(on: boolean, hasReceipt: boolean) {
       if (liftOn !== on) { liftOn = on; liftBtn.setAttribute('aria-disabled', String(!on)); if (!on) closeLift(); }
       receiptBtn.disabled = !(on && hasReceipt);
+      // Off during runs and story beats, like the receipt; aria-disabled keeps it in the tab order.
+      if (expertOn !== on) { expertOn = on; expertBtn.setAttribute('aria-disabled', String(!on)); if (!on) closeExpert(); }
     },
     /** Which rooms this surface can show. The Cage is a panel, so it works without a building. */
     rooms(can: (id: RoomId) => boolean) { reachable = can; progressKey = ''; paintLift(); },
@@ -299,9 +335,10 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
       clearTimeout(swapTimer); cagePanel.dispose(); roulettePanel.dispose();
       main.removeEventListener('click', clickMain); alt.removeEventListener('click', clickAlt); input.removeEventListener('input', onInput); stakeRow.removeEventListener('change', onStakeChange);
       receiptBtn.removeEventListener('click', onReceiptOpen); close.removeEventListener('click', onReceiptClose); receipt.removeEventListener('pointerdown', onReceiptDown); receipt.removeEventListener('click', onBackdrop);
+      expertBtn.removeEventListener('click', onExpertOpen); sheetClose.removeEventListener('click', onExpertClose); expert.removeEventListener('pointerdown', onExpertDown); expert.removeEventListener('click', onExpertBackdrop);
       liftBtn.removeEventListener('click', onLiftOpen); floors.removeEventListener('click', onFloor); stay.removeEventListener('click', onStay); elevator.removeEventListener('pointerdown', onLiftDown); elevator.removeEventListener('click', onLiftBackdrop); soundBtn.removeEventListener('click', onSnd);
       document.removeEventListener('keydown', onKey);
-      hud.remove(); receipt.remove(); elevator.remove(); root.classList.remove('deco', 'is-colour', 'is-side', 'is-cage', 'is-roulette');
+      hud.remove(); receipt.remove(); expert.remove(); elevator.remove(); root.classList.remove('deco', 'is-colour', 'is-side', 'is-cage', 'is-roulette');
       delete root.dataset.colour;
     },
   };

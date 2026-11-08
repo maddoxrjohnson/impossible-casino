@@ -223,6 +223,35 @@ describe('parsers', () => {
     expect(() => parseWiesnerExport(bad)).toThrow(message);
   });
 
+  it('reads optional standard errors on a run, and leaves them out when absent', () => {
+    const plain = looseWiesner();
+    for (const run of plain.runs) {
+      delete (run as Record<string, unknown>).stdErrMethod;
+      for (const point of run.points) delete (point as Record<string, unknown>).stdErr;
+    }
+    const bare = parseWiesnerExport(plain).runs[0]!;
+    expect(bare.stdErrMethod).toBeUndefined();
+    expect(bare.points[0]?.stdErr).toBeUndefined();
+    const marked = structuredClone(plain);
+    (marked.runs[0] as Record<string, unknown>).stdErrMethod = 'binomial, from the shots';
+    (marked.runs[0]!.points[0] as Record<string, unknown>).stdErr = 0.0048;
+    const run = parseWiesnerExport(marked).runs[0]!;
+    expect(run.stdErrMethod).toBe('binomial, from the shots');
+    expect(run.points[0]?.stdErr).toBe(0.0048);
+    expect(run.points[1]?.stdErr).toBeUndefined();
+  });
+
+  it.each<[string, (run: Record<string, unknown>, point: Record<string, unknown>) => void, RegExp]>([
+    ['a negative standard error', (run, point) => { run.stdErrMethod = 'binomial'; point.stdErr = -0.01; }, /stdErr/],
+    ['a standard error that is not a number', (run, point) => { run.stdErrMethod = 'binomial'; point.stdErr = '1%'; }, /stdErr/],
+    ['a standard error with no method', (run, point) => { delete run.stdErrMethod; point.stdErr = 0.01; }, /stdErrMethod/],
+    ['a blank method', (run, point) => { run.stdErrMethod = ''; point.stdErr = 0.01; }, /stdErrMethod/],
+  ])('rejects wiesner with %s', (_name, spoil, message) => {
+    const bad = looseWiesner();
+    spoil(bad.runs[0] as Record<string, unknown>, bad.runs[0]!.points[0] as Record<string, unknown>);
+    expect(() => parseWiesnerExport(bad)).toThrow(message);
+  });
+
   it('accepts a chip run that carries a job id and no noise model', () => {
     const good = looseChsh();
     good.runs[0]!.provenance.source = 'ibm-chip';

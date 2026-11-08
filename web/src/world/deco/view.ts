@@ -242,7 +242,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     });
     // It presses on the plate. Cracks run outward through the cames, and stop short of the rim.
     after(1.5, () => {
-      tw(U.uCrack, 'value', ENTANGLE_CRACK, .52, EASE.in);
+      tw(U.uCrack, 'value', ENTANGLE_CRACK, .52, EASE.in); audio.cue('entangle');
       if (!reducedMotion) { tw(fx, 'shake', .03, .5, EASE.in); tw(fx, 'ca', .004, .5, EASE.in); }
     });
     // It gets through the cracks. The glass holds, and the limit stays up there until the table is beaten.
@@ -281,7 +281,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     after(2.05, () => {
       tw(U.uOpen, 'value', 1.2, .95);
       U.uImpactCol.value.setRGB(4, 3, 1.4); U.uImpact.value = 0;
-      world.shards.visible = !reducedMotion; U.uShard.value = 0;
+      world.shards.visible = !reducedMotion; U.uShard.value = 0; audio.cue('shatter');
       fx.flash = 1; fx.shake = reducedMotion ? 0 : .22; fx.ca = reducedMotion ? 0 : .009; fx.exposure = 2.4;
       tw(fx, 'exposure', 1.02, 1.5); tw(fx, 'shake', 0, 1.4); tw(fx, 'ca', 0, 1.4);
     });
