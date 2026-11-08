@@ -426,12 +426,13 @@ def test_runs_cover_every_reachable_spin_once(export, solution):
 def test_points_are_consistent(export):
     for run in export["runs"]:
         shots = run["provenance"]["shots"]
+        on_chip = run["provenance"]["source"] == "ibm-chip"
         for point in run["points"]:
             assert set(point) == {"draft", "seed", "shots", "counts"}
-            assert point["shots"] == shots
+            assert point["shots"] <= shots if on_chip else point["shots"] == shots
             assert len(point["counts"]) == POCKETS
             assert all(isinstance(n, int) and n >= 0 for n in point["counts"])
-            assert sum(point["counts"]) == shots
+            assert sum(point["counts"]) == point["shots"]
 
 
 def test_seeds_follow_the_spaced_scheme(export):
@@ -645,6 +646,25 @@ def test_build_export_folds_a_chip_run_in_and_checks_its_edge(monkeypatch, from_
     pays, stake = export["payouts"]["table"][0]["pays"], export["payouts"]["stake"]
     assert export["edge"][2] == run_edge(solution, chip, pays, stake)
     assert export["playRun"] == "ibm-noise-model"
+    check_edge(export)
+
+
+def test_a_chip_run_with_shots_per_draft_folds_in_with_each_points_own_shots(
+    monkeypatch, from_committed, committed, solution
+):
+    """Drafts below the limit keep a sixteenth of the shots, as a mixed chip job would."""
+    chip = chip_run(committed["runs"][1])
+    limit = solution.value[()]
+    for i, point in enumerate(chip["points"]):
+        if max(solution.wheels[tuple(point["draft"])]) < limit - 1e-9:
+            counts = [n // 16 for n in point["counts"]]
+            chip["points"][i] = {**point, "counts": counts, "shots": sum(counts)}
+    assert len({p["shots"] for p in chip["points"]}) > 1
+    monkeypatch.setattr(quantum.export_roulette, "chip_runs", lambda: [chip])
+    export = build_export(today=TODAY)
+    test_points_are_consistent(export)
+    pays, stake = export["payouts"]["table"][0]["pays"], export["payouts"]["stake"]
+    assert export["edge"][2] == run_edge(solution, chip, pays, stake)
     check_edge(export)
 
 
