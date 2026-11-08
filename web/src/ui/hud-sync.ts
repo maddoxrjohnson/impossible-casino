@@ -16,9 +16,11 @@ export interface HudSyncOptions {
   /** Read on every sync, so the caller can lock the table or leave it for a side room. */
   /** `room` is the side room in view, if any. */
   moment: () => TableMoment & { readonly room?: SideName | null };
+  /** What of the state to show: a spin's result waits here until its ball lands. The game itself is never held. */
+  shown?: (s: GameState) => GameState;
 }
 
-export function createHudSync(hud: HudSurface, { source, lines, moment }: HudSyncOptions) {
+export function createHudSync(hud: HudSurface, { source, lines, moment, shown = (s) => s }: HudSyncOptions) {
   const LIMIT = pct(source.limits.classical), EVEN = pct(BREAK_EVEN);
   let lastPhase: Phase | null = null, lastBroke = false, lastBand: LineKey | '' = '', running = false, buttonKey = '', ticketFilled = false;
   let lastForge: ForgeAttempt | null = null, lastForging = false, cageCleared = false;
@@ -34,7 +36,7 @@ export function createHudSync(hud: HudSurface, { source, lines, moment }: HudSyn
     lastForge = s.forge; lastForging = s.forging;
     return settled || failed;
   };
-  /** A spin settles at once, so its line follows the forge's. */
+  /** A spin's line follows the forge's, once its ball has landed. */
   const spinLine = (s: GameState): boolean => {
     const justCleared = !wheelCleared && s.cleared.includes('roulette');
     wheelCleared = s.cleared.includes('roulette');
@@ -45,7 +47,8 @@ export function createHudSync(hud: HudSurface, { source, lines, moment }: HudSyn
     return settled;
   };
   return {
-    sync: (s: GameState): void => {
+    sync: (state: GameState): void => {
+      const s = shown(state);
       hud.progress(s.cleared);
       hud.put('bank', money(s.bankroll));
       hud.put('rate', s.rounds ? pct(s.winRate, 1) : 'No hands');

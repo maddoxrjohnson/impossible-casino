@@ -7,6 +7,7 @@ import { showFallback } from './fallback';
 import type { Hud, SideName } from './hud';
 import { createHudSync } from './hud-sync';
 import { createLines, pct } from './lines';
+import type { SpinReveal } from './spin-reveal';
 import { flatFloor, flatHand, flatRate, type FlatHand } from './table';
 
 export interface FlatTableOptions {
@@ -14,6 +15,7 @@ export interface FlatTableOptions {
   source: ResultSource;
   hud: Hud;
   audio: GameAudio;
+  reveal: SpinReveal;
   stages: readonly string[];
 }
 
@@ -30,7 +32,7 @@ function seat(name: string) {
 }
 
 /** Builds the surface, drives the HUD from the store, and returns the teardown. */
-export function createFlatTable(root: HTMLElement, { store, source, hud, audio, stages }: FlatTableOptions): () => void {
+export function createFlatTable(root: HTMLElement, { store, source, hud, audio, reveal, stages }: FlatTableOptions): () => void {
   const { limits } = source;
   const surface = showFallback(root, 'no-webgl', hud.hud);
   root.classList.add('is-flat');
@@ -57,7 +59,7 @@ export function createFlatTable(root: HTMLElement, { store, source, hud, audio, 
   // Story beats belong to the 3D view. Here the next control is always ready.
   const moment = { locked: false, inRoom: false, room: null as SideName | null };
   const lines = createLines(limits);
-  const { sync, clearBand } = createHudSync(hud, { source, lines, moment: () => moment });
+  const { sync, clearBand } = createHudSync(hud, { source, lines, moment: () => moment, shown: reveal.shown });
 
   // The side rooms are panels, so they open over the same HUD. A room with no flat view is ignored.
   hud.setSide((name) => {
@@ -101,9 +103,10 @@ export function createFlatTable(root: HTMLElement, { store, source, hud, audio, 
     }
   });
   const unround = store.onRound((last) => { audio.tick(last.win); });
+  const unreveal = reveal.subscribe(() => { sync(store.state); });
 
   return () => {
-    unsub(); unround();
+    unsub(); unround(); unreveal();
     surface.remove();
     root.classList.remove('is-flat');
   };

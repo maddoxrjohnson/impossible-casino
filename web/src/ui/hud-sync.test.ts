@@ -6,10 +6,12 @@ import { createPrerunSource, parseChshExport, parseRouletteExport, parseWiesnerE
 import { rouletteBoard } from '../game/roulette';
 import { HAND_MS, type Rng } from '../game/rules';
 import { SAVE_KEY } from '../game/save';
-import { createGameStore, type GameStore, type Phase } from '../game/store';
+import { createGameStore, type GameState, type GameStore, type Phase } from '../game/store';
 import type { HudButton, SideName } from './hud';
 import { createHudSync, type HudSurface } from './hud-sync';
-import { createLines } from './lines';
+import { createLines, money } from './lines';
+import { ROLL_MS } from './roulette-wheel';
+import { createSpinReveal } from './spin-reveal';
 
 const source = createPrerunSource({ chsh: parseChshExport(chshJson), wiesner: parseWiesnerExport(wiesnerJson) }, 'ibm-noise-model');
 const LINES = createLines(source.limits);
@@ -421,12 +423,13 @@ describe('createHudSync at the wheel', () => {
   const at = (pocket: number) => (point?.counts.slice(0, pocket).reduce((sum, c) => sum + c, 0) ?? 0) / (point?.shots ?? 1);
 
   /** The rng answers the house with the limit line, then lands the spin on `lands`. */
-  function wheel({ lands = limitPocket, save }: { lands?: number; save?: object } = {}) {
+  function wheel({ lands = limitPocket, save, shown }: { lands?: number; save?: object; shown?: (s: GameState) => GameState } = {}) {
     let draw = 0;
     const store = createGameStore({ source, rng: () => draw, storage: memoryStorage(save ?? { version: 1, bankroll: 9000, phase: 'entangled', dial: 0.5, stake: 100, cleared: [] }) });
     const { hud, seen } = fakeHud();
     const moment = { locked: false, inRoom: true, room: 'roulette' as SideName | null };
-    store.subscribe(createHudSync(hud, { source, lines: LINES, moment: () => moment }).sync);
+    const hudSync = createHudSync(hud, { source, lines: LINES, moment: () => moment, shown });
+    store.subscribe(hudSync.sync);
     const house = (at: readonly number[], card: number) => {
       const n = board.node(at);
       if (n?.turn === 'house') draw = (n.houseCards.indexOf(card) + 0.5) / n.houseCards.length;
@@ -440,8 +443,28 @@ describe('createHudSync at the wheel', () => {
       draw = at(lands);
       store.rouletteSpin(board, limitPocket);
     };
-    return { store, seen, moment, play };
+    return { store, seen, moment, play, hudSync };
   }
+
+  it('keeps the line, the plaque, the bankroll and the cleared rooms on their pre-spin show until the ball lands', () => {
+    let t = 0, fire = (): void => undefined;
+    const reveal = createSpinReveal({ now: () => t, later: (fn) => { fire = fn; return () => undefined; } });
+    const { store, seen, play, hudSync } = wheel({ shown: reveal.shown });
+    reveal.subscribe(() => { hudSync.sync(store.state); });
+    play();
+    expect(store.state.bankroll).toBe(9280);
+    expect(said(seen)).not.toBe(LINES.rouletteClear);
+    expect(seen.plaque.get('bank')).toBe(money(9000));
+    expect(seen.plaque.get('delta')).not.toContain('last spin');
+    expect(seen.cleared).not.toContain('roulette');
+    expect(seen.receipt).toBe(false);
+    t = ROLL_MS; fire();
+    expect(said(seen)).toBe(LINES.rouletteClear);
+    expect(seen.plaque.get('bank')).toBe(money(9280));
+    expect(seen.plaque.get('delta')).toBe('last spin +280');
+    expect(seen.cleared).toContain('roulette');
+    expect(seen.receipt).toBe(true);
+  });
 
   it('says the room is cleared the first time, then won', () => {
     const { seen, play } = wheel();

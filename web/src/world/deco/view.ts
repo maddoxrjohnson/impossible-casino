@@ -11,6 +11,7 @@ import type { Hud, SideName } from '../../ui/hud';
 import { createHudSync } from '../../ui/hud-sync';
 import { createLines, pastClassical, pct } from '../../ui/lines';
 import { rollBoost } from '../../ui/roulette-wheel';
+import type { SpinReveal } from '../../ui/spin-reveal';
 import { buildWorld, FROST, TIERS, TOP_Y, SEAL_S, FLOOR_Y, TABLE_Y, PAIR_A, PAIR_B, WIN_DIR } from './scene';
 import { questionCell } from './textures';
 import { createPost } from './post';
@@ -66,6 +67,8 @@ export interface DecoViewOptions {
   source: ResultSource;
   hud: Hud;
   audio: GameAudio;
+  /** Holds a spin's result off the HUD and the chips until the panel's ball lands. */
+  reveal: SpinReveal;
   reducedMotion: boolean;
   /** Called from `dispose`, so everything built for the view goes with the stage. */
   onDispose: () => void;
@@ -73,7 +76,7 @@ export interface DecoViewOptions {
 
 export const STAGE_LABELS: readonly string[] = TIERS.map((t) => t.label);
 
-export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, source, hud, audio, reducedMotion, onDispose }: DecoViewOptions): StageView {
+export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, source, hud, audio, reveal, reducedMotion, onDispose }: DecoViewOptions): StageView {
   const cleanups: (() => void)[] = [];
   const CLASSICAL_LIMIT = source.limits.classical, QUANTUM_LIMIT = source.limits.quantum;
   const LINES = createLines(source.limits);
@@ -82,7 +85,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
   // ---- HUD logic ----
   const story = { locked: false };
   let side: SideName | null = null;
-  const { sync: hudSync, clearBand } = createHudSync(hud, { source, lines: LINES, moment: () => ({ locked: story.locked, inRoom: !!side, room: side }) });
+  const { sync: hudSync, clearBand } = createHudSync(hud, { source, lines: LINES, moment: () => ({ locked: story.locked, inRoom: !!side, room: side }), shown: reveal.shown });
 
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.toneMapping = THREE.NoToneMapping; // the final pass develops the film
@@ -329,19 +332,26 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
 
   // ---- Game wiring ----
   let worldPhase: Phase | null = null, washGoal = fx.wash;
-  const unsub = store.subscribe((s) => {
+  // The wash and the chips follow what the HUD shows, so a spin's arrive as its ball lands.
+  const showHouse = () => {
+    const v = reveal.shown(store.state);
     // A newly cleared room seeps colour through the whole house, after its own moment has played.
-    const wash = colourLevel(s.cleared);
+    const wash = colourLevel(v.cleared);
     if (wash !== washGoal) { washGoal = wash; if (reducedMotion) tw(fx, 'wash', wash, .6, EASE.linear); else tw(fx, 'wash', wash, 3.2, EASE.inOut, wash > fx.wash ? 2.4 : 0); }
+    // Each chip is a hundred of the bankroll.
+    const n = Math.floor(v.bankroll / CLASSICAL_STAKE);
+    if (n !== chipN) { chipN = n; layoutChips(n); }
+  };
+  const unsub = store.subscribe((s) => {
+    showHouse();
     if (s.phase !== worldPhase) { const prev = worldPhase; worldPhase = s.phase; if (phaseArmed) arrive(s.phase, prev); }
     hudSync(s);
-    const n = Math.floor(s.bankroll / CLASSICAL_STAKE);
-    if (n !== chipN) { chipN = n; layoutChips(n); }
     if (s.last) showQuestions(s.last.x, s.last.y);
     if (s.mode === 'quantum' && pastClassical(s.target, CLASSICAL_LIMIT) && thawed && !cross75) { cross75 = true; fx.flash = Math.max(fx.flash, .7); }
     if (s.mode === 'quantum' && !pastClassical(s.target, CLASSICAL_LIMIT)) cross75 = false;
   });
   phaseArmed = true;
+  cleanups.push(reveal.subscribe(() => { hudSync(store.state); showHouse(); }));
   const unround = store.onRound((l: LastHand, s) => {
     audio.tick(l.win);
     launch(l.win); beat = l.win ? .34 : -.62;

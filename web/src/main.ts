@@ -17,6 +17,8 @@ import { createHud, type HudAction } from './ui/hud';
 import { dialStep } from './ui/lines';
 import { createPressPanel } from './ui/press-panel';
 import { markerFor } from './ui/receipt';
+import { ROLL_MS } from './ui/roulette-wheel';
+import { createSpinReveal } from './ui/spin-reveal';
 import { stakeChoices } from './ui/table';
 
 /** The exported run the table plays where it has no chip data. Noisy on purpose: it is the closest stand-in for a real chip. */
@@ -83,6 +85,8 @@ async function boot(root: HTMLElement): Promise<void> {
     const source = withPressedRun(withChipRuns(live, exports), exports, () => press.result());
     const store = createGameStore({ source });
     const audio = createAudio();
+    // A spin settles in the store at once; everything off the Roulette panel shows it as the panel's ball lands.
+    const reveal = createSpinReveal({ rollMs: () => (matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : ROLL_MS) });
     const cage = cageBoard(exports.wiesner, RUN_ID);
     const wheel = rouletteBoard(rouletteExport, playedRunId(rouletteExport));
     const actions: Record<HudAction, () => void> = {
@@ -118,15 +122,16 @@ async function boot(root: HTMLElement): Promise<void> {
       onStake: (value) => {
         store.setStake(value);
         // As with the dial, a refused stake does not emit.
-        hud.stakes(stakeChoices(store.state, store.state.forging), store.state.stake);
+        const shown = reveal.shown(store.state);
+        hud.stakes(stakeChoices(shown, shown.forging), shown.stake);
         hud.cage(store.state);
         hud.roulette(store.state);
       },
       onSound: (on) => {
         audio.set(on);
       },
-      onReceipt: (room) => markerFor(store.state, room, source.limits, cage, wheel),
-      onExpert: (room) => expertSheet(room, store.state, { chsh: exports.chsh, wiesner: exports.wiesner, roulette: rouletteExport, wheel }),
+      onReceipt: (room) => markerFor(reveal.shown(store.state), room, source.limits, cage, wheel),
+      onExpert: (room) => expertSheet(room, reveal.shown(store.state), { chsh: exports.chsh, wiesner: exports.wiesner, roulette: rouletteExport, wheel }),
       cage,
       onForge: (length) => {
         void store.forge(length, cage.payoutStake);
@@ -163,12 +168,19 @@ async function boot(root: HTMLElement): Promise<void> {
     let heard: CueState | null = null;
     // The 3D stage times the crack and the shatter to its own glass; only the flat table needs them played here.
     let flat = false;
-    store.subscribe((state) => {
-      hud.cage(state);
-      hud.roulette(state);
+    const hear = (state: CueState): void => {
       for (const cue of cuesFor(heard, state)) if (flat || (cue !== 'entangle' && cue !== 'shatter')) audio.cue(cue);
       audio.ambience(ambienceFor(state));
       heard = { phase: state.phase, forge: state.forge, roulette: state.roulette, cleared: [...state.cleared] };
+    };
+    // The panel holds its own result, so it reads the store as it is.
+    store.subscribe((state) => {
+      hud.cage(state);
+      hud.roulette(state);
+      hear(reveal.shown(state));
+    });
+    reveal.subscribe(() => {
+      hear(reveal.shown(store.state));
     });
 
     let closed = false;
@@ -177,6 +189,7 @@ async function boot(root: HTMLElement): Promise<void> {
       if (closed) return;
       closed = true;
       closeFlat();
+      reveal.dispose();
       pressPanel.dispose();
       press.dispose();
       hud.dispose();
@@ -193,6 +206,7 @@ async function boot(root: HTMLElement): Promise<void> {
           source,
           hud,
           audio,
+          reveal,
           reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
           onDispose: close,
         }),
@@ -211,7 +225,7 @@ async function boot(root: HTMLElement): Promise<void> {
     document.getElementById('status')?.remove();
     if (!stage) {
       flat = true;
-      closeFlat = createFlatTable(root, { store, source, hud, audio, stages: STAGE_LABELS });
+      closeFlat = createFlatTable(root, { store, source, hud, audio, reveal, stages: STAGE_LABELS });
     }
   } catch (error) {
     close();
