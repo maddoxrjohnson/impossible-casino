@@ -108,7 +108,9 @@ export function settledLine(
   if (phase === 'beyond' && ran && showing) return 'past';
   if (phase !== 'entangled') return null;
   if (ran) return target > BREAK_EVEN ? 'cold' : 'short';
-  return bandFor(target, limits);
+  // Before the first run has results, a dial short of the line still owes the instruction.
+  const band = bandFor(target, limits);
+  return band === 'low' && rounds === 0 ? 'entangled' : band;
 }
 
 /** Where the flat table stands on the lift dial: outside the stack before the deal, then down at the table. */

@@ -275,7 +275,7 @@ export function createDecoView(renderer: THREE.WebGLRenderer, { root, store, sou
     world.beam.visible = true; tw(U.uBeam, 'value', 1, 2.2, EASE.out, .4);
     glide([{ r: 8.4, a: 1.5, y: 5, ty: 2.6, fov: 58 }, POSE.beyond], 4.6);
   }
-  // The payoff. The last hands of the run play out while the camera tips back to the glass.
+  // The payoff. Once the run has finished past the line, the camera tips back to the glass.
   function shatterSequence() {
     story.locked = true; path = null;
     glide([{ r: 1.9, a: 1.7, y: 2.1, ty: 4.6, fov: 64 }, POSE.wall], 1.6);

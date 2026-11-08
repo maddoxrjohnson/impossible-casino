@@ -534,7 +534,7 @@ describe('during a run', () => {
 });
 
 describe('the shatter rule', () => {
-  it('fires on the first qualifying hand from the minimum on', async () => {
+  it('fires on the finished run, not mid-run', async () => {
     const rng = await steeredRng(TUNED, RUN_HANDS, () => true);
     const store = make({ rng, storage: saved() });
     const phases: string[] = [];
@@ -542,8 +542,34 @@ describe('the shatter rule', () => {
     const finished = store.run();
     await hands(RUN_HANDS);
     await finished;
-    expect(phases.indexOf('beyond')).toBe(BEYOND_MIN_HANDS - 1);
+    expect(phases.indexOf('beyond')).toBe(RUN_HANDS - 1);
     expect(store.state.cleared).toEqual(['tables']);
+  });
+
+  it('does not fire when a run crosses break-even mid-run and finishes under it', async () => {
+    const rng = await steeredRng(TUNED, RUN_HANDS, (hand) => hand < BEYOND_MIN_HANDS);
+    const store = make({ rng, storage: saved() });
+    const phases: string[] = [];
+    store.onRound((_last, state) => phases.push(state.phase));
+    const finished = store.run();
+    await hands(BEYOND_MIN_HANDS);
+    expect(store.state.winRate).toBe(1);
+    await hands(RUN_HANDS - BEYOND_MIN_HANDS);
+    await finished;
+    expect(store.state.winRate).toBeLessThan(BREAK_EVEN);
+    expect(phases).not.toContain('beyond');
+    expect(store.state.phase).toBe('entangled');
+    expect(store.state.cleared).toEqual([]);
+  });
+
+  it('does not fire on a short finished run under the minimum', async () => {
+    const rng = await steeredRng(TUNED, BEYOND_MIN_HANDS - 1, () => true);
+    const store = make({ rng, storage: saved() });
+    const finished = store.run(BEYOND_MIN_HANDS - 1);
+    await hands(BEYOND_MIN_HANDS - 1);
+    await finished;
+    expect(store.state.winRate).toBe(1);
+    expect(store.state.phase).toBe('entangled');
   });
 
   it('does not fire at exactly break-even', async () => {
@@ -1483,13 +1509,13 @@ describe('persistence', () => {
     expect(saveOf(storage)).toMatchObject({ dial: 0.25, stake: 200 });
   });
 
-  it('does not save during a run, even on the shatter, and saves once at the end', async () => {
+  it('does not save during a run, shatters only at the end, and saves once', async () => {
     const rng = await steeredRng(TUNED, RUN_HANDS, () => true);
     const storage = saved();
     const store = make({ rng, storage });
     const finished = store.run();
     await hands(RUN_HANDS - 1);
-    expect(store.state.phase).toBe('beyond');
+    expect(store.state.phase).toBe('entangled');
     expect(storage.writes).toBe(0);
     await hands(1);
     await finished;

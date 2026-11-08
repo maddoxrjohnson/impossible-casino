@@ -95,6 +95,13 @@ describe('settledLine', () => {
     expect(settledLine({ ...entangled, target: 0.848 }, false, limits)).toBe('best');
   });
 
+  it('keeps the instruction up for a dial short of the line until a run has results', () => {
+    expect(settledLine({ ...entangled, rounds: 0, target: 0.6 }, false, limits)).toBe('entangled');
+    expect(settledLine({ ...entangled, rounds: 0, target: 0.75 }, false, limits)).toBe('entangled');
+    expect(settledLine({ ...entangled, rounds: 0, target: 0.848 }, false, limits)).toBe('best');
+    expect(settledLine({ ...entangled, rounds: RUN_HANDS, target: 0.6 }, false, limits)).toBe('low');
+  });
+
   it('blames the dial only when the dial was the problem', () => {
     expect(settledLine({ ...entangled, target: 0.79 }, true, limits)).toBe('short');
     expect(settledLine({ ...entangled, target: 0.8 }, true, limits)).toBe('short');

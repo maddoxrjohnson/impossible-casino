@@ -200,6 +200,18 @@ export function createGameStore({
   const endHands = (deckFinished: boolean): void => {
     stopRun();
     if (deckFinished && state.phase === 'classical') state.phase = 'wall';
+    // Decided on the finished run, so a rate that crosses mid-run and falls back never counts.
+    // Break-even rather than a fixed rate, so noisier chip data can still clear the
+    // table; the target check stops a lucky streak on a mistuned dial from counting.
+    if (
+      state.phase === 'entangled' &&
+      state.rounds >= BEYOND_MIN_HANDS &&
+      state.target > BREAK_EVEN &&
+      state.winRate > BREAK_EVEN
+    ) {
+      state.phase = 'beyond';
+      markCleared('tables');
+    }
     settleStake();
     save();
   };
@@ -216,17 +228,6 @@ export function createGameStore({
     state.last = { x, y, a, b, win, delta };
     history.push(win ? 1 : 0);
     if (history.length > HISTORY_CAP) history.shift();
-    // Break-even rather than a fixed rate, so noisier chip data can still clear the
-    // table; the target check stops a lucky streak on a mistuned dial from counting.
-    if (
-      state.phase === 'entangled' &&
-      state.rounds >= BEYOND_MIN_HANDS &&
-      state.target > BREAK_EVEN &&
-      state.winRate > BREAK_EVEN
-    ) {
-      state.phase = 'beyond';
-      markCleared('tables');
-    }
   };
 
   /** Plays the deck on the timer. The stake stays fixed until the run stops. */

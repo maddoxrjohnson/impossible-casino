@@ -115,7 +115,7 @@ describe('createHudSync', () => {
     expect(seen.note).toBe('Simulator at this angle');
   });
 
-  it('holds a band line back so the phase line gets its moment, then owes it after a story beat', () => {
+  it('holds a band line back so the phase line gets its moment, and keeps the instruction for a dial short of the line before any run', () => {
     const { store, seen, moment, hudSync } = table({ save: { version: 1, bankroll: 9000, phase: 'wall', dial: MISTUNED, stake: 100, cleared: [] } });
     moment.locked = true;
     store.entangle();
@@ -124,7 +124,9 @@ describe('createHudSync', () => {
     expect(seen.dial).toBe(false);
     moment.locked = false;
     hudSync.sync(store.state);
-    expect(said(seen)).toBe(LINES.low);
+    expect(said(seen)).toBe(LINES.entangled);
+    store.setDial(TUNED);
+    expect(said(seen)).toBe(LINES.best);
     expect(seen.main.disabled).toBeFalsy();
     expect(seen.dial).toBe(true);
   });
