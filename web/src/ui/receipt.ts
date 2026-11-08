@@ -43,7 +43,7 @@ function stamp(p: Provenance): string {
 }
 
 export function chshReceipt(result: ChshResult, last: LastHand | null, limits: Limits): Receipt {
-  const { provenance: p, circuits, dial, pairs, winRate } = result;
+  const { provenance: p, circuits, dial, pairs, winRate, stdErr } = result;
   const wanted = last ?? { x: 0, y: 0 };
   const match = circuits.find((c) => c.x === wanted.x && c.y === wanted.y);
   const circuit = match ?? circuits[0];
@@ -60,7 +60,7 @@ export function chshReceipt(result: ChshResult, last: LastHand | null, limits: L
       ['Backend', p.backend],
       ...machineRows(p),
       ['Shots', `${shots.toLocaleString('en-US')} across ${pairs.length} question pairs`],
-      ['Win rate', `${pct(winRate, 1)} at this dial`],
+      ['Win rate', `${pct(winRate, 1)}${p.source === 'ibm-chip' && stdErr !== undefined ? ` ± ${pct(stdErr, 2)}` : ''} at this dial`],
       ['Limits', `${pct(limits.classical, 1)} for any plan, ${pct(limits.quantum, 2)} for quantum`],
       ['Job', p.jobId ?? 'None. Simulators take no job.'],
       ['Software', software(p)],

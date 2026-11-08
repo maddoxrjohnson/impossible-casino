@@ -133,6 +133,14 @@ describe('withChipRuns', () => {
     expect(source.snapDial(0.51)).toBe(base.snapDial(0.51));
   });
 
+  it("carries a chip point's exported standard error onto its result", async () => {
+    const points = [chipPoint(0.25, 2800), { ...chipPoint(0.5, 3400), stdErr: 0.0029, chshS: 2.64, sigmasAboveClassical: 27 }];
+    const exports = { ...withChip, chsh: parseChshExport({ ...bare, runs: [...bare.runs, { ...chipRun, stdErrMethod: 'binomial', points }] }) };
+    const table = withChipRuns(createPrerunSource(exports, 'ibm-noise-model'), exports);
+    expect((await table.chsh(CLEARS)).stdErr).toBe(0.0029);
+    expect(await table.chsh(SHORT)).not.toHaveProperty('stdErr');
+  });
+
   it('answers a chip dial with the chip counts, label and logical circuits', async () => {
     const result = await source.chsh(CLEARS);
     const point = chipRun.points[1] as ChshPoint;

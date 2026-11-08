@@ -57,6 +57,24 @@ describe('the Tables sheet', () => {
     expect(maths).toMatch(/pays 25 on 100/);
   });
 
+  it('says how far the chip clears the best plan at the middle setting, in the exported figures', () => {
+    expect(sheet.maths).toContain(
+      'IBM chip at the middle setting: 84.48% ± 0.28%, about 34 standard errors above 75%. CHSH S = 2.76 (classical bound 2, quantum limit 2.83).',
+    );
+  });
+
+  it('prints whatever the export says about the chip, and nothing when it says nothing', () => {
+    const raw = structuredClone(chshJson) as unknown as Loose & { limits: Record<string, Record<string, unknown>> };
+    const point = raw.runs.find((r) => r.id === 'ibm-chip')!.points.find((p) => p.dial === 0.5)!;
+    Object.assign(point, { winRate: 0.8, stdErr: 0.01, sigmasAboveClassical: 5.2, chshS: 2.4 });
+    raw.limits.quantum!.chshS = 2.91;
+    const changed = expertSheet(null, fresh, { ...data(), chsh: parseChshExport(raw) });
+    expect(changed.maths).toContain('IBM chip at the middle setting: 80.00% ± 1.00%, about 5 standard errors above 75%. CHSH S = 2.40 (classical bound 2, quantum limit 2.91).');
+    delete point.sigmasAboveClassical;
+    const silent = expertSheet(null, fresh, { ...data(), chsh: parseChshExport(raw) });
+    expect(silent.maths.join(' ')).not.toContain('middle setting');
+  });
+
   it('names the noise model qubits as the export picked them', () => {
     const noisy = chsh.runs.find((r) => r.id === 'ibm-noise-model')!.provenance as SimulatorProvenance;
     expect(sheet.maths.join(' ')).toContain(noisy.noiseModel!.qubitSelection);

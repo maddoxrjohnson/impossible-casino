@@ -253,6 +253,51 @@ describe('parsers', () => {
     expect(() => parseWiesnerExport(bad)).toThrow(message);
   });
 
+  it('reads the chip run standard error, CHSH value and distance from the classical limit as exported', () => {
+    const rawChip = chshJson.runs.find((r) => r.id === 'ibm-chip')!;
+    const rawPoint = rawChip.points.find((p) => p.dial === 0.5)! as Record<string, unknown>;
+    const point = chsh.runs.find((r) => r.id === 'ibm-chip')!.points.find((p) => p.dial === 0.5)!;
+    expect(point.stdErr).toBe(rawPoint.stdErr);
+    expect(point.chshS).toBe(rawPoint.chshS);
+    expect(point.sigmasAboveClassical).toBe(rawPoint.sigmasAboveClassical);
+    expect(chsh.runs.find((r) => r.id === 'ibm-chip')!.stdErrMethod).toBe(rawChip.stdErrMethod);
+    expect(chsh.limits.classical.chshS).toBe(chshJson.limits.classical.chshS);
+    expect(chsh.limits.quantum.chshS).toBe(chshJson.limits.quantum.chshS);
+  });
+
+  it('leaves the chsh statistics out when a run or limit has none', () => {
+    const plain = looseChsh();
+    for (const run of plain.runs) {
+      delete (run as Record<string, unknown>).stdErrMethod;
+      for (const point of run.points) {
+        for (const key of ['stdErr', 'chshS', 'sigmasAboveClassical']) delete (point as Record<string, unknown>)[key];
+      }
+    }
+    for (const key of ['classical', 'quantum']) delete ((plain.limits as Record<string, Record<string, unknown>>)[key]!).chshS;
+    const parsed = parseChshExport(plain);
+    expect(parsed.runs[0]?.stdErrMethod).toBeUndefined();
+    expect(parsed.runs[0]?.points[0]).not.toHaveProperty('stdErr');
+    expect(parsed.runs[0]?.points[0]).not.toHaveProperty('chshS');
+    expect(parsed.runs[0]?.points[0]).not.toHaveProperty('sigmasAboveClassical');
+    expect(parsed.limits.classical).not.toHaveProperty('chshS');
+  });
+
+  it.each<[string, (run: Record<string, unknown>, point: Record<string, unknown>, d: LooseChsh) => void, RegExp]>([
+    ['a negative standard error', (_run, point) => { point.stdErr = -0.01; }, /stdErr/],
+    ['a standard error that is not a number', (_run, point) => { point.stdErr = '1%'; }, /stdErr/],
+    ['a standard error with no method', (run) => { delete run.stdErrMethod; }, /stdErrMethod/],
+    ['a blank method', (run) => { run.stdErrMethod = ''; }, /stdErrMethod/],
+    ['a CHSH value past the algebraic bound', (_run, point) => { point.chshS = 4.5; }, /chshS/],
+    ['a CHSH value that is not a number', (_run, point) => { point.chshS = null; }, /chshS/],
+    ['a sigma count that is not a number', (_run, point) => { point.sigmasAboveClassical = 'many'; }, /sigmasAboveClassical/],
+    ['a limit CHSH value that is not a number', (_run, _point, d) => { (d.limits as Record<string, Record<string, unknown>>).quantum!.chshS = '2.83'; }, /chshS/],
+  ])('rejects chsh with %s', (_name, spoil, message) => {
+    const bad = looseChsh();
+    const chip = bad.runs.find((r) => r.id === 'ibm-chip')!;
+    spoil(chip, chip.points[0] as Record<string, unknown>, bad);
+    expect(() => parseChshExport(bad)).toThrow(message);
+  });
+
   it('accepts a chip run that carries a job id and no noise model', () => {
     const good = looseChsh();
     good.runs[0]!.provenance.source = 'ibm-chip';

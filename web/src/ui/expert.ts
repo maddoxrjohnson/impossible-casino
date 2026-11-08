@@ -93,6 +93,8 @@ export interface ExpertSheet {
   readonly sources: readonly string[];
 }
 
+/** Where the chip's best result sits on the dial. */
+const MIDDLE_DIAL = 0.5;
 const SUB = 'The quantum numbers come from Qiskit runs, each labelled with its source. Break-even and pays are the house rules. Formulas are written out beside the values they name.';
 const DASH = '—';
 
@@ -153,6 +155,11 @@ function tablesSheet({ dial, result }: ExpertState, chsh: ChshExport): ExpertShe
     const best = p.noiseModel ? ' Picking the lowest-error qubits makes the noise model a best case, not a typical chip.' : '';
     return [`${runName(p)} ran on qubits ${p.qubits.join(' and ')}. How they were chosen: ${pick}.${best}`];
   });
+  const chipPeak = chsh.runs.find((run) => run.provenance.source === 'ibm-chip')?.points.find((p) => p.dial === MIDDLE_DIAL);
+  const sValue = (s: number): string => String(+s.toFixed(2));
+  const beaten = chipPeak?.stdErr !== undefined && chipPeak.sigmasAboveClassical !== undefined && chipPeak.chshS !== undefined && classical.chshS !== undefined && quantum.chshS !== undefined
+    ? [`IBM chip at the middle setting: ${pct(chipPeak.winRate, 2)} ± ${pct(chipPeak.stdErr, 2)}, about ${Math.round(chipPeak.sigmasAboveClassical)} standard errors above ${pct(classical.value)}. CHSH S = ${chipPeak.chshS.toFixed(2)} (classical bound ${sValue(classical.chshS)}, quantum limit ${sValue(quantum.chshS)}).`]
+    : [];
   return {
     title: 'The maths at the Tables',
     sub: SUB,
@@ -160,6 +167,7 @@ function tablesSheet({ dial, result }: ExpertState, chsh: ChshExport): ExpertShe
       'You draw a question x and your partner draws y, each 0 or 1. You answer a, they answer b. A hand wins when a ⊕ b = x ∧ y: answer alike, unless both questions are 1, and then differ.',
       `No plan made in advance wins more than ${pct(classical.value, 1)} of hands. Method: ${classical.method}.`,
       `A shared entangled pair, measured at the best dial, wins cos²(π/8) of hands: ${pct(quantum.value, 2)}. Method: ${quantum.method}.`,
+      ...beaten,
       `A win pays ${pays} on ${CLASSICAL_STAKE} and a loss costs ${CLASSICAL_STAKE}, so a hand breaks even at ${CLASSICAL_STAKE} / (${CLASSICAL_STAKE} + ${pays}) = ${pct(BREAK_EVEN)}.${classical.value < BREAK_EVEN && BREAK_EVEN < quantum.value ? ' That sits between the two limits, so only the pair can beat the house.' : ''}`,
       ...picks,
     ],

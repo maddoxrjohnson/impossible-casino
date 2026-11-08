@@ -42,6 +42,7 @@ export function withChipRuns(base: ResultSource, exports: GameExports, chipRunId
         pairs: point.pairs,
         circuits: circuits.pairs,
         provenance: chshRun.provenance,
+        ...(point.stdErr === undefined ? {} : { stdErr: point.stdErr }),
       };
     },
     async wiesner(length): Promise<WiesnerResult> {

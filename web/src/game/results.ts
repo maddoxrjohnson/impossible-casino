@@ -47,6 +47,11 @@ export type CountKey = (typeof COUNT_KEYS)[number];
 export type Counts = Readonly<Record<CountKey, number>>;
 export type OutcomeOrder = 'ba';
 
+export interface ChshLimit extends Limit {
+  /** The limit as a CHSH value S, as exported. */
+  readonly chshS?: number;
+}
+
 export interface ChshPair {
   readonly x: Bit;
   readonly y: Bit;
@@ -66,19 +71,27 @@ export interface ChshPoint {
   readonly seed: number;
   readonly winRate: number;
   readonly pairs: readonly ChshPair[];
+  /** One standard error on `winRate`, as a fraction. Optional; its run names the method. */
+  readonly stdErr?: number;
+  /** The CHSH value S that `winRate` equals, as exported. */
+  readonly chshS?: number;
+  /** How many standard errors `winRate` sits above the classical limit, as exported. Chip points only. */
+  readonly sigmasAboveClassical?: number;
 }
 
 export interface ChshRun {
   readonly id: string;
   readonly provenance: Provenance;
   readonly points: readonly ChshPoint[];
+  /** How the points' standard errors were worked out. Present whenever a point has one. */
+  readonly stdErrMethod?: string;
 }
 
 export interface ChshExport {
   readonly schemaVersion: 1;
   readonly experiment: 'chsh';
   readonly outcomeOrder: OutcomeOrder;
-  readonly limits: { readonly classical: Limit; readonly quantum: Limit };
+  readonly limits: { readonly classical: ChshLimit; readonly quantum: ChshLimit };
   readonly logicalCircuits: readonly {
     readonly dial: number;
     readonly pairs: readonly ChshCircuit[];
@@ -269,6 +282,8 @@ export interface ChshResult {
   readonly pairs: readonly ChshPair[];
   readonly circuits: readonly ChshCircuit[];
   readonly provenance: Provenance;
+  /** One standard error on `winRate`, where the export gives one. */
+  readonly stdErr?: number;
 }
 
 export interface WiesnerResult extends TicketShots {
@@ -472,6 +487,11 @@ function parseChshPoint(value: unknown, path: string): ChshPoint {
     seed: finite(raw.seed, `${path}.seed`),
     winRate: rate(raw.winRate, `${path}.winRate`),
     pairs,
+    ...(raw.stdErr === undefined ? {} : { stdErr: rate(raw.stdErr, `${path}.stdErr`) }),
+    ...(raw.chshS === undefined ? {} : { chshS: chshValue(raw.chshS, `${path}.chshS`) }),
+    ...(raw.sigmasAboveClassical === undefined
+      ? {}
+      : { sigmasAboveClassical: finite(raw.sigmasAboveClassical, `${path}.sigmasAboveClassical`) }),
   };
 }
 
@@ -484,10 +504,28 @@ function parseChshRun(value: unknown, path: string): ChshRun {
     points.map((p) => p.dial),
     `${path}.points`,
   );
+  // An error bar has to say how it was made, so a point's stdErr needs its run's method.
+  const errors = raw.stdErrMethod !== undefined || points.some((p) => p.stdErr !== undefined);
   return {
     id: text(raw.id, `${path}.id`),
     provenance: parseExportedProvenance(raw.provenance, `${path}.provenance`),
     points,
+    ...(errors ? { stdErrMethod: text(raw.stdErrMethod, `${path}.stdErrMethod`) } : {}),
+  };
+}
+
+/** S runs from -4 to 4 for any strategy at all. */
+function chshValue(value: unknown, path: string): number {
+  const n = finite(value, path);
+  if (n < -4 || n > 4) fail(path, 'expected a CHSH value between -4 and 4');
+  return n;
+}
+
+function chshLimit(value: unknown, path: string): ChshLimit {
+  const raw = record(value, path);
+  return {
+    ...limit(raw, path),
+    ...(raw.chshS === undefined ? {} : { chshS: chshValue(raw.chshS, `${path}.chshS`) }),
   };
 }
 
@@ -531,8 +569,8 @@ export function parseChshExport(value: unknown): ChshExport {
     experiment: 'chsh',
     outcomeOrder: 'ba',
     limits: {
-      classical: limit(limits.classical, 'chsh.limits.classical'),
-      quantum: limit(limits.quantum, 'chsh.limits.quantum'),
+      classical: chshLimit(limits.classical, 'chsh.limits.classical'),
+      quantum: chshLimit(limits.quantum, 'chsh.limits.quantum'),
     },
     logicalCircuits,
     runs,

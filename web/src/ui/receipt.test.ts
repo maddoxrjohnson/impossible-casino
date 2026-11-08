@@ -138,6 +138,17 @@ describe('chshReceipt', () => {
     expect(receipt.stamp).toBe('Ran on ibm_kingston. IBM job d4example.');
   });
 
+  it("gives a chip run's win rate with its exported standard error", async () => {
+    const result = { ...(await noisy.chsh(0.5)), provenance: chip, winRate: 0.8448486328125, stdErr: 0.0028285 };
+    expect(value(chshReceipt(result, hand, limits), 'Win rate')).toBe('84.5% ± 0.28% at this dial');
+    expect(value(chshReceipt({ ...result, stdErr: undefined }, hand, limits), 'Win rate')).toBe('84.5% at this dial');
+  });
+
+  it('keeps the simulator win rate as it was', async () => {
+    const result = { ...(await noisy.chsh(0.5)), stdErr: 0.002 };
+    expect(value(chshReceipt(result, hand, limits), 'Win rate')).toBe(`${(result.winRate * 100).toFixed(1)}% at this dial`);
+  });
+
   it('names the chip and its job only for a chip run', async () => {
     const receipt = chshReceipt({ ...(await noisy.chsh(0.5)), provenance: chip }, hand, limits);
     expect(value(receipt, 'Job')).toBe('d4example');

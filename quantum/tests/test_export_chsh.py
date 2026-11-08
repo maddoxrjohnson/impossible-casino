@@ -27,7 +27,10 @@ from quantum.export_chsh import (
     NOISY_BASE_SEED,
     OUTCOMES,
     SHOTS,
+    STD_ERR_METHOD,
+    binomial_std_err,
     build_export,
+    chip_run_with_statistics,
     chip_runs,
     dial_seed,
     limits,
@@ -37,6 +40,7 @@ from quantum.export_chsh import (
     quietest_pair,
     refresh_chip_runs,
     sample_point,
+    with_statistics,
 )
 
 QUANTUM_LIMIT = math.cos(math.pi / 8) ** 2
@@ -289,7 +293,7 @@ def test_chip_runs_skips_a_job_with_no_run_yet(records, committed):
     run = chip_run_from(committed)
     records("collected", run=run)
     records("queued")
-    assert chip_runs() == [run]
+    assert chip_runs() == [chip_run_with_statistics(run)]
 
 
 def test_build_export_appends_chip_runs_after_the_simulators(records, small_export):
@@ -298,7 +302,7 @@ def test_build_export_appends_chip_runs_after_the_simulators(records, small_expo
     built = build_export(dials=(0.25, 0.5), shots=2048, today=date(2026, 11, 7))
     assert [r["id"] for r in built["runs"]] == ["ideal", "ibm-noise-model", "ibm-chip"]
     assert built["runs"][:2] == small_export["runs"]
-    assert built["runs"][2] == run
+    assert built["runs"][2] == chip_run_with_statistics(run)
 
 
 def test_chip_only_leaves_the_file_alone_with_nothing_collected(records, export_copy):
@@ -313,7 +317,7 @@ def test_chip_only_adds_the_chip_run_and_keeps_the_simulators(records, export_co
     records("collected", run=run)
     refresh_chip_runs(export_copy)
     written = json.loads(export_copy.read_text())
-    assert written["runs"] == [*simulator_runs(committed), run]
+    assert written["runs"] == [*simulator_runs(committed), chip_run_with_statistics(run)]
     assert {k: v for k, v in written.items() if k != "runs"} == {
         k: v for k, v in committed.items() if k != "runs"
     }
@@ -325,7 +329,9 @@ def test_chip_only_replaces_chip_runs_rather_than_stacking_them(records, export_
     newer = chip_run_from(committed, "second")
     write_record({"experiment": "chsh", "jobId": "first", "run": newer})
     refresh_chip_runs(export_copy)
-    assert committed_chip_runs(json.loads(export_copy.read_text())) == [newer]
+    assert committed_chip_runs(json.loads(export_copy.read_text())) == [
+        chip_run_with_statistics(newer)
+    ]
 
 
 def test_chip_only_flag_never_regenerates_the_simulators(
@@ -339,7 +345,9 @@ def test_chip_only_flag_never_regenerates_the_simulators(
     run = chip_run_from(committed)
     records("collected", run=run)
     main(["--chip-only"])
-    assert committed_chip_runs(json.loads(export_copy.read_text())) == [run]
+    assert committed_chip_runs(json.loads(export_copy.read_text())) == [
+        chip_run_with_statistics(run)
+    ]
 
 
 def test_the_exporter_does_not_load_the_chip_module():
@@ -378,11 +386,11 @@ def test_committed_points_replay_exactly_from_their_stored_seeds(committed, dial
     noisy = run_named(committed, "ibm-noise-model")
     shots = ideal["provenance"]["shots"]
     stored = point_at(ideal, dial)
-    assert sample_point(dial, shots, stored["seed"], AerSimulator()) == stored
+    assert with_statistics(sample_point(dial, shots, stored["seed"], AerSimulator())) == stored
     stored = point_at(noisy, dial)
     backend = AerSimulator.from_backend(FakeKingston())
     layout = noisy["provenance"]["qubits"]
-    assert sample_point(dial, shots, stored["seed"], backend, layout) == stored
+    assert with_statistics(sample_point(dial, shots, stored["seed"], backend, layout)) == stored
 
 
 def test_committed_ideal_curve_matches_the_game_within_shot_noise(committed):
@@ -407,3 +415,74 @@ def test_committed_noise_lowers_the_curve_across_the_grid(committed):
 def test_committed_noisy_peak_still_beats_the_classical_limit(committed):
     noisy = point_at(run_named(committed, "ibm-noise-model"), 0.5)["winRate"]
     assert noisy > committed["limits"]["classical"]["value"]
+
+
+def test_binomial_std_err_is_the_textbook_formula():
+    assert binomial_std_err(0.5, 100) == 0.05
+    assert binomial_std_err(1.0, 100) == 0.0
+    with pytest.raises(ValueError):
+        binomial_std_err(1.5, 100)
+    with pytest.raises(ValueError):
+        binomial_std_err(0.5, 0)
+
+
+def test_with_statistics_adds_the_error_over_every_shot_and_the_chsh_value(small_export):
+    point = sample_point(0.5, 2048, 7, AerSimulator())
+    shots = 4 * 2048
+    assert with_statistics(point) == {
+        **point,
+        "stdErr": binomial_std_err(point["winRate"], shots),
+        "chshS": 8 * point["winRate"] - 4,
+    }
+
+
+def test_chip_run_with_statistics_adds_how_far_each_point_clears_the_classical_limit(committed):
+    run = chip_run_from(committed)
+    exported = chip_run_with_statistics(run)
+    assert exported["stdErrMethod"] == STD_ERR_METHOD
+    assert {k: v for k, v in exported.items() if k not in ("points", "stdErrMethod")} == {
+        k: v for k, v in run.items() if k != "points"
+    }
+    for raw, point in zip(run["points"], exported["points"], strict=True):
+        stats = with_statistics(raw)
+        assert point == {
+            **stats,
+            "sigmasAboveClassical": (raw["winRate"] - 0.75) / stats["stdErr"],
+        }
+
+
+def test_every_run_says_how_its_errors_were_found(export):
+    for run in export["runs"]:
+        assert run["stdErrMethod"] == STD_ERR_METHOD
+        assert "binomial" in run["stdErrMethod"]
+
+
+def test_committed_statistics_are_exactly_what_the_rates_say(committed):
+    classical = committed["limits"]["classical"]["value"]
+    for run in committed["runs"]:
+        chip = run["provenance"]["source"] == "ibm-chip"
+        for point in run["points"]:
+            shots = sum(pair["shots"] for pair in point["pairs"])
+            assert point["stdErr"] == binomial_std_err(point["winRate"], shots)
+            assert point["chshS"] == 8 * point["winRate"] - 4
+            if chip:
+                expected = (point["winRate"] - classical) / point["stdErr"]
+                assert point["sigmasAboveClassical"] == expected
+            else:
+                assert "sigmasAboveClassical" not in point
+
+
+def test_committed_chip_peak_clears_the_classical_limit_by_many_standard_errors(committed):
+    (run,) = committed_chip_runs(committed)
+    point = point_at(run, 0.5)
+    assert point["stdErr"] == pytest.approx(0.0028, abs=0.0001)
+    assert point["sigmasAboveClassical"] > 30
+    assert 2 < point["chshS"] < 2 * math.sqrt(2)
+
+
+def test_each_limit_carries_its_chsh_value(export):
+    classical = export["limits"]["classical"]
+    quantum = export["limits"]["quantum"]
+    assert classical["chshS"] == 2
+    assert quantum["chshS"] == 8 * quantum["value"] - 4
+    assert quantum["chshS"] == pytest.approx(2 * math.sqrt(2))

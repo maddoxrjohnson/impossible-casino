@@ -7,10 +7,15 @@ The noisy run uses Aer with a noise model built from IBM's stored fake_kingston
 calibration, pinned to that snapshot's quietest coupler. It is a simulation, and
 the provenance says so. Chip runs come from the records in CHIP_JOBS, and cover
 only the dials those jobs ran.
+
+Every point carries stdErr, in the same units as winRate, and chshS, the CHSH
+value 8 winRate minus 4. Chip points also carry sigmasAboveClassical. Every run
+says in stdErrMethod how stdErr was found.
 """
 
 import argparse
 import json
+import math
 from collections.abc import Mapping, Sequence
 from datetime import date
 from itertools import product
@@ -48,6 +53,11 @@ DIAL_GRID: tuple[float, ...] = tuple(i / DIAL_STEPS for i in range(DIAL_STEPS + 
 OUTCOMES: tuple[str, ...] = tuple("".join(bits) for bits in product("01", repeat=2))
 QUBIT_SELECTION = "lowest CZ plus readout error in the snapshot"
 CHIP_JOBS: tuple[str, ...] = ("dbnneo0qtr0c73adbufg",)
+STD_ERR_METHOD = (
+    "binomial: square root of winRate times (1 minus winRate) over the point's "
+    "shots summed across its four question pairs; every shot is an independent "
+    "run, and with the pairs split evenly this slightly overstates the error"
+)
 
 # Aer steps the seed by about 2,100 per circuit inside a job. This spacing keeps
 # each dial's four streams in their own band, so neighbouring dials stay independent.
@@ -119,15 +129,44 @@ def point_from_counts(
     }
 
 
+def binomial_std_err(rate: float, shots: int) -> float:
+    """Standard error of a rate over shots independent trials."""
+    if shots <= 0 or not 0 <= rate <= 1:
+        raise ValueError(f"need a rate in [0, 1] over positive shots, got {rate} over {shots}")
+    return math.sqrt(rate * (1 - rate) / shots)
+
+
+def with_statistics(point: dict[str, Any]) -> dict[str, Any]:
+    """A point with its standard error and CHSH value, leaving sample_point as is."""
+    shots = sum(pair["shots"] for pair in point["pairs"])
+    return {
+        **point,
+        "stdErr": binomial_std_err(point["winRate"], shots),
+        "chshS": 8 * point["winRate"] - 4,
+    }
+
+
+def chip_run_with_statistics(run: dict[str, Any]) -> dict[str, Any]:
+    """A chip run whose points also say how many standard errors they clear 75% by."""
+    classical = float(best_classical_win_rate())
+    points = []
+    for point in run["points"]:
+        stats = with_statistics(point)
+        sigmas = (point["winRate"] - classical) / stats["stdErr"]
+        points.append({**stats, "sigmasAboveClassical": sigmas})
+    return {**run, "points": points, "stdErrMethod": STD_ERR_METHOD}
+
+
 def ideal_run(dials: Sequence[float], shots: int, today: date) -> dict[str, Any]:
     backend = AerSimulator()
     return {
         "id": "ideal",
         "provenance": simulator_provenance(backend.name, shots, today),
         "points": [
-            sample_point(dial, shots, dial_seed(IDEAL_BASE_SEED, i), backend)
+            with_statistics(sample_point(dial, shots, dial_seed(IDEAL_BASE_SEED, i), backend))
             for i, dial in enumerate(dials)
         ],
+        "stdErrMethod": STD_ERR_METHOD,
     }
 
 
@@ -146,23 +185,34 @@ def noisy_run(dials: Sequence[float], shots: int, today: date) -> dict[str, Any]
             backend.name, shots, today, noise_model=noise_model, qubits=list(layout)
         ),
         "points": [
-            sample_point(dial, shots, dial_seed(NOISY_BASE_SEED, i), backend, layout)
+            with_statistics(
+                sample_point(dial, shots, dial_seed(NOISY_BASE_SEED, i), backend, layout)
+            )
             for i, dial in enumerate(dials)
         ],
+        "stdErrMethod": STD_ERR_METHOD,
     }
 
 
 def chip_runs() -> list[dict[str, Any]]:
-    return collected_runs("chsh", CHIP_JOBS)
+    return [chip_run_with_statistics(run) for run in collected_runs("chsh", CHIP_JOBS)]
 
 
 def limits() -> dict[str, dict[str, Any]]:
+    """Each limit as a win rate, and as the CHSH value S = 8 winRate - 4 it equals."""
+    classical = float(best_classical_win_rate())
+    quantum = quantum_limit()
     return {
         "classical": {
-            "value": float(best_classical_win_rate()),
+            "value": classical,
             "method": "brute force over every deterministic strategy",
+            "chshS": 8 * classical - 4,
         },
-        "quantum": {"value": quantum_limit(), "method": "Qiskit statevector at dial 0.5"},
+        "quantum": {
+            "value": quantum,
+            "method": "Qiskit statevector at dial 0.5",
+            "chshS": 8 * quantum - 4,
+        },
     }
 
 
