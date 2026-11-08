@@ -76,11 +76,11 @@ export function createHud(root: HTMLElement, { stages, dial: dialRange, stakes, 
   const dial = el('div', 'dc-dial', `<label for="dc-dial-input"><span>Your dial</span><output data-v="odds"></output></label>
     <div class="dc-track"><div class="dc-ticks" aria-hidden="true"></div><input id="dc-dial-input" type="range" aria-label="Measurement angle dial"></div>
     <div class="dc-dial-note" hidden><span data-note></span><span class="dc-legend">Gold ticks: IBM chip data</span></div>
-    <p class="dc-dial-cap">Above ${pct(BREAK_EVEN)} beats the house over time. One hand is luck.</p>
+    <p class="dc-dial-cap">Drag the dial. Above ${pct(BREAK_EVEN)} beats the house over time; one hand is luck.</p>
     <div class="dc-stakes" role="radiogroup" aria-label="Stake per hand"><span>Stake</span>${stakes.map((value) => `<label class="dc-stake"><input type="radio" name="dc-stake" value="${value}"><span>${value.toLocaleString('en-US')}</span></label>`).join('')}<output data-v="pays"></output></div>`);
   const row = el('div', 'dc-row');
   const main = el('button', 'dc-btn'); main.type = 'button';
-  const alt = el('button', 'dc-btn'); alt.type = 'button'; alt.hidden = true;
+  const alt = el('button', 'dc-btn is-quiet'); alt.type = 'button'; alt.hidden = true;
   row.append(main, alt);
   const stubs = el('div', 'dc-row');
   const receiptBtn = el('button', 'dc-stub', 'Receipt'); receiptBtn.type = 'button'; receiptBtn.disabled = true;

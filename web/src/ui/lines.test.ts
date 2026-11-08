@@ -99,7 +99,7 @@ describe('createLines', () => {
   });
 
   it('claims wins at the payoff, not agreement, which a fixed plan can reach every hand', () => {
-    expect(lines.beyond).toContain('won more often than any plan allows');
+    expect(lines.beyond).toContain('won more often than any plan manages on average');
     expect(lines.beyond).not.toContain('agreed');
   });
 

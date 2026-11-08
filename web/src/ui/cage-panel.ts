@@ -17,7 +17,7 @@ export function createCagePanel({ board, stakes, onForge, onRestart, onStake }: 
   box.setAttribute('aria-label', "The Cashier's Cage");
   box.hidden = true;
   box.innerHTML = `<h2>Forge a chip</h2><p class="dc-panel-how">You are the forger. Pick a chip length and a stake, then press Forge. Longer chips pay more but pass the cashier's check less often.</p><p class="dc-cage-goal"></p>
-    <div class="dc-cage-head" aria-hidden="true"><span>Qubits</span><span>This run</span><span>Proven limit</span><span>Pays</span></div>
+    <div class="dc-cage-head" aria-hidden="true"><span>Qubits</span><span>This run</span><span>Attack's rate</span><span>Pays</span></div>
     <div class="dc-cage-rows" role="radiogroup" aria-label="Chip length">${board.rows.map(({ length }) => `<label class="dc-cage-row"><input type="radio" name="dc-cage-length" value="${length}"><span>${length}</span><span></span><span></span><span></span></label>`).join('')}</div>
     <div class="dc-stakes" role="radiogroup" aria-label="Stake on this forge"><span>Stake</span>${stakes.map((value) => `<label class="dc-stake"><input type="radio" name="dc-cage-stake" value="${value}"><span>${value.toLocaleString('en-US')}</span></label>`).join('')}</div>
     <div class="dc-cage-act"><button type="button" class="dc-btn"></button><div class="dc-cage-result" role="status"><b></b><span></span></div></div>

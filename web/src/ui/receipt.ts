@@ -87,14 +87,14 @@ export function wiesnerReceipt(forge: ForgeAttempt, board: CageBoard): Receipt {
       ...machineRows(p, qubits),
       ['Shots', split ? `${money(shots)} (${split})` : money(shots)],
       ['Passes', `${money(passes)}, or ${pct(passRate, 1)}`],
-      ...(limit === undefined ? [] : [['Proven limit', `${pct(limit, 1)} for this attack`] as const]),
+      ...(limit === undefined ? [] : [["This attack's rate", `${pct(limit, 1)}, exact`] as const]),
       // Few live shots land either side of the limit often enough to look like a broken proof.
       ...(p.source === 'live-simulator' && limit !== undefined
-        ? [['Reading this', `The limit is a long-run value. This figure is a ${money(shots)}-shot sample, so it can land above or below it.`] as const]
+        ? [['Reading this', `That rate is a long-run value. This figure is a ${money(shots)}-shot sample, so it can land above or below it.`] as const]
         : []),
       // Repeated tickets add their own spread, so the total shots overstate how tight this is.
       ...(split && limit !== undefined
-        ? [['Reading this', `The limit is a long-run value. This figure repeats a fixed set of random tickets, so it can land further from it than ${money(shots)} shots suggest.`] as const]
+        ? [['Reading this', `That rate is a long-run value. This figure repeats a fixed set of random tickets, so it can land further from it than ${money(shots)} shots suggest.`] as const]
         : []),
       ['Job', p.jobId ?? 'None. Simulators take no job.'],
       ['Software', software(p)],

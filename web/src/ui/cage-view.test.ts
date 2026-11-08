@@ -219,7 +219,7 @@ describe('cageView with a chip run', () => {
     expect(row?.pass).toBe('25.0%*');
     expect(row?.label).toContain('25.0% on chip');
     expect(row?.label).toContain(SPLIT);
-    expect(row?.label).toContain(`proven limit ${row?.limit ?? ''}`);
+    expect(row?.label).toContain(`this attack's rate ${row?.limit ?? ''}`);
   });
 
   it('leaves every simulator row unmarked and free of chip words', () => {
@@ -253,7 +253,7 @@ describe('cageView with a chip run', () => {
   });
 
   it('keeps the plain note when no chip run exists', () => {
-    expect(cageView(state(), board).note).toBe('A run is a sample of shots, so it can land a little either side of its limit.');
+    expect(cageView(state(), board).note).toBe("A run is a sample of shots, so it can land a little either side of the attack's rate.");
   });
 
   it('shows the split beside a chip forge and its own label', async () => {

@@ -38,9 +38,9 @@ house's second card the player has one card left, which can't both untie a pair
 and Sweep.
 
 The room clears on a straight-up win on a pocket at the house limit, which
-needs the best line and then a 1 in 4 spin. A classical wheel can't gather at
-all: if every qubit were measured after the opening and after each card, no
-draft would lift any pocket above 1 in 32.
+needs the best line and then a 1 in 4 spin. A wheel measured between cards
+can't gather at all: if every qubit were measured after the opening and after
+each card, no draft would lift any pocket above 1 in 32.
 """
 
 import functools

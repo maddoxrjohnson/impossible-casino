@@ -59,7 +59,7 @@ export function createRestartGuard(now: () => number, press = 'forge') {
   };
 }
 
-const RUN_NOTE = 'A run is a sample of shots, so it can land a little either side of its limit.';
+const RUN_NOTE = "A run is a sample of shots, so it can land a little either side of the attack's rate.";
 const CHIP_NOTE = '* Chip rates repeat a fixed set of tickets, so they spread wider than their shots suggest.';
 
 const qubits = (length: number): string => `${length} qubit${length === 1 ? '' : 's'}`;
@@ -88,7 +88,7 @@ export function cageView(state: CageState, board: CageBoard): CageView {
     const pass = pct(row.passRate, 1), limit = pct(row.limit, 1);
     const pays = `+${money(forgeWin(row.pays, state.stake, board.payoutStake))}`;
     const measured = row.onChip ? `${pass} on chip, ${split ?? ''}` : `${pass} this run`;
-    const label = `${qubits(row.length)}, ${measured}, proven limit ${limit}, pays ${pays}`;
+    const label = `${qubits(row.length)}, ${measured}, this attack's rate ${limit}, pays ${pays}`;
     return { length: row.length, pass: row.onChip ? `${pass}*` : pass, limit, pays, label };
   });
   const sources: string[] = [];

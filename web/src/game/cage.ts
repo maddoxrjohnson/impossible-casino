@@ -9,7 +9,7 @@ export interface CageRow {
   readonly passRate: number;
   /** Whether `passRate` is a chip result. */
   readonly onChip: boolean;
-  /** The proven limit for this attack at this length. */
+  /** The exact pass rate of this attack at this length. */
   readonly limit: number;
   /** Net profit on `CageBoard.payoutStake`. */
   readonly pays: number;

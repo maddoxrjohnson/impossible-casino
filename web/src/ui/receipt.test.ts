@@ -183,8 +183,8 @@ describe('wiesnerReceipt', () => {
     const rows = wiesnerReceipt(live, board).rows;
     const labels = rows.map(([label]) => label);
     const note = rows.find(([label]) => label === 'Reading this')?.[1];
-    expect(note).toBe('The limit is a long-run value. This figure is a 512-shot sample, so it can land above or below it.');
-    expect(labels.indexOf('Reading this')).toBe(labels.indexOf('Proven limit') + 1);
+    expect(note).toBe('That rate is a long-run value. This figure is a 512-shot sample, so it can land above or below it.');
+    expect(labels.indexOf('Reading this')).toBe(labels.indexOf("This attack's rate") + 1);
   });
 
   it('keeps pre-run wording as it was', async () => {
@@ -197,7 +197,7 @@ describe('wiesnerReceipt', () => {
     expect(value(receipt, 'Shots')).toBe(forge.result.shots.toLocaleString('en-US'));
     expect(value(receipt, 'Passes')).toContain(forge.result.passes.toLocaleString('en-US'));
     const limit = exports.wiesner.limits.byLength.find((l) => l.length === 4)?.value ?? 0;
-    expect(value(receipt, 'Proven limit')).toContain(`${(limit * 100).toFixed(1)}%`);
+    expect(value(receipt, "This attack's rate")).toContain(`${(limit * 100).toFixed(1)}%`);
   });
 
   it('lists only the qubits this length used', async () => {
@@ -254,7 +254,7 @@ describe('wiesnerReceipt on a chip run', () => {
     const labels = receipt.rows.map(([label]) => label);
     expect(value(receipt, 'Reading this')).toMatch(/fixed set of random tickets/);
     expect(value(receipt, 'Reading this')).toContain('1,024 shots');
-    expect(labels.indexOf('Reading this')).toBe(labels.indexOf('Proven limit') + 1);
+    expect(labels.indexOf('Reading this')).toBe(labels.indexOf("This attack's rate") + 1);
   });
 
   it('does not let the example ticket pass for one that ran', async () => {
