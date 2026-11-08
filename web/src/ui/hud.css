@@ -73,6 +73,7 @@
 .dc-dial-note[hidden] { display: none; }
 .dc-dial-note.is-chip > span:first-child { color: #ffe08a; }
 .dc-legend { opacity: .75; white-space: nowrap; }
+.dc-dial-cap { margin: 0; padding: 2px 10px; background: rgba(3,3,3,.78); font: italic 400 13px/1.2 "Federo", Georgia, serif; color: var(--silver); text-shadow: 0 1px 6px #000; }
 .dc-dial input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 40px; margin: 0; background: transparent; cursor: grab; touch-action: none; }
 .dc-dial input[type="range"]:active { cursor: grabbing; }
 .dc-dial input[type="range"]:disabled { cursor: default; }

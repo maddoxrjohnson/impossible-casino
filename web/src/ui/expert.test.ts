@@ -138,8 +138,8 @@ describe('the Cage sheet', () => {
     expect(maths).toContain(w.logicalCircuitsNote);
   });
 
-  it('plots the exact limit, each run and break-even per length, all read from the export', () => {
-    expect(series(sheet, /limit/i)!.points.map((p) => [p.x, p.y])).toEqual(w.limits.byLength.map((l) => [l.length, l.value]));
+  it('plots the attack\'s exact rate, each run and break-even per length, all read from the export', () => {
+    expect(series(sheet, /exact rate/i)!.points.map((p) => [p.x, p.y])).toEqual(w.limits.byLength.map((l) => [l.length, l.value]));
     expect(series(sheet, /break-even/i)!.points.map((p) => p.y)).toEqual(w.payouts.table.map((r) => r.breakEven));
     for (const run of w.runs) {
       const s = chart(sheet).series.find((x) => x.source === provenanceLabel(run.provenance))!;
@@ -167,12 +167,12 @@ describe('the Cage sheet', () => {
     const maths = sheet.maths.join(' ');
     expect(maths).toMatch(/lengths 1 and 2/);
     expect(maths).toMatch(/1\.3 standard errors/);
-    expect(maths).not.toMatch(/(?<!evidence of )beat(s|ing)? the limit|broke the limit/i);
+    expect(maths).not.toMatch(/(?<!evidence of )beat(s|ing)? (the limit|that rate)|broke the (limit|rate)|exact limit/i);
     // Without error bars it still says a sample can land above a long-run value.
     expect(expertSheet('cage', fresh, plain).maths.join(' ')).toMatch(/lengths 1 and 2.*long-run/);
   });
 
-  it('tabulates every length with the exact limit, the runs, break-even and the pay', () => {
+  it('tabulates every length with the attack\'s exact rate, the runs, break-even and the pay', () => {
     const table = sheet.tables[0]!;
     expect(table.rows).toHaveLength(8);
     expect(table.rows[0]).toEqual(['1', '75.0%', '75.3%', '74.1%', '78.2%', '80.0%', '25']);
@@ -181,13 +181,13 @@ describe('the Cage sheet', () => {
   it('words the real chip, noise and ideal figures from the committed export without claiming a beaten limit', () => {
     const real = expertSheet('cage', fresh, data(parseWiesnerExport(wiesnerJson)));
     const maths = real.maths.join(' ');
-    expect(maths).toMatch(/lengths 1 and 2 sit above the exact limit by at most 1\.4 standard errors/);
-    expect(maths).toMatch(/within sampling spread, so those rates are no evidence of beating the limit/);
+    expect(maths).toMatch(/lengths 1 and 2 sit above the attack's exact rate by at most 1\.4 standard errors/);
+    expect(maths).toMatch(/within sampling spread, so those rates are no evidence of beating that rate/);
     expect(maths).toMatch(/cashier reads all zeros/);
     expect(maths).toMatch(/By 8 qubits that is 10\.0%/);
     // At length 1 the noise model is 1.2 points under the ideal run, past their combined error bars, so the within-shot-noise line stays out.
     expect(maths).not.toMatch(/within shot noise of the ideal run/);
-    expect(maths).not.toMatch(/(?<!evidence of )beat(s|ing)? the limit|broke the limit/i);
+    expect(maths).not.toMatch(/(?<!evidence of )beat(s|ing)? (the limit|that rate)|broke the (limit|rate)|exact limit/i);
     expect(real.tables[0]!.rows[0]![2]).toBe('75.3% ± 0.5%');
   });
 

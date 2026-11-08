@@ -206,7 +206,7 @@ function cageSheet({ forge }: ExpertState, w: WiesnerExport): ExpertSheet {
     })),
   }));
   const series: ExpertSeries[] = [
-    { label: 'Exact limit, (3/4)ⁿ', source: `${perQubit.method}; ${byLengthMethod}`, tone: 'gold', line: 'solid', shape: 'circle', points: byLength.map((l) => ({ x: l.length, y: l.value, tip: `Exact limit, length ${l.length}: ${pct(l.value, 1)}` })) },
+    { label: "This attack's exact rate, (3/4)ⁿ", source: `${perQubit.method}; ${byLengthMethod}`, tone: 'gold', line: 'solid', shape: 'circle', points: byLength.map((l) => ({ x: l.length, y: l.value, tip: `This attack's exact rate, length ${l.length}: ${pct(l.value, 1)}` })) },
     ...runSeries,
     { label: 'Break-even', source: `the Cage's pay table: ${w.payouts.rule}`, tone: 'grey', line: 'long', shape: null, points: w.payouts.table.map((r) => ({ x: r.length, y: r.breakEven, tip: `Break-even, length ${r.length}: ${pct(r.breakEven, 1)}` })) },
   ];
@@ -214,7 +214,7 @@ function cageSheet({ forge }: ExpertState, w: WiesnerExport): ExpertSheet {
   const lengths = w.payouts.table.map((r) => r.length);
   const longest = Math.max(...byLength.map((l) => l.length));
 
-  // A chip point above the exact limit may be sampling or device bias; the copy has to say how far, not that the proof failed.
+  // A chip point above the attack's exact rate may be sampling or device bias; the copy has to say how far, not that the proof failed.
   const maths: string[] = [
     `The forger's attack: ${w.attack}. The check: ${w.passRule}.`,
     `Against that attack one qubit passes 3/4 of the time: ${pct(perQubit.value)}. Method: ${perQubit.method}.`,
@@ -228,12 +228,12 @@ function cageSheet({ forge }: ExpertState, w: WiesnerExport): ExpertSheet {
       if (above.every((p) => p.stdErr !== undefined && p.stdErr > 0)) {
         const most = Math.max(...above.map((p) => (p.passRate - (limitAt(p.length) ?? 0)) / (p.stdErr ?? 1)));
         maths.push(most <= 2
-          ? `On the chip, ${where} sit above the exact limit by at most ${most.toFixed(1)} standard errors. That is within sampling spread, so those rates are no evidence of beating the limit.`
-          : `On the chip, ${where} sit above the exact limit by up to ${most.toFixed(1)} standard errors. The limit is exact, so that is more than sampling spread usually gives. Device bias, with errors leaning toward a pass, is the likelier cause.`);
+          ? `On the chip, ${where} sit above the attack's exact rate by at most ${most.toFixed(1)} standard errors. That is within sampling spread, so those rates are no evidence of beating that rate.`
+          : `On the chip, ${where} sit above the attack's exact rate by up to ${most.toFixed(1)} standard errors. That rate is exact, so that is more than sampling spread usually gives. Device bias, with errors leaning toward a pass, is the likelier cause.`);
         maths.push('A pass means the cashier reads all zeros, so readout and decay errors that lean toward 0 can also lift the rate.');
       } else {
         const split = ticketSplit(chip);
-        maths.push(`On the chip, ${where} land above the exact limit. The limit is a long-run value, and each chip point is ${split ?? `${money(chip.points[0]?.shots ?? 0)} shots`}, so a sample can land above it.`);
+        maths.push(`On the chip, ${where} land above the attack's exact rate. That rate is a long-run value, and each chip point is ${split ?? `${money(chip.points[0]?.shots ?? 0)} shots`}, so a sample can land above it.`);
       }
     }
   }
@@ -277,7 +277,7 @@ function cageSheet({ forge }: ExpertState, w: WiesnerExport): ExpertSheet {
     }],
     tables: [{
       title: 'Each length',
-      head: ['Length', 'Exact limit', 'Ideal simulator', 'Noise model', 'IBM chip', 'Break-even', `Pays on ${money(w.payouts.stake)}`],
+      head: ['Length', "Attack's exact rate", 'Ideal simulator', 'Noise model', 'IBM chip', 'Break-even', `Pays on ${money(w.payouts.stake)}`],
       rows: w.payouts.table.map((r) => [String(r.length), limitAt(r.length) === undefined ? DASH : pct(limitAt(r.length) ?? 0, 1), rate(ideal, r.length), rate(noisy, r.length), rate(chip, r.length), pct(r.breakEven, 1), money(r.pays)]),
       ...(chip ? { note: `${provenanceLabel(chip.provenance)}${ticketSplit(chip) ? `, ${ticketSplit(chip)} per length` : ''}.` } : {}),
     }],
