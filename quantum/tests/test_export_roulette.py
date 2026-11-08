@@ -16,6 +16,7 @@ from qiskit_aer import AerSimulator
 from qiskit_ibm_runtime.fake_provider import FakeKingston
 
 import quantum.export_roulette
+from quantum.chip_roulette import run_from_counts
 from quantum.export import simulator_provenance
 from quantum.export_roulette import (
     CZ_PER_TIE,
@@ -25,7 +26,6 @@ from quantum.export_roulette import (
     NOISY_BASE_SEED,
     SHOTS,
     SX_PER_QUBIT,
-    CHIP_JOBS,
     best_return,
     build_export,
     check_edge,
@@ -46,6 +46,7 @@ from quantum.export_roulette import (
     sample_point,
     spin_drafts,
     spin_return,
+    write_export,
 )
 from quantum.roulette import (
     DECK,
@@ -76,6 +77,19 @@ def run_named(export, run_id):
     return next(r for r in export["runs"] if r["id"] == run_id)
 
 
+def simulator_runs(export):
+    return [r for r in export["runs"] if r["provenance"]["source"] != "ibm-chip"]
+
+
+def simulator_edge(export):
+    ids = {r["id"] for r in simulator_runs(export)}
+    return [e for e in export["edge"] if e["run"] in ids]
+
+
+def without_chip_runs(export):
+    return {**export, "runs": simulator_runs(export), "edge": simulator_edge(export)}
+
+
 def point_for(run, draft):
     return next(p for p in run["points"] if p["draft"] == list(draft))
 
@@ -98,6 +112,12 @@ def small_export():
 @pytest.fixture(scope="module")
 def committed():
     return json.loads(Path(EXPORT_PATH).read_text())
+
+
+@pytest.fixture(scope="module")
+def committed_sims(committed):
+    """The committed file with any chip run and its edge entry taken out."""
+    return without_chip_runs(committed)
 
 
 @pytest.fixture(params=["small_export", "committed"])
@@ -156,7 +176,7 @@ def test_deck_lists_each_card_with_its_gates(export):
 
 
 def test_each_run_labels_its_true_source(export, device):
-    assert [r["id"] for r in export["runs"]] == ["ideal", "ibm-noise-model"]
+    assert [r["id"] for r in simulator_runs(export)] == ["ideal", "ibm-noise-model"]
     ideal = run_named(export, "ideal")["provenance"]
     noisy = run_named(export, "ibm-noise-model")["provenance"]
     for provenance in (ideal, noisy):
@@ -332,7 +352,7 @@ def test_payout_is_below_fair_and_keeps_a_house_edge(export):
 
 
 def test_edge_entries_carry_each_runs_own_numbers(export):
-    assert [e["run"] for e in export["edge"]] == ["ideal", "ibm-noise-model"]
+    assert [e["run"] for e in simulator_edge(export)] == ["ideal", "ibm-noise-model"]
     for entry in export["edge"]:
         assert set(entry) == {"run", "method", "bestReturn", "worstSpin", "clearChance"}
         assert set(entry["worstSpin"]) == {"draft", "return"}
@@ -366,7 +386,7 @@ def test_every_finished_draft_keeps_the_edge_in_every_run(committed):
 def test_committed_clear_chance_is_each_runs_own(committed, solution):
     for entry, run in zip(committed["edge"], committed["runs"]):
         assert entry["clearChance"] == clear_chance(solution, run)
-    ideal, noisy = (e["clearChance"] for e in committed["edge"])
+    ideal, noisy = (e["clearChance"] for e in simulator_edge(committed))
     assert ideal == pytest.approx(0.25, abs=5 * math.sqrt(0.25 * 0.75 / SHOTS))
     assert 0.2 < noisy < 0.26
 
@@ -393,7 +413,7 @@ def test_check_edge_refuses_an_export_the_player_can_beat(committed):
 
 
 def test_check_edge_refuses_one_finished_draft_the_player_can_beat(committed):
-    ideal, noisy = committed["runs"]
+    ideal, noisy = simulator_runs(committed)
     point = ideal["points"][0]
     third = point["shots"] // 3
     spike = {**point, "counts": [third] + [0] * 30 + [point["shots"] - third]}
@@ -603,42 +623,47 @@ def test_spin_drafts_are_the_reachable_finals(solution):
 # Chip runs
 
 
-def chip_run(source_run, shots=None):
-    """A stand-in chip run reusing a simulator run's counts, labelled the way a collected run is."""
-    return {
-        "id": "ibm-chip",
-        "provenance": {
-            **source_run["provenance"],
-            "source": "ibm-chip",
-            "backend": "ibm_kingston",
-            "noiseModel": None,
-            "jobId": "job123",
-        },
-        "points": [{**p, "seed": None} for p in source_run["points"]],
-    }
+def chip_run(source_run):
+    """A stand-in chip run reusing a simulator run's counts, built the way a collected run is."""
+    points = source_run["points"]
+    return run_from_counts(
+        "ibm-chip",
+        "ibm_kingston",
+        source_run["provenance"]["qubits"],
+        "best-case pick from the day's calibration",
+        [p["shots"] for p in points],
+        TODAY,
+        "job123",
+        [tuple(p["draft"]) for p in points],
+        [p["counts"] for p in points],
+    )
 
 
 @pytest.fixture
-def from_committed(monkeypatch, committed):
-    """build_export with the simulators replaced by the committed runs, so it is fast."""
-    ideal, noisy = committed["runs"]
+def from_committed(monkeypatch, committed, committed_sims):
+    """build_export with the runs replaced by the committed ones, so it is fast."""
+    ideal, noisy = committed_sims["runs"]
     monkeypatch.setattr(quantum.export_roulette, "ideal_run", lambda *_: ideal)
     monkeypatch.setattr(quantum.export_roulette, "noisy_run", lambda *_: noisy)
+    chips = [r for r in committed["runs"] if r not in committed_sims["runs"]]
+    monkeypatch.setattr(quantum.export_roulette, "chip_runs", lambda: chips)
 
 
-def test_no_chip_jobs_are_listed_yet():
-    assert CHIP_JOBS == ()
+def test_with_no_chip_jobs_listed_there_are_no_chip_runs(monkeypatch):
+    monkeypatch.setattr(quantum.export_roulette, "CHIP_JOBS", ())
     assert quantum.export_roulette.chip_runs() == []
 
 
-def test_with_no_chip_jobs_the_runs_and_edge_are_unchanged(from_committed, committed):
+def test_a_rebuild_leaves_the_runs_and_edge_as_committed(from_committed, committed):
     export = build_export(today=TODAY)
     for block in ("runs", "edge"):
         assert json.dumps(export[block], indent=1) == json.dumps(committed[block], indent=1)
 
 
-def test_build_export_folds_a_chip_run_in_and_checks_its_edge(monkeypatch, from_committed, committed, solution):
-    chip = chip_run(committed["runs"][1])
+def test_build_export_folds_a_chip_run_in_and_checks_its_edge(
+    monkeypatch, from_committed, committed_sims, solution
+):
+    chip = chip_run(committed_sims["runs"][1])
     monkeypatch.setattr(quantum.export_roulette, "chip_runs", lambda: [chip])
     export = build_export(today=TODAY)
     assert [r["id"] for r in export["runs"]] == ["ideal", "ibm-noise-model", "ibm-chip"]
@@ -650,10 +675,10 @@ def test_build_export_folds_a_chip_run_in_and_checks_its_edge(monkeypatch, from_
 
 
 def test_a_chip_run_with_shots_per_draft_folds_in_with_each_points_own_shots(
-    monkeypatch, from_committed, committed, solution
+    monkeypatch, from_committed, committed_sims, solution
 ):
     """Drafts below the limit keep a sixteenth of the shots, as a mixed chip job would."""
-    chip = chip_run(committed["runs"][1])
+    chip = chip_run(committed_sims["runs"][1])
     limit = solution.value[()]
     for i, point in enumerate(chip["points"]):
         if max(solution.wheels[tuple(point["draft"])]) < limit - 1e-9:
@@ -668,8 +693,8 @@ def test_a_chip_run_with_shots_per_draft_folds_in_with_each_points_own_shots(
     check_edge(export)
 
 
-def test_check_edge_refuses_a_chip_run_with_one_beaten_draft(monkeypatch, from_committed, committed):
-    chip = chip_run(committed["runs"][1])
+def test_check_edge_refuses_a_chip_run_with_one_beaten_draft(monkeypatch, from_committed, committed_sims):
+    chip = chip_run(committed_sims["runs"][1])
     point = chip["points"][0]
     third = point["shots"] // 3
     chip["points"][0] = {**point, "counts": [third] + [0] * 30 + [point["shots"] - third]}
@@ -678,16 +703,18 @@ def test_check_edge_refuses_a_chip_run_with_one_beaten_draft(monkeypatch, from_c
         check_edge(build_export(today=TODAY))
 
 
-def test_chip_only_refresh_adds_the_chip_run_and_keeps_the_simulators(monkeypatch, tmp_path, committed, solution):
+def test_chip_only_refresh_adds_the_chip_run_and_keeps_the_simulators(
+    monkeypatch, tmp_path, committed, committed_sims, solution
+):
     target = tmp_path / "roulette.json"
     target.write_text(Path(EXPORT_PATH).read_text())
-    chip = chip_run(committed["runs"][1])
+    chip = chip_run(committed_sims["runs"][1])
     monkeypatch.setattr(quantum.export_roulette, "chip_runs", lambda: [chip])
     monkeypatch.setattr(quantum.export_roulette, "EXPORT_PATH", target)
     main(["--chip-only"])
     refreshed = json.loads(target.read_text())
-    assert refreshed["runs"][:2] == committed["runs"]
-    assert refreshed["edge"][:2] == committed["edge"]
+    assert refreshed["runs"][:2] == committed_sims["runs"]
+    assert refreshed["edge"][:2] == committed_sims["edge"]
     assert refreshed["runs"][2] == chip
     pays, stake = committed["payouts"]["table"][0]["pays"], committed["payouts"]["stake"]
     assert refreshed["edge"][2] == run_edge(solution, chip, pays, stake)
@@ -697,16 +724,41 @@ def test_chip_only_refresh_adds_the_chip_run_and_keeps_the_simulators(monkeypatc
 
     monkeypatch.setattr(quantum.export_roulette, "chip_runs", lambda: [])
     refresh_chip_runs(target)
-    assert target.read_text() == Path(EXPORT_PATH).read_text()
+    expected = tmp_path / "simulators-only.json"
+    write_export(expected, committed_sims)
+    assert target.read_text() == expected.read_text()
 
 
-def test_chip_only_refresh_refuses_to_write_a_beaten_chip_run(monkeypatch, tmp_path, committed):
+def test_chip_only_refresh_refuses_to_write_a_beaten_chip_run(monkeypatch, tmp_path, committed_sims):
     target = tmp_path / "roulette.json"
     original = Path(EXPORT_PATH).read_text()
     target.write_text(original)
-    chip = chip_run(committed["runs"][1])
+    chip = chip_run(committed_sims["runs"][1])
     chip["points"][0] = {**chip["points"][0], "counts": [0] * 31 + [chip["points"][0]["shots"]]}
     monkeypatch.setattr(quantum.export_roulette, "chip_runs", lambda: [chip])
     with pytest.raises(ValueError, match="ibm-chip"):
         refresh_chip_runs(target)
     assert target.read_text() == original
+
+
+def test_the_committed_file_checks_hold_once_a_chip_run_is_folded_in(
+    monkeypatch, tmp_path, committed_sims, device, solution
+):
+    """The checks that read the committed file also pass on a copy that holds a chip run."""
+    target = tmp_path / "roulette.json"
+    write_export(target, committed_sims)
+    chip = chip_run(committed_sims["runs"][1])
+    monkeypatch.setattr(quantum.export_roulette, "chip_runs", lambda: [chip])
+    refresh_chip_runs(target)
+    with_chip = json.loads(target.read_text())
+    assert [r["id"] for r in with_chip["runs"]] == ["ideal", "ibm-noise-model", "ibm-chip"]
+    assert without_chip_runs(with_chip) == committed_sims
+    assert with_chip["runs"][2]["provenance"]["qubitSelection"]
+    test_each_run_labels_its_true_source(with_chip, device)
+    test_edge_entries_carry_each_runs_own_numbers(with_chip)
+    test_points_are_consistent(with_chip)
+    test_committed_runs_use_the_full_shot_count(with_chip)
+    test_committed_edge_holds_against_every_player_strategy_in_every_run(with_chip, solution)
+    test_every_finished_draft_keeps_the_edge_in_every_run(with_chip)
+    test_committed_clear_chance_is_each_runs_own(with_chip, solution)
+    test_check_edge_refuses_one_finished_draft_the_player_can_beat(with_chip)

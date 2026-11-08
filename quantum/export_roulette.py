@@ -16,8 +16,9 @@ the records in CHIP_JOBS, and none is listed yet.
 The noisy simulator keeps only the errors on the chosen qubits, which gives the
 same counts as the full model at a fraction of the cost.
 
-Spins sample from runs[].points[].counts, and the game plays the noise-model
-run. The edge block holds each run's own numbers: the most any player strategy
+Spins sample from runs[].points[].counts. The game plays the ibm-chip run when
+one covers every finished draft and has an edge entry, and otherwise the
+noise-model run. The edge block holds each run's own numbers: the most any player strategy
 gets back per chip, with the player even picking the pocket that got the most
 shots; the single finished draft that returns most per chip, which bounds a
 player who could change the stake after seeing the draft (the game fixes the
@@ -94,7 +95,8 @@ STAKE_RULE = (
 PLAY_RUN = "ibm-noise-model"
 SPIN_RULE = (
     "each spin samples one shot from runs[].points[].counts for the finished draft; "
-    "the game plays the run named in playRun"
+    "the game plays the ibm-chip run when one covers every finished draft and has an edge entry, "
+    "otherwise the run named in playRun"
 )
 CLEAR_RULE = (
     "win a straight-up bet on a pocket at the house limit, one of the spin's limitPockets: "

@@ -176,7 +176,9 @@ def test_counts_from_result_refuses_shots_that_do_not_match_each_circuits_plan()
 def test_run_from_counts_matches_the_export_shape_with_a_chip_label(drafts, layout):
     shots = draft_shots(solve(), drafts, 512, 8192)
     counts = [[0] * (POCKETS - 1) + [n] for n in shots]
-    run = run_from_counts("ibm-chip", "ibm_kingston", layout, shots, TODAY, "job123", drafts, counts)
+    run = run_from_counts(
+        "ibm-chip", "ibm_kingston", layout, QUBIT_SELECTION, shots, TODAY, "job123", drafts, counts
+    )
     assert set(run) == {"id", "provenance", "points"}
     assert run["id"] == "ibm-chip"
     provenance = run["provenance"]
@@ -226,7 +228,7 @@ def test_collect_writes_the_run_from_the_records_drafts(monkeypatch, drafts):
     collect(SimpleNamespace(job_id="job123", run_id="ibm-chip"))
     run = written[0]["run"]
     assert written[0]["usageSeconds"] == 30
-    assert run["provenance"]["qubitSelection"] == QUBIT_SELECTION
+    assert run["provenance"]["qubitSelection"] == "stored text"
     assert run["provenance"]["date"] == "2026-11-07"
     assert [p["counts"] for p in run["points"]] == counts
     assert [p["shots"] for p in run["points"]] == record["shots"]

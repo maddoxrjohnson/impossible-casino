@@ -146,6 +146,7 @@ def run_from_counts(
     run_id: str,
     backend: str,
     qubits: Sequence[int],
+    qubit_selection: str,
     shots: Sequence[int],
     today: date,
     job_id: str,
@@ -160,7 +161,7 @@ def run_from_counts(
     return {
         "id": run_id,
         "provenance": chip_provenance(
-            backend, qubits, QUBIT_SELECTION, max(shots), today, job_id
+            backend, qubits, qubit_selection, max(shots), today, job_id
         ),
         "points": [
             {"draft": list(draft), "seed": None, "shots": n, "counts": list(pockets)}
@@ -366,6 +367,7 @@ def collect(args: argparse.Namespace) -> None:
         args.run_id,
         record["backend"],
         record["qubits"],
+        record["qubitSelection"],
         record["shots"],
         job.creation_date.date(),
         args.job_id,

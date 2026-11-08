@@ -12,7 +12,7 @@
  "houseRule": "the house only plays a card that holds the player to the most they can still force; where several do, the game picks one of the listed houseCards uniformly",
  "bet": "after the draft the player sees the wheel and puts one straight-up chip on any pocket; the spin lands on one pocket",
  "stakeRule": "the stake is fixed before the house plays its first card and can't change during the draft; the game enforces this",
- "spin": "each spin samples one shot from runs[].points[].counts for the finished draft; the game plays the run named in playRun",
+ "spin": "each spin samples one shot from runs[].points[].counts for the finished draft; the game plays the ibm-chip run when one covers every finished draft and has an edge entry, otherwise the run named in playRun",
  "playRun": "ibm-noise-model",
  "deck": [
   {
