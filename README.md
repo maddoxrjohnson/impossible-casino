@@ -109,7 +109,7 @@ uv pip install --python .venv/bin/python 'httpx==0.28.1'
 cd web && VITE_API_URL=http://localhost:8081 npm run dev
 ```
 
-The public API is at `https://impossible-casino-api-je3xb2leta-ue.a.run.app` (`GET /health`). Deploying, settings and costs are in [`api/README.md`](api/README.md).
+The hosted API was shut down after judging. The public site now plays only from the pre-run exports, so it has no backend and costs nothing to run. Deploying, settings and costs are in [`api/README.md`](api/README.md).
 
 ## Built with
 Qiskit 2.6, Qiskit Aer 0.18, Qiskit IBM Runtime 0.51, FastAPI, Google Cloud Run, TypeScript, Three.js, Vite and Web Audio.
