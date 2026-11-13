@@ -25,8 +25,7 @@ import { stakeChoices } from './ui/table';
 const RUN_ID = 'ibm-noise-model';
 
 const FONTS = ['64px "Limelight"', '40px "Federo"', 'italic 20px "Bodoni Moda"'];
-const FONT_SHEET =
-  'https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,600;1,6..96,400;1,6..96,500&family=Courier+Prime:wght@400;700&family=Federo&family=Limelight&display=swap';
+const FONT_SHEET = `${import.meta.env.BASE_URL}fonts/fonts.css`;
 const FONT_WAIT_MS = 1400;
 
 function fail(root: HTMLElement, error: unknown): void {
@@ -35,7 +34,7 @@ function fail(root: HTMLElement, error: unknown): void {
 }
 
 /**
- * Added from here so a hung font host cannot hold the first paint. Settles on
+ * Added from here so a slow font load cannot hold the first paint. Settles on
  * success or failure. The link stays in the page, so a sheet that arrives late
  * still restyles DOM text.
  */
